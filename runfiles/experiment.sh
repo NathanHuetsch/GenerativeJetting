@@ -6,7 +6,7 @@
 export CUDA_VISIBLE_DEVICES=$(cat $PBS_GPUFILE | sed s/.*-gpu// )
 
 source venv/bin/activate
-cd Diffusion
+cd GenerativeJetting
 
-python run_Z2.py /remote/gpu07/huetsch/Diffusion/params/Z2_Experiment_gpu.yaml
+python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z2_Experiment_gpu.yaml
 

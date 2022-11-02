@@ -8,5 +8,5 @@ export CUDA_VISIBLE_DEVICES=$(cat $PBS_GPUFILE | sed s/.*-gpu// )
 source venv/bin/activate
 cd GenerativeJetting
 
-python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/Diffusion/runs/z2/LongerAndBigger_TBD3038" --train=False --n_samples=1000000
+python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z2/LongerAndBigger_TBD3038" --train=False --n_samples=1000000
 
