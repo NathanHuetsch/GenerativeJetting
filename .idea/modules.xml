@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/Diffusion.iml" filepath="$PROJECT_DIR$/.idea/Diffusion.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../jet-diffusion-notebooks-peter/.idea/jet-diffusion-notebooks-peter.iml" filepath="$PROJECT_DIR$/../jet-diffusion-notebooks-peter/.idea/jet-diffusion-notebooks-peter.iml" />
+    </modules>
+  </component>
+</project>

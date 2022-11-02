@@ -1,0 +1,37 @@
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/6c"
+run_name : "INN_moreLayers"
+# #########
+# # Data: #
+# #########
+data_dir : "/remote/gpu07/huetsch/data"
+preprocessing : False
+dim : 6
+# ##############
+# # Training:  #
+# ##############
+train: True
+lr : 1.e-4
+batch_size : 2048
+weight_decay : 0.0
+betas : [0.9, 0.99]
+n_epochs : 1000
+save_every : 100
+save_checkpoints : False
+# #################
+# # Architecture: #
+# #################
+model : INN
+n_blocks: 15
+intermediate_dim: 256
+layers_per_block: 10
+# ###################
+# # Loading/saving: #
+# ###################
+warm_start : False
+warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/INN_6c_1000e18848/model.pt"
+# #############
+# # Plotting: #
+# #############
+plot : True
+n_samples : 1000000
+

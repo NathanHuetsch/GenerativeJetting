@@ -1,0 +1,56 @@
+runs_dir : "/Users/huetsch/Desktop/GenerativeJetting/runs"
+run_name : "Diff_4c"
+# #########
+# # Data: #
+# #########
+#
+data_dir : "/Users/huetsch/Desktop/data"
+preprocessing : False
+channels : [6,7,10,11]
+dim : 4
+#
+# ##############
+# # Training:  #
+# ##############
+#
+lr : 1.e-4
+batch_size : 512
+weight_decay : 0.0
+betas : [0.9, 0.99]
+n_epochs : 1
+#
+# #################
+# # Architecture: #
+# #################
+#
+model : SBD
+n_blocks : 8
+intermediate_dim : 256
+#
+#
+# ###################
+# # Loading/saving: #
+# ###################
+#
+warm_start : False
+warm_start_path : ""
+out_dir : './runs'               # Save parameters under this name
+#
+max_val_batches : 10
+checkpoint_save_interval : 30
+checkpoint_save_overwrite : True            # Overwrite each checkpoint with the next one
+# checkpoint_on_error : True                  # Write out a checkpoint if the training crashes
+
+# #############
+# # Plotting: #
+# #############
+
+#latent_data_cut: ["\\Delta\\phi_{23}", -6.0, -4.0]
+
+n_samples : 1000
+save_predicted: False
+plot_2d_hist: True
+plot_losses: True
+plot_observables: True
+plot_mse_quantiles: False
+plot_latent: False

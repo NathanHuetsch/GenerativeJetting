@@ -1,0 +1,52 @@
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z2"
+run_name : "DDPM_3M_NoEncode_NoLoop"
+redirect_console : True
+# #########
+# # Data: #
+# #########
+#
+data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
+preprocessing : False
+#channels : [6,7,10,11]
+dim : 4
+#
+# ##############
+# # Training:  #
+# ##############
+#
+train: True
+lr : 1.e-4
+batch_size : 1024
+weight_decay : 0.0
+betas : [0.9, 0.99]
+n_epochs : 500
+validate: True
+validate_every : 5
+#
+# #################
+# # Architecture: #
+# #################
+#
+model: DDPM
+encode_t : False
+encode_t_dim : 2
+n_blocks : 10
+intermediate_dim : 256
+layers_per_block : 5
+#
+#
+# ###################
+# # Loading/saving: #
+# ###################
+#
+warm_start : False
+warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5internal_continue90419/model.pt"
+
+# #############
+# # Plotting: #
+# #############
+
+plot : True
+n_samples : 100000
+sigma_mode : beta_tilde
+
