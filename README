@@ -13,7 +13,7 @@ The code is written to run on our GPU cluster and hierarchically works as follow
   Example: run_Z2.py
 
 - Experiments are performed using the Experiment classes in the Source/Experiments folder. These classes should implement all necessary functions to perform the experiments. It is recommended to inherit from the Experiment base class defined in Source/Experiments/ExperimentBase.py and follow the defined structure.
-  But feel free to implement other types of experiment :)
+But feel free to implement other types of experiment :)
   Example: Source/Experiments/z2.py
 
 - Generative models are instantiated within the Experiment classes. Models should be implemented in the Source/Models folder and should inherit from and follow the structure of Source/Models/ModelBase.py
@@ -22,4 +22,5 @@ The code is written to run on our GPU cluster and hierarchically works as follow
 - Neural Netowkrs are instantiated within the Models classes. New networks should be implemented in the Souce/Networks folder. They do not have to follow any specific structure, the only requirement is that they are instantiated with a parameter dict as single input.
   Example: Source/Networks/resnet.py
 
-Detailed documentation for the classes and their functionalities can be found within the BaseClasses and the example implementations.
+Detailed documentation for the classes and their methods can be found in the code.
+The principal steps of an experiment are outlined in the Experiment base class in Source/Experiments/ExperimentBase.py
