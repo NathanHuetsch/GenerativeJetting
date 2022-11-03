@@ -28,7 +28,7 @@ class TBD(GenerativeModel):
     def batch_loss(self, x):
         """
         Calculate batch loss as described by Peter
-        TODO Add some more documentation?
+        TODO Write section in dropbox
         """
         t = torch.rand(x.size(0), 1, device=x.device)
         c = torch.cos(t * np.pi / 2)

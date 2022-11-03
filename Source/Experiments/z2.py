@@ -75,7 +75,7 @@ class Z2_Experiment(Experiment):
         else:
             runs_dir = get(self.params, "runs_dir", None)
             if runs_dir is None:
-                runs_dir = os.getcwd()
+                runs_dir = os.path.join(os.getcwd(), "runs")
                 print("prepare_experiment: runs_dir not specified. Working in ", runs_dir)
             run_name = get(self.params, "run_name", None)
             rnd_number = np.random.randint(low=1000, high=9999)
@@ -156,6 +156,7 @@ class Z2_Experiment(Experiment):
             print("preprocess_data: channels and dim not specified. Defaulting to 13 channels")
             self.dim = 13
             self.channels = np.array([i for i in range(self.data_raw.shape[1]) if i not in [1, 3, 7]])
+            self.params["dim"] = len(self.channels)
         elif self.channels is None and self.dim == 4:
             print("preprocess_data: channels not specified and dim=4. Using [9,10,13,14]")
             self.channels = [9, 10, 13, 14]

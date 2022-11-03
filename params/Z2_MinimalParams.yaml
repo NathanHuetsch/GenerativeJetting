@@ -1,0 +1,20 @@
+# MinimalParams Example
+# Only the absolutely necessary params are specified. All others can fall back to default values.
+# These necessary parameters are:
+# the data_path from which to load the dataset
+# the model class
+# the specifications of the NN size
+
+# #########
+# # Data: #
+# #########
+data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
+
+# #################
+# # Architecture: #
+# #################
+model: INN
+
+n_blocks : 3
+intermediate_dim : 32
+layers_per_block : 3

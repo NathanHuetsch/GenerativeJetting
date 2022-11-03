@@ -14,12 +14,9 @@ def load_params(path):
     :param path: path to a *.yaml parameter file
     :return: the parameters as a dict
     """
-    try:
-        with open(path) as f:
-            param = yaml.load(f, Loader=yaml.FullLoader)
-            return param
-    except Exception:
-        raise RuntimeError(f"Could not load params from path {path}")
+    with open(path) as f:
+        param = yaml.load(f, Loader=yaml.FullLoader)
+        return param
 
 
 def save_params(params, name="paramfile.yaml"):

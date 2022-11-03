@@ -81,7 +81,7 @@ class GenerativeModel(nn.Module):
     def run_training(self):
 
         self.prepare_training()
-        n_epochs = get(self.params, "n_epochs", 1000)
+        n_epochs = get(self.params, "n_epochs", 100)
         past_epochs = get(self.params, "total_epochs", 0)
         print(f"train_model: Model has been trained for {past_epochs} epochs before.")
         print(f"train_model: Beginning training. n_epochs set to {n_epochs}")

@@ -1,5 +1,4 @@
 import os
-print(os.getcwd())
 from Source.Experiments import z2
 from Source.Util.util import load_params
 from absl import app
@@ -17,7 +16,7 @@ There are several ways to call this script:
 Call this function and pass as single argument the path to the *.yaml file containing the experiment parameters.
 No flags have to be specified and the experiment will just run from the parameter *.yaml.
 Example:
-python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z2_Experiment_gpu.yaml
+python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z2_test_gpu.yaml
 
 2) The WarmStart way
 Call this function as pass a path to a warm start folder as warm_start_path flag. 

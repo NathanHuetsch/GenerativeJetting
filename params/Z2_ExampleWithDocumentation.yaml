@@ -1,0 +1,66 @@
+# Examples parameter file for an INN experiment
+# Most parameters have default values are not mandatory.
+# Explicitly mandatory are:
+# data_path, model, n_blocks, layers_per_block, intermediate_dim
+
+# #########
+# # General: #
+# #########
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z2"  # Path to directory where experiment folder is created
+run_name : "ExampleName"                                      # Name of experiment folder
+redirect_console : True                                       # Redirect console output and errors to text files in the experiment folder
+# #########
+# # Data: #
+# #########
+data_path : "/remote/gpu07/huetsch/data/Z_2.npy"              # Path from where to load the data for the experiment
+data_type: np                                                 # Type of the dataset
+preprocess : True                                             # Do preprocessing of the data?
+channels : [9, 10, 13, 14]                                    # Which channels of the dataset to keep for the experiment
+dim : 4                                                       # Alternative to channels for some predefined channel combinations
+# ##############
+# # Training:  #
+# ##############
+train: True                                                   # Train the model?
+log: True                                                     # Log the training using Tensorboard?
+data_split: [0.6, 0.1, 0.3]                                   # Split of the data into train, val, test
+
+optimizer: Adam                                               # Optimizer
+lr : 1.e-4                                                    # Learning rate
+batch_size : 1024                                             # Batch size
+weight_decay : 0.0                                            # Optimizer Weight decay (see Adam documentation)
+betas : [0.9, 0.99]                                           # Optimizer betas (see Adam documentation)
+
+n_epochs : 1                                                  # Number of epochs to train
+validate: True                                                # Perform validations periodically?
+validate_every : 5                                            # How many epochs of training between validations?
+# #################
+# # Architecture: #
+# #################
+model: INN                                                    # Model class
+
+n_blocks : 10                                                 # Number of ResNet blocks in the net
+layers_per_block : 5                                          # Dense layers per ResNet block
+intermediate_dim : 256                                        # Dimension of the dense layers
+
+# ###################
+# # Loading/saving: #
+# ###################
+warm_start : False                                            # Start from pretrained model?
+warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5internal_continue90419/model.pt"
+                                                              # Path to folder containing pretrained model as warm_start_path/models/checkpoint.pt
+# #############
+# # Sampling: #
+# #############
+sample: True                                                  # Generate samples with the trained/loaded model?
+load_best_checkpoint: True                                    # Load the best validation checkpoint for the sampling?
+n_samples : 100000                                            # How many samples to generate?
+
+# #############
+# # Plotting: #
+# #############
+plot : True                                                   # Create plots comparing train data, test data, generated data
+plot_channels : [9, 10, 13, 14]                               # Which channels to use for 1d histograms?
+plot_deltaR: True                                             # Create a DeltaR 1d histogram?
+plot_Deta_Dphi: True                                          # Create a DeltaEta-DeltaPhi 2d heatmap?
+
+
