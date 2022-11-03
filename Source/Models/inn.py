@@ -1,6 +1,5 @@
 import torch
 import math
-import os
 from Source.Util.util import get
 from Source.Networks.inn_net import build_INN
 from Source.Models.ModelBase import GenerativeModel

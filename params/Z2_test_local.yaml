@@ -1,5 +1,5 @@
 runs_dir : "/Users/huetsch/Desktop/runs"
-run_name : "LongerAndBigger"
+run_name : "Venv"
 # #########
 # # Data: #
 # #########
@@ -18,7 +18,7 @@ lr : 1.e-4
 batch_size : 1024
 weight_decay : 0.0
 betas : [0.9, 0.99]
-n_epochs : 50
+n_epochs : 1
 validate: True
 validate_every : 5
 #
