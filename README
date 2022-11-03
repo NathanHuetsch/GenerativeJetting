@@ -6,16 +6,13 @@ Most of the boilerplate code is hidden behind the ExperimentClass. It takes a pa
 
 The code is written to run on our GPU cluster and hierarchically works as follows:
 
-- Experiments are initiated from a *.sh file in the runfiles folder. This should follow the syntax of the GPU cluster qsub system.
-  This file should then call upon a main method in the main folder and pass the necessary parameters and flags, most importantly a *.yaml file including the parameters defining the experiment.
+- Experiments are initiated from a *.sh file in the runfiles folder. This should follow the syntax of the GPU cluster qsub system. This file should then call upon a main method in the main folder and pass the necessary parameters and flags, most importantly a *.yaml file including the parameters defining the experiment.
   Example: runfiles/experiment.sh
 
-- The next step is a main *.py file in the main folder to be called upon from the *.sh file.
-  This file should read in and process the parameters and flags, create an experiment and run it.
+- The next step is a main *.py file in the main folder to be called upon from the *.sh file. This file should read in and process the parameters and flags, create an experiment and run it.
   Example: run_Z2.py
 
-- Experiments are performed using the Experiment classes in the Source/Experiments folder.
-  These classes should implement all necessary functions to perform the experiments. It is recommended to inherit from the Experiment base class defined in Source/Experiments/ExperimentBase.py and follow the defined structure.
+- Experiments are performed using the Experiment classes in the Source/Experiments folder. These classes should implement all necessary functions to perform the experiments. It is recommended to inherit from the Experiment base class defined in Source/Experiments/ExperimentBase.py and follow the defined structure.
   But feel free to implement other types of experiment :)
   Example: Source/Experiments/z2.py
 
