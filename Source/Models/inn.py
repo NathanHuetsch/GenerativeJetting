@@ -19,7 +19,7 @@ class INN(GenerativeModel):
         loss = torch.mean(z ** 2) / 2 - torch.mean(jac) / z.shape[1]
         return loss
 
-    def sample_n_parallel(self, n_samples):
+    def sample_n(self, n_samples):
         self.eval()
         gauss_input = torch.randn((n_samples, self.dim)).to(self.device)
         events_predict = []
@@ -31,27 +31,3 @@ class INN(GenerativeModel):
                 events_predict.append(events_batch)
             events_predict = torch.cat(events_predict, dim=0).cpu().detach().numpy()
         return events_predict
-
-    def save(self, epoch=""):
-        """Save the model, its optimizer and the test/train split, as well as the epoch"""
-        os.makedirs(self.doc.get_file("model", False), exist_ok=True)
-        torch.save({"opt": self.optim.state_dict(),
-                    "net": self.net.state_dict(),
-                    "epoch": self.epoch}, self.doc.get_file(f"model/model{epoch}", False))
-
-    def load(self, epoch=""):
-        """Load the model, its optimizer and the test/train split, as well as the epoch"""
-        name = self.doc.get_file(f"model/model{epoch}", False)
-        state_dicts = torch.load(name, map_location=self.device)
-        self.net.load_state_dict(state_dicts["net"])
-
-        try:
-            self.epoch = state_dicts["epoch"]
-        except:
-            self.epoch = 0
-            print(f"Warning: Epoch number not provided in save file, setting to {self.epoch}")
-        try:
-            self.optim.load_state_dict(state_dicts["opt"])
-        except ValueError as e:
-            print(e)
-        self.net.to(self.device)

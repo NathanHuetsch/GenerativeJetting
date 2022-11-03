@@ -3,9 +3,12 @@ import torch.nn as nn
 
 
 class Resnet(nn.Module):
-
+    """
+    Simple Conditional Resnet class to build from a params dict
+    """
     def __init__(self, param):
         super().__init__()
+        # Read in the network specifications from the params
         self.param = param
         self.n_blocks = param["n_blocks"]
         self.intermediate_dim = self.param["intermediate_dim"]
@@ -16,6 +19,7 @@ class Resnet(nn.Module):
         self.activation = self.param.get("activation", nn.SiLU)
         self.encode_t = self.param.get("encode_t", False)
 
+        # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
             self.encode_t_scale = self.param.get("encode_t_scale", 30)
             self.encode_t_dim = self.param.get("encode_t_dim", 4)
@@ -25,14 +29,19 @@ class Resnet(nn.Module):
         else:
             self.encode_t_dim = 1
 
+        # Build the Resnet blocks
         self.blocks = nn.ModuleList([
             self.make_block()
             for _ in range(self.n_blocks)])
+        # Initialize the weights in the last layer of each block as 0
         for block in self.blocks:
             block[-1].weight.data *= 0
             block[-1].bias.data *= 0
 
     def make_block(self):
+        """
+        Method to build the Resnet blocks with the defined specifications
+        """
         layers = [nn.Linear(self.dim + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
         for _ in range(1, self.layers_per_block-1):
             layers.append(nn.Linear(self.intermediate_dim, self.intermediate_dim))
@@ -45,6 +54,9 @@ class Resnet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x, t):
+        """
+        forward method of our Resnet
+        """
         if self.encode_t:
             t = self.embed(t)
         for block in self.blocks[:-1]:

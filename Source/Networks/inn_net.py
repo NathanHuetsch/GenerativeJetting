@@ -10,6 +10,11 @@ from scipy.stats import special_ortho_group
 import numpy as np
 import math
 
+"""
+The necessary code to build the INNs.
+Any questions are best asked to Theo. I have no clue.
+"""
+
 
 class CubicSplineBlock(InvertibleModule):
 

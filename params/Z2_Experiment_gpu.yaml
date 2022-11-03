@@ -1,5 +1,5 @@
 runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z2"
-run_name : "DDPM_3M_NoEncode_NoLoop"
+run_name : "DDPM_3M_2Encode_Scale5"
 redirect_console : True
 # #########
 # # Data: #
@@ -28,8 +28,9 @@ validate_every : 5
 # #################
 #
 model: DDPM
-encode_t : False
+encode_t : True
 encode_t_dim : 2
+encode_t_scale: 5
 n_blocks : 10
 intermediate_dim : 256
 layers_per_block : 5

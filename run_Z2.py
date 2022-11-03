@@ -7,6 +7,36 @@ import os
 import warnings
 warnings.filterwarnings("ignore")
 
+"""
+The *.py script that should be called from the *.sh shell script.
+There are several ways to call this script:
+
+1) The Standard way 
+Call this function and pass as single argument the path to the *.yaml file containing the experiment parameters.
+No flags have to be specified and the experiment will just run from the parameter *.yaml.
+Example:
+python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z2_Experiment_gpu.yaml
+
+2) The WarmStart way
+Call this function as pass a path to a warm start folder as warm_start_path flag. 
+In this case we do not need a path to a *.yaml parameter file. It is assumed that the warm start folder contains a
+file called "parameters.yaml". These will be read and used for the experiment.
+This is convenient if we want to continue a past experiment, as we will just load the parameters from that experiment.
+Example:
+python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z2/LongerAndBigger_TBD3038"
+
+3) The Overwrite way
+Can be combined with 2)
+Pass additional flags to overwrite specific parameters in the *.yaml parameter file. This is useful if we want to
+continue a past experiment, but change some of the parameters, but are too lazy do to it by hand.
+(Note: Not fully implemented for arbitray parameters yet)
+
+The most common use case for this is if we want to load a pretrained model and generate new samples and/or plots with it.
+In this case we can load the past experiment with 2) and overwrite the train parameter in it. 
+Example:
+python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z2/LongerAndBigger_TBD3038" --train=False --n_samples=1000000
+"""
+
 
 def define_flags():
     flags.DEFINE_string('warm_start_path', None, "Path to the pre-trained model folder")

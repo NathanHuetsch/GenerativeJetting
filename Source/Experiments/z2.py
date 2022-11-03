@@ -389,7 +389,7 @@ class Z2_Experiment(Experiment):
             n_samples = get(self.params, "n_samples", 1000000)
             print(f"generate_samples: Starting generation of {n_samples} samples")
             t0 = time.time()
-            self.samples = self.model.sample_n_parallel(n_samples)
+            self.samples = self.model.sample_n(n_samples)
             t1 = time.time()
             sampletime = t1 - t0
             self.params["sampletime"] = sampletime

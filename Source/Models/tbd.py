@@ -10,16 +10,26 @@ from torch.utils.tensorboard import SummaryWriter
 from Source.Models.ModelBase import GenerativeModel
 
 
-
 class TBD(GenerativeModel):
+    """
+     Class for Trajectory Based Diffusion
+     Inheriting from the GenerativeModel BaseClass
+    """
 
     def __init__(self, params):
         super().__init__(params)
 
     def build_net(self):
+        """
+        Build the Resnet
+        """
         return Resnet(self.params)
 
     def batch_loss(self, x):
+        """
+        Calculate batch loss as described by Peter
+        TODO Add some more documentation?
+        """
         t = torch.rand(x.size(0), 1, device=x.device)
         c = torch.cos(t * np.pi / 2)
         s = torch.sin(t * np.pi / 2)
@@ -32,7 +42,11 @@ class TBD(GenerativeModel):
         loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
         return loss
 
-    def sample_n_parallel(self, n_samples):
+    def sample_n(self, n_samples):
+        """
+        Generate n_samples new samples.
+        Start from Gaussian random noise and solve the reverse ODE to obtain samples
+        """
         self.eval()
 
         batch_size = get(self.params, "batch_size", 8192)

@@ -9,14 +9,44 @@ from Source.Networks.inn_net import build_INN
 
 
 class GenerativeModel(nn.Module):
+    """
+    Base Class for Generative Models to inherit from.
+    Children classes should overwrite the individual methods as needed.
+    Every child class MUST overwrite the methods:
 
+    def build_net(self): should register some NN architecture as self.net
+    def batch_loss(self, x): takes a batch of samples as input and returns the loss
+    def sample_n_parallel(self, n_samples): generates and returns n_samples new samples
+
+    See tbd.py for an example of child class
+
+    Structure:
+
+    __init__(params)      : Read in parameters and register the important ones
+    build_net()           : Create the NN and register it as self.net
+                            HAS TO BE OVERWRITTEN IN CHILD CLASS
+    prepare_training()    : Read in the appropriate parameters and prepare the model for training
+                            Currently this is called from run_training(), so it should not be called on its own
+    run_training()        : Run the actual training.
+                            Necessary parameters are read in and the training is performed.
+                            This calls on the methods train_one_epoch() and validate_one_epoch()
+    train_one_epoch()     : Performs one epoch of model training.
+                            This calls on the method batch_loss(x)
+    validate_one_epoch()  : Performs one epoch of validation.
+                            This calls on the method batch_loss(x)
+    batch_loss(x)         : Takes one batch of samples as input and returns the loss.
+                            HAS TO BE OVERWRITTEN IN CHILD CLASS
+    sample_n(n_samples)   : Generates and returns n_samples new samples as a numpy array
+                            HAS TO BE OVERWRITTEN IN CHILD CLASS
+    save()                : Saves the model and all relevant information. TODO
+    load()                : Loads a saved model and all relevant information. TODO
+    """
     def __init__(self, params):
         super().__init__()
         self.params = params
         self.device = get(self.params, "device", get_device())
         self.dim = self.params["dim"]
         self.net = self.build_net()
-        self.to(self.device)
 
     def build_net(self):
         pass
@@ -119,18 +149,18 @@ class GenerativeModel(nn.Module):
     def batch_loss(self, x):
         pass
 
-    def sample_n_parallel(self, n_samples):
+    def sample_n(self, n_samples):
         pass
 
     def save(self, epoch=""):
-        """Save the model, its optimizer and the test/train split, as well as the epoch"""
+        # Deprecated TOD0
         os.makedirs(self.doc.get_file("model", False), exist_ok=True)
         torch.save({"opt": self.optim.state_dict(),
                     "net": self.net.state_dict(),
                     "epoch": self.epoch}, self.doc.get_file(f"model/model{epoch}", False))
 
     def load(self, epoch=""):
-        """Load the model, its optimizer and the test/train split, as well as the epoch"""
+        # Deprecated TOD0
         name = self.doc.get_file(f"model/model{epoch}", False)
         state_dicts = torch.load(name, map_location=self.device)
         self.net.load_state_dict(state_dicts["net"])

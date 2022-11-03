@@ -66,7 +66,7 @@ class DDPM(GenerativeModel):
         loss = F.mse_loss(model_pred, noise)
         return loss
 
-    def sample_n_parallel(self, n_samples):
+    def sample_n(self, n_samples):
         batch_size = get(self.params, "batch_size", 8192)
         events = []
         for i in range(int(n_samples / batch_size) + 1):
