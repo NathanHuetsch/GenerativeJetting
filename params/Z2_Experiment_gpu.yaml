@@ -1,5 +1,5 @@
 runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z2"
-run_name : "DDPM_3M_2Encode_Scale5"
+run_name : "xyz"
 redirect_console : True
 # #########
 # # Data: #
@@ -19,7 +19,7 @@ lr : 1.e-4
 batch_size : 1024
 weight_decay : 0.0
 betas : [0.9, 0.99]
-n_epochs : 500
+n_epochs : 1
 validate: True
 validate_every : 5
 #

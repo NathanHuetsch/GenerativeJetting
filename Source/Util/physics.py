@@ -1,5 +1,11 @@
 import numpy as np
 
+"""
+Methods to do some physics calculations with the jet observables
+Code copy-pasted from Theo
+
+Currently only the EpppToPTPhiEta is used in this project
+"""
 
 def EpppToPTPhiEta(events, reduce_data, dim = 4, include_masses=False):
     pt = get_pt(events, dim)

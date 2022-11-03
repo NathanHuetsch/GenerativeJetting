@@ -1,3 +1,5 @@
+import os
+print(os.getcwd())
 from Source.Experiments import z2
 from Source.Util.util import load_params
 from absl import app
@@ -49,34 +51,46 @@ def define_flags():
 
 def main(argv):
 
+    # If warm_start_path is not specified, a path to a param *.yaml file is required
     if FLAGS.warm_start_path is None:
-        params = load_params(sys.argv)
+        params = load_params(sys.argv[1])
+    # If warm_start_path is specified, it is assumed that a paramfile.yaml is in that folder
     else:
         params = load_params(os.path.join(FLAGS.warm_start_path, "paramfile.yaml"))
         params["warm_start"] = True
         params["warm_start_path"] = FLAGS.warm_start_path
 
+    # If overwrite_param_path is specified, a paramfile is read in from that path.
+    # Parameters in the original paramfile are overwritten by those in the overwrite paramfile
     if FLAGS.overwrite_param_path is not None:
         overwrite_params = load_params(FLAGS.overwrite_param_path)
         params = params | overwrite_params
 
+    # Explicitly overwrite the train parameter
     if FLAGS.train is not None:
         params["train"] = FLAGS.train
 
+    # Explicitly overwrite the sample parameter
     if FLAGS.sample is not None:
         params["sample"] = FLAGS.sample
 
+    # Explicitly overwrite the n_samples parameter
     if FLAGS.n_samples is not None:
         params["n_samples"] = FLAGS.n_samples
 
+    # Explicitly overwrite the plot parameter
     if FLAGS.plot is not None:
         params["plot"] = FLAGS.plot
 
+    # Instantiate the experiment class
     experiment = z2.Z2_Experiment(params)
+    # Run the experiment
     experiment.full_run()
 
 
 if __name__ == '__main__':
+    # Read in the flags
     FLAGS = flags.FLAGS
     define_flags()
+    # Run the main program
     app.run(main)
