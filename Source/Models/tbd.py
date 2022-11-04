@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from scipy.integrate import solve_ivp
 from Source.Networks.resnet import Resnet
-from Source.Util.util import get_device, get
+from Source.Util.util import get
 from Source.Models.ModelBase import GenerativeModel
 
 
@@ -19,7 +19,7 @@ class TBD(GenerativeModel):
         """
         Build the Resnet
         """
-        return Resnet(self.params)
+        return Resnet(self.params).to(self.device)
 
     def batch_loss(self, x):
         """

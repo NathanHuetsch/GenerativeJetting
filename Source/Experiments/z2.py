@@ -87,6 +87,7 @@ class Z2_Experiment(Experiment):
             os.makedirs(self.out_dir)
             os.chdir(self.out_dir)
         self.params["out_dir"] = self.out_dir
+        save_params(self.params, "paramfile.yaml")
 
         # The "redirect_console" parameter controls weather or not we redirect console outputs and errors into text files
         # This is usefull when working on the cluster
@@ -168,7 +169,7 @@ class Z2_Experiment(Experiment):
         else:
             self.params["dim"] = len(self.channels)
             print(f"preprocess_data: channels {self.channels} specified. Ignoring dim")
-
+        self.params["channels"] = self.channels
         # Do the preprocessing
         # Currently using already preprocessed data is not implemented
         if not self.preprocess:
@@ -178,6 +179,10 @@ class Z2_Experiment(Experiment):
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s \
                 = preprocess(self.data_raw, self.channels)
+            self.params["data_mean"] = self.data_mean
+            self.params["data_std"] = self.data_std
+            self.params["data_u"] = self.data_u
+            self.params["data_s"] = self.data_s
             print("preprocess_data: Finished preprocessing")
         self.n_data = len(self.data)
         self.data_raw = undo_preprocessing(self.data, self.data_mean, self.data_std, self.data_u, self.data_s,
@@ -229,6 +234,8 @@ class Z2_Experiment(Experiment):
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         self.params["model_parameters"] = model_parameters
+        self.model.obs_names = self.obs_names
+        self.model.obs_ranges  = self.obs_ranges
         print(f"build_model: Built model {model}. Total number of parameters: {model_parameters}")
 
         # If "warm_start", load the model parameters from the specified directory.
@@ -401,6 +408,9 @@ class Z2_Experiment(Experiment):
                 self.samples = undo_preprocessing(self.samples,
                                                   self.data_mean, self.data_std, self.data_u, self.data_s,
                                                   self.channels, keep_all=True)
+
+            if get(self.params, "save_samples", False):
+                np.save("samples_final.npy", self.samples)
             print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
         else:
             print("generate_samples: sample set to False")
@@ -419,7 +429,7 @@ class Z2_Experiment(Experiment):
             # Transform the raw_data from (E, p_x, p_y, p_z) to (p_T, phi, eta, m)
             # self.data_raw = EpppToPTPhiEta(self.data_raw, reduce_data=False, include_masses=True)
             # Create a directory to save the plots
-            os.makedirs(f"plots_run{self.runs}", exist_ok=True)
+            os.makedirs(f"plots/run{self.runs}", exist_ok=True)
             self.plot_channels = get(self.params, "plot_channels", None)
 
             # Read in the "plot_channels" parameter, specifying for which observables we want a 1d histogram
@@ -432,7 +442,7 @@ class Z2_Experiment(Experiment):
             cut = int(self.n_data * (self.data_split[0] + self.data_split[1]))
 
             # Draw all 1d histograms into one PDF file
-            with PdfPages(f"plots_run{self.runs}/1d_histograms") as out:
+            with PdfPages(f"plots/run{self.runs}/1d_histograms") as out:
                 # Loop over the plot_channels
                 for i, channel in enumerate(self.plot_channels):
                     # Get the train data, test data and generated data for the channel
@@ -455,7 +465,7 @@ class Z2_Experiment(Experiment):
             plot_DeltaR = get(self.params, "plot_deltaR", True)
             if plot_DeltaR:
                 if all(c in self.channels for c in [9, 10, 13, 14]):
-                    file_name = f"plots_run{self.runs}/deltaR_j1_j2.pdf"
+                    file_name = f"plots/run{self.runs}/deltaR_j1_j2.pdf"
                     obs_name = "\Delta R_{j_1 j_2}"
                     obs_train = delta_r(self.data_raw[:cut])
                     obs_test = delta_r(self.data_raw[cut:])
@@ -474,7 +484,7 @@ class Z2_Experiment(Experiment):
             plot_Deta_Dphi = get(self.params, "plot_Deta_Dphi", True)
             if plot_Deta_Dphi:
                 if all(c in self.channels for c in [9, 10, 13, 14]):
-                    file_name = f'plots_run{self.runs}/deta_dphi.png'
+                    file_name = f'plots/run{self.runs}/deta_dphi.png'
                     plot_deta_dphi(file_name=file_name,
                                    data_train=self.data_raw[:cut],
                                    data_test =self.data_raw[cut:],

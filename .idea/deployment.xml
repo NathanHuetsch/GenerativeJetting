@@ -6,7 +6,7 @@
       <paths name="gpu07">
         <serverdata>
           <mappings>
-            <mapping deploy="/Diffusion" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/GenerativeJetting" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

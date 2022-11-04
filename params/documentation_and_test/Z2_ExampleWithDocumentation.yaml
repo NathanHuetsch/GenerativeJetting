@@ -46,7 +46,7 @@ intermediate_dim : 256                                        # Dimension of the
 # # Loading/saving: #
 # ###################
 warm_start : False                                            # Start from pretrained model?
-warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5internal_continue90419/model.pt"
+warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Example_run"
                                                               # Path to folder containing pretrained model as warm_start_path/models/checkpoint.pt
 # #############
 # # Sampling: #
