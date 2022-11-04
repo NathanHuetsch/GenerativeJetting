@@ -179,10 +179,6 @@ class Z2_Experiment(Experiment):
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s \
                 = preprocess(self.data_raw, self.channels)
-            self.params["data_mean"] = self.data_mean
-            self.params["data_std"] = self.data_std
-            self.params["data_u"] = self.data_u
-            self.params["data_s"] = self.data_s
             print("preprocess_data: Finished preprocessing")
         self.n_data = len(self.data)
         self.data_raw = undo_preprocessing(self.data, self.data_mean, self.data_std, self.data_u, self.data_s,
@@ -234,8 +230,6 @@ class Z2_Experiment(Experiment):
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         self.params["model_parameters"] = model_parameters
-        self.model.obs_names = self.obs_names
-        self.model.obs_ranges  = self.obs_ranges
         print(f"build_model: Built model {model}. Total number of parameters: {model_parameters}")
 
         # If "warm_start", load the model parameters from the specified directory.
@@ -251,6 +245,16 @@ class Z2_Experiment(Experiment):
         else:
             if not get(self.params, "train", True):
                 print("build_model: CARE !!! train set to False and warm_start set to False")
+
+        if get(self.params, "sample_periodically", False):
+            # The Model needs these values to make intermediate plots
+            # TODO: Can we make this nicer?
+            self.model.data_mean = self.data_mean
+            self.model.data_std = self.data_std
+            self.model.data_u = self.data_u
+            self.model.data_s = self.data_s
+            self.model.obs_names = self.obs_names
+            self.model.obs_ranges = self.obs_ranges
 
     def build_optimizer(self):
         """

@@ -19,5 +19,5 @@ source venv/bin/activate
 cd GenerativeJetting
 
 # Run the actual python script with necessary parameters
-python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z26c_INN.yaml
+python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z26c_TBD.yaml
 

@@ -78,17 +78,17 @@ class GenerativeModel(nn.Module):
             self.sample_every = get(self.params, "sample_every", 1)
             self.sample_every_n_samples = get(self.params, "sample_every_n_samples", 100000)
             self.data_train = undo_preprocessing(events=self.train_loader.dataset.detach().cpu().numpy(),
-                                                 events_mean=self.params["data_mean"],
-                                                 events_std=self.params["data_std"],
-                                                 u=self.params["data_u"],
-                                                 s=self.params["data_s"],
+                                                 events_mean=self.data_mean,
+                                                 events_std=self.data_std,
+                                                 u=self.data_u,
+                                                 s=self.data_s,
                                                  channels=self.params["channels"],
                                                  keep_all=True)
             self.data_test = undo_preprocessing(events=self.test_loader.dataset.detach().cpu().numpy(),
-                                                 events_mean=self.params["data_mean"],
-                                                 events_std=self.params["data_std"],
-                                                 u=self.params["data_u"],
-                                                 s=self.params["data_s"],
+                                                 events_mean=self.data_mean,
+                                                 events_std=self.data_std,
+                                                 u=self.data_u,
+                                                 s=self.data_s,
                                                  channels=self.params["channels"],
                                                  keep_all=True)
             print(f"train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every"
@@ -200,9 +200,9 @@ class GenerativeModel(nn.Module):
             # Loop over the plot_channels
             for i, channel in enumerate(self.params["channels"]):
                 # Get the train data, test data and generated data for the channel
-                obs_train = self.data_train[channel]
-                obs_test = self.data_test[channel]
-                obs_generated = samples[channel]
+                obs_train = self.data_train[:, channel]
+                obs_test = self.data_test[:, channel]
+                obs_generated = samples[:, channel]
                 # Get the name and the range of the observable
                 obs_name = self.obs_names[channel]
                 obs_range = self.obs_ranges[channel]

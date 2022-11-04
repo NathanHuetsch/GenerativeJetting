@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z26c"
-run_name : "INN_base"
+run_name : "DDPM_base"
 redirect_console : True
 # #########
 # # Data: #
@@ -25,9 +25,13 @@ batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 50
+n_epochs : 100
 validate: True
 validate_every : 5
+
+sample_periodically: True
+sample_every: 5
+sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
@@ -35,7 +39,7 @@ model: DDPM
 
 n_blocks : 10
 layers_per_block : 10
-intermediate_dim : 128
+intermediate_dim : 256
 
 # ###################
 # # Loading/saving: #
