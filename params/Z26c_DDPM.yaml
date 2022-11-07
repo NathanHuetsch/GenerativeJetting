@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z26c"
-run_name : "DDPM_base"
+run_name : "DDPM_100e"
 redirect_console : True
 # #########
 # # Data: #
@@ -30,7 +30,7 @@ validate: True
 validate_every : 5
 
 sample_periodically: True
-sample_every: 5
+sample_every: 10
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #

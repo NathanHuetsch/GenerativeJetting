@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z26c"
-run_name : "INN_base"
+run_name : "INN_100e"
 redirect_console : True
 # #########
 # # Data: #
@@ -30,7 +30,7 @@ validate: True
 validate_every : 5
 
 sample_periodically: True
-sample_every: 5
+sample_every: 10
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
@@ -39,7 +39,7 @@ model: INN
 
 n_blocks : 10
 layers_per_block : 10
-intermediate_dim : 128
+intermediate_dim : 256
 
 # ###################
 # # Loading/saving: #
