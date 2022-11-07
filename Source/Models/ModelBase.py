@@ -139,7 +139,7 @@ class GenerativeModel(nn.Module):
             loss_m = self.train_losses[-1000:].mean()
             loss_s = self.train_losses[-1000:].std()
 
-            if np.isfinite(loss.item()) and (abs(loss.item() - loss_m) / loss_s < 5 or len(self.train_losses_epoch) == 0):
+            if np.isfinite(loss.item()): # and (abs(loss.item() - loss_m) / loss_s < 5 or len(self.train_losses_epoch) == 0):
                 loss.backward()
                 self.optimizer.step()
                 train_losses = np.append(train_losses, loss.item())
@@ -186,7 +186,6 @@ class GenerativeModel(nn.Module):
     def sample_and_plot(self, n_samples):
         os.makedirs(f"plots/epoch{self.epoch}", exist_ok=True)
         samples = self.sample_n(n_samples)
-        print(samples.shape)
         samples = undo_preprocessing(events=samples,
                                      events_mean=self.data_mean,
                                      events_std=self.data_std,
@@ -194,7 +193,6 @@ class GenerativeModel(nn.Module):
                                      s=self.data_s,
                                      channels=self.params["channels"],
                                      keep_all=True)
-        print(samples.shape)
 
         with PdfPages(f"plots/epoch{self.epoch}/1d_histograms") as out:
             # Loop over the plot_channels
