@@ -63,9 +63,9 @@ class Z2_Experiment(Experiment):
         if self.warm_start:
             self.warm_start_path = get(self.params, "warm_start_path", None)
             assert self.warm_start_path is not None, \
-                    f"prepare_experiment: warm_start set to True, but warm_start_path not specified"
+                f"prepare_experiment: warm_start set to True, but warm_start_path not specified"
             assert os.path.exists(self.warm_start_path), \
-                    f"prepare_experiment: warm_start set to True, but warm_start_path {self.warm_start_path} does not exist"
+                f"prepare_experiment: warm_start set to True, but warm_start_path {self.warm_start_path} does not exist"
             self.out_dir = self.warm_start_path
             os.chdir(self.out_dir)
             print("prepare_experiment: Using warm_start_path as out_dir ", self.out_dir)
@@ -153,6 +153,7 @@ class Z2_Experiment(Experiment):
         self.preprocess = get(self.params, "preprocess", True)
         self.channels = get(self.params, "channels", None)
         self.dim = get(self.params, "dim", None)
+        self.fraction = get(self.params, "fraction", None)
         if self.channels is None and self.dim is None:
             print("preprocess_data: channels and dim not specified. Defaulting to 13 channels")
             self.dim = 13
@@ -178,8 +179,10 @@ class Z2_Experiment(Experiment):
             raise ValueError("preprocess_data: preprocess set to False. Not implemented properly")
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s \
-                = preprocess(self.data_raw, self.channels)
+                = preprocess(self.data_raw, self.channels, self.fraction)
             print("preprocess_data: Finished preprocessing")
+
+        print(f"preprocess_data: input shape is {self.data.shape}")
         self.n_data = len(self.data)
         self.data_raw = undo_preprocessing(self.data, self.data_mean, self.data_std, self.data_u, self.data_s,
                                            self.channels, keep_all=True)
@@ -283,7 +286,8 @@ class Z2_Experiment(Experiment):
                 weight_decay = get(self.params, "weight_decay", 0)
                 self.model.optimizer = \
                     Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
-                print(f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
+                print(
+                    f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
             else:
                 raise ValueError(f"build_optimizer: optimizer {optim} not implemented")
 
@@ -308,8 +312,8 @@ class Z2_Experiment(Experiment):
             # Read in the "batch_size" parameter and calculate the cuts between traindata, valdata and testdata
             # Define the loaders
             self.batch_size = get(self.params, "batch_size", 1024)
-            cut1 = int(self.n_data*self.data_split[0])
-            cut2 = int(self.n_data*(self.data_split[0]+self.data_split[1]))
+            cut1 = int(self.n_data * self.data_split[0])
+            cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
             self.model.train_loader = \
                 DataLoader(dataset=self.data[:cut1],
                            batch_size=self.batch_size,
@@ -322,7 +326,8 @@ class Z2_Experiment(Experiment):
                 DataLoader(dataset=self.data[cut2:],
                            batch_size=self.batch_size,
                            shuffle=True)
-            print(f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
+            print(
+                f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
         else:
             print("build_dataloaders: train set to False. Not building dataloaders")
 
@@ -351,7 +356,7 @@ class Z2_Experiment(Experiment):
             t0 = time.time()
             self.model.run_training()
             t1 = time.time()
-            traintime = t1-t0
+            traintime = t1 - t0
             self.params["traintime"] = traintime
             n_epochs = self.params["n_epochs"]
             print(f"train_model: Finished training {n_epochs} epochs after {traintime} seconds.")
@@ -479,7 +484,7 @@ class Z2_Experiment(Experiment):
                              obs_test=obs_test,
                              obs_predict=obs_generated,
                              name=obs_name,
-                             range=[0,8])
+                             range=[0, 8])
                 else:
                     print("make_plots: plot_deltaR ist set to True, but missing at least one required channel")
 
@@ -491,7 +496,7 @@ class Z2_Experiment(Experiment):
                     file_name = f'plots/run{self.runs}/deta_dphi.png'
                     plot_deta_dphi(file_name=file_name,
                                    data_train=self.data_raw[:cut],
-                                   data_test =self.data_raw[cut:],
+                                   data_test=self.data_raw[cut:],
                                    data_generated=self.samples[:])
                 else:
                     print("make_plots: plot_Deta_Dphi ist set to True, but missing at least one required channel")
@@ -504,12 +509,12 @@ class Z2_Experiment(Experiment):
         """
         The finish_up method just writes some additional information into the parameters and saves them in the out_dir
         """
-        self.params["runs"] = self.runs+1
+        self.params["runs"] = self.runs + 1
         self.params["datetime"] = str(datetime.now())
         self.params["experimenttime"] = time.time() - self.starttime
         save_params(self.params, "paramfile.yaml")
         print("finish_up: Finished experiment.")
 
-        if get(self.params, "redirect_output", True):
+        if get(self.params, "redirect_console", True):
             sys.stdout.close()
             sys.stderr.close()
