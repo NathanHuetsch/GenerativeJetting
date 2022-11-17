@@ -26,7 +26,7 @@ validate_every : 5
 # # Architecture: #
 # #################
 #
-model: INN
+model: DDPM
 encode_t : True
 n_blocks : 10
 intermediate_dim : 128
@@ -54,9 +54,3 @@ checkpoint_save_overwrite : True            # Overwrite each checkpoint with the
 
 plot : True
 n_samples : 10000
-save_predicted: False
-plot_2d_hist: True
-plot_losses: True
-plot_observables: True
-plot_mse_quantiles: False
-plot_latent: False

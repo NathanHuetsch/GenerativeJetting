@@ -228,9 +228,9 @@ class Z2_Experiment(Experiment):
             raise ValueError(f"build_model: model class {model} not recognised. Use INN, TBD or DDPM")
 
         # Keep track of the total number of trainable model parameters
-        model_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-        self.params["model_parameters"] = model_parameters
-        print(f"build_model: Built model {model}. Total number of parameters: {model_parameters}")
+        #model_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        #self.params["model_parameters"] = model_parameters
+        print(f"build_model: Built model {model}")#. Total number of parameters: {model_parameters}")
 
         # If "warm_start", load the model parameters from the specified directory.
         # It is expected that they are found under warm_start_dir/models/checkpoint
@@ -335,9 +335,6 @@ class Z2_Experiment(Experiment):
         New model classes implemented in this framework must have a run_training() method.
         See documentation of ModelBase class for more guidelines on how to implement new model classes.
 
-        TODO: Implement sample_every
-        TODO: Implement force_checkpoint_every
-
         Overwrite this method if a different way of performing the training is needed.
         """
 
@@ -413,9 +410,13 @@ class Z2_Experiment(Experiment):
                                                   self.data_mean, self.data_std, self.data_u, self.data_s,
                                                   self.channels, keep_all=True)
 
-            if get(self.params, "save_samples", False):
-                np.save("samples_final.npy", self.samples)
             print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+
+            save_sample = get(self.params, "save_sample", False)
+            if save_sample:
+                os.makedirs("samples", exist_ok=True)
+                np.save(f"samples/run{self.runs}.npy", self.samples)
+
         else:
             print("generate_samples: sample set to False")
 
@@ -510,6 +511,6 @@ class Z2_Experiment(Experiment):
         save_params(self.params, "paramfile.yaml")
         print("finish_up: Finished experiment.")
 
-        if get(self.params, "redirect_output", True):
+        if get(self.params, "redirect_console", True):
             sys.stdout.close()
             sys.stderr.close()

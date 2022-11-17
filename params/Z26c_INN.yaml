@@ -2,8 +2,8 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z26c"
-run_name : "INN_100e"
-redirect_console : True
+run_name : "Test_q_gpu"
+redirect_console : False
 # #########
 # # Data: #
 # #########
@@ -17,7 +17,7 @@ channels : [8, 9, 10, 12, 13, 14]
 # ##############
 train: True
 log: True
-data_split: [0.6, 0.05, 0.35]
+data_split: [0.5, 0.05, 0.45]
 
 optimizer: Adam
 lr : 1.e-4
@@ -25,11 +25,11 @@ batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 100
+n_epochs : 1
 validate: True
-validate_every : 5
+validate_every : 20
 
-sample_periodically: True
+sample_periodically: False
 sample_every: 10
 sample_every_n_samples: 100000
 # #################
@@ -37,8 +37,8 @@ sample_every_n_samples: 100000
 # #################
 model: INN
 
-n_blocks : 10
-layers_per_block : 10
+n_blocks : 1 #5
+layers_per_block : 1 #0
 intermediate_dim : 256
 
 # ###################

@@ -91,7 +91,7 @@ class GenerativeModel(nn.Module):
                                                  s=self.data_s,
                                                  channels=self.params["channels"],
                                                  keep_all=True)
-            print(f"train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every"
+            print(f"train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every " 
                   f"{self.sample_every} epochs. This may significantly slow down training!")
 
         self.log = get(self.params, "log", True)
