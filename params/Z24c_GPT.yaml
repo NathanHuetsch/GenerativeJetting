@@ -1,0 +1,67 @@
+# #########
+# # General: #
+# #########
+runs_dir : "/media/jspinner/shared/Studium/project1/GenerativeJetting/runs"
+run_name : "GPT_Visualize"
+redirect_console : False
+# #########
+# # Data: #
+# #########
+data_path : "/media/jspinner/shared/Studium/project1/data/Z_2.npy"
+data_type: np
+preprocess : True
+#channels : [9, 10, 13, 14]
+dim : 4
+n_bins : 200
+# ##############
+# # Training:  #
+# ##############
+train: True
+log: True
+data_split: [0.6, 0.05, 0.35]
+
+optimizer: Adam
+lr : 1.e-4
+batch_size : 2048
+weight_decay : 0.0
+betas : [0.9, 0.99]
+
+n_epochs : 1
+validate: True
+validate_every : 5
+
+sample_periodically: False
+sample_every: 1
+sample_every_n_samples: 100000
+# #################
+# # Architecture: #
+# #################
+model: GPT
+
+n_blocks : 1
+n_head : 1
+intermediate_dim : 192
+intermediate_fac : 4
+
+# ###################
+# # Loading/saving: #
+# ###################
+warm_start : False
+warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5internal_continue90419/model.pt"
+
+# #############
+# # Sampling: #
+# #############
+sample: True
+load_best_checkpoint: True
+n_samples : 1000
+
+# #############
+# # Plotting: #
+# #############
+plot : True
+#plot_channels : [9, 10, 13, 14]
+#plot_deltaR: True
+#plot_Deta_Dphi: True
+
+

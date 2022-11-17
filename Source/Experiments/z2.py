@@ -4,10 +4,12 @@ from torch.utils.data import DataLoader
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
+from Source.Models.gpt import GPTwrapper
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
 from Source.Util.util import get_device, save_params, get
+from Source.Util.discretize import create_bins, discretize_wrapper
 from Source.Experiments.ExperimentBase import Experiment
 import time
 from datetime import datetime
@@ -33,6 +35,11 @@ class Z2_Experiment(Experiment):
         super().__init__(params)
         self.params = params
         self.device = get(self.params, "device", get_device())
+
+        # Read in the model class. Raise an error if it is not specified
+        self.modelname = get(self.params, "model", None)
+        if self.modelname is None:
+            raise ValueError("build_model: model not specified")
 
         # Names of the observables for plotting
         self.obs_names = ["p_{T,l1}", "\phi_{l1}", "\eta_{l1}", "\mu_{l1}",
@@ -187,11 +194,16 @@ class Z2_Experiment(Experiment):
         self.data_raw = undo_preprocessing(self.data, self.data_mean, self.data_std, self.data_u, self.data_s,
                                            self.channels, keep_all=True)
 
-        # Make sure the data is a torch.Tensor and move it to device
         if not isinstance(self.data, torch.Tensor):
             self.data = torch.from_numpy(self.data)
-        self.data = self.data.to(self.device).float()
-        print(f"preprocess_data: Moved data to {self.data.device}")
+        # do discretization for GPT-style models
+        if self.modelname == "GPT":
+            n_bins = self.params["n_bins"]
+            assert n_bins is not None, "preprocess_data: n_bins not specified"
+            batchsize_discretize = 100000
+            
+            for i in range(self.data.size(1)):
+                self.data[:, i] = discretize_wrapper(self.data, i, n_bins, batchsize_discretize)
 
     def build_model(self):
         """
@@ -206,34 +218,36 @@ class Z2_Experiment(Experiment):
         This method should place the model under self.model
         """
 
-        # Read in the model class and try to build the model. Raise an error if it is not specified
-        model = get(self.params, "model", None)
-        if model is None:
-            raise ValueError("build_model: model not specified")
         # Read in the parameters required to build the model. Raise an error if one of them is not specified
         n_blocks = get(self.params, "n_blocks", None)
         assert n_blocks is not None, "build_model: n_blocks not specified"
-        layers_per_block = get(self.params, "layers_per_block", None)
-        assert layers_per_block is not None, "build_model: layers_per_block not specified"
         intermediate_dim = get(self.params, "intermediate_dim", None)
         assert intermediate_dim is not None, "build_model: intermediate_dim not specified"
-        encode_t = get(self.params, "encode_t", False)
-        print(f"build_model: Trying to build model {model} "
-              f"with n_blocks {n_blocks}, layers_per_block {layers_per_block}, "
-              f"intermediate dim {intermediate_dim} and encode_t {encode_t}")
-        if model == "INN":
-            self.model = INN(self.params)
-        elif model == "TBD":
-            self.model = TBD(self.params)
-        elif model == "DDPM":
-            self.model = DDPM(self.params)
+        if (self.modelname == "INN" or self.modelname == "TBD" or self.modelname == "DDPM"):
+            layers_per_block = get(self.params, "layers_per_block", None)
+            assert layers_per_block is not None, "build_model: layers_per_block not specified"
+            encode_t = get(self.params, "encode_t", False)
+            print(f"build_model: Trying to build model {self.model} "
+                  f"with n_blocks {n_blocks}, layers_per_block {layers_per_block}, "
+                  f"intermediate dim {intermediate_dim} and encode_t {encode_t}")
+            if self.modelname == "INN":
+                self.modelname = INN(self.params)
+            elif self.modelname == "TBD":
+                self.modelname = TBD(self.params)
+            elif self.modelname == "DDPM":
+                self.modelname = DDPM(self.params)
+        elif self.modelname == "GPT":
+            self.params["vocab_size"] = 2*self.params["n_bins"]
+            self.params["block_size"] = self.data.size(1)-1
+            
+            self.model = GPTwrapper(self.params)
         else:
-            raise ValueError(f"build_model: model class {model} not recognised. Use INN, TBD or DDPM")
+            raise ValueError(f"build_model: model class {self.modelname} not recognised. Use INN, TBD, DDPM or GPT")
 
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         self.params["model_parameters"] = model_parameters
-        print(f"build_model: Built model {model}. Total number of parameters: {model_parameters}")
+        print(f"build_model: Built model {self.modelname}. Total number of parameters: {model_parameters}")
 
         # If "warm_start", load the model parameters from the specified directory.
         # It is expected that they are found under warm_start_dir/models/checkpoint
@@ -303,6 +317,14 @@ class Z2_Experiment(Experiment):
         This method should place the loaders under
         self.model.train_loader, self.model.val_loader and self.model.test_loader respectively
         """
+
+        # Make sure the data is a torch.Tensor of correct type and move it to device
+        if self.modelname == "GPT":
+            self.data = self.data.long()
+        else:
+            self.data = self.data.float()
+        self.data = self.data.to(self.device)
+        print(f"preprocess_data: Moved data to {self.data.device}")
 
         # Read in the "train" parameter. If it is set to True, build the dataloaders, otherwise skip it.
         train = get(self.params, "train", True)
@@ -406,10 +428,25 @@ class Z2_Experiment(Experiment):
             n_samples = get(self.params, "n_samples", 1000000)
             print(f"generate_samples: Starting generation of {n_samples} samples")
             t0 = time.time()
-            self.samples = self.model.sample_n(n_samples)
+            if self.modelname == "GPT":
+                self.samples = self.model.sample_n(n_samples, self.data)
+            else:
+                self.samples = self.model.sample_n(n_samples)
             t1 = time.time()
             sampletime = t1 - t0
             self.params["sampletime"] = sampletime
+
+            #undo discretization
+            if self.modelname == "GPT":
+                events = np.zeros_like(self.samples, dtype="float")
+                n_bins = self.params["n_bins"]
+                for i in range(self.data.size(1)):
+                    bin_means = create_bins(self.data[:, i].cpu().numpy(), n_bins)
+                    nDiff = 0
+                    if(i%2==1): #do this better
+                        nDiff=1
+                    events[:,i] = bin_means[np.clip(self.samples[:, i] - nDiff * n_bins, 0, n_bins-1)]
+                self.samples = events  
 
             # Undo the preprocessing of the samples
             # TODO: Currently they are mapped back to 16dim for this. Could be made more efficient
