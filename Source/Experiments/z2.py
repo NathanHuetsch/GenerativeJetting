@@ -428,10 +428,7 @@ class Z2_Experiment(Experiment):
             n_samples = get(self.params, "n_samples", 1000000)
             print(f"generate_samples: Starting generation of {n_samples} samples")
             t0 = time.time()
-            if self.modelname == "GPT":
-                self.samples = self.model.sample_n(n_samples, self.data)
-            else:
-                self.samples = self.model.sample_n(n_samples)
+            self.samples = np.concatenate([self.model.sample_n(n_samples//200) for _ in range(200)], 0)
             t1 = time.time()
             sampletime = t1 - t0
             self.params["sampletime"] = sampletime

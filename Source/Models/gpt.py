@@ -33,12 +33,13 @@ class GPTwrapper(GenerativeModel):
         return loss
 
     
-    def sample_n(self, n_samples, data):
+    def sample_n(self, n_samples):
         """
         Event generation for autoregressive model
         TBD: Extension by start-of-sequence token
         """
         self.eval()
+        data = self.train_loader.dataset
 
         idx = data[torch.randperm(len(data[:,0]))[:n_samples]][:, [0]]
 
