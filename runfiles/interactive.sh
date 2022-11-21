@@ -6,4 +6,4 @@
 
 export CUDA_VISIBLE_DEVICES=$(cat $PBS_GPUFILE | sed s/.*-gpu// )
 export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/lib/python3.9/site-packages
-
+export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/GenerativeJetting
