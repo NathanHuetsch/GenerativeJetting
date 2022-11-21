@@ -68,7 +68,7 @@ class Z2_Experiment(Experiment):
                     f"prepare_experiment: warm_start set to True, but warm_start_path {self.warm_start_path} does not exist"
             self.out_dir = self.warm_start_path
             os.chdir(self.out_dir)
-            print("prepare_experiment: Using warm_start_path as out_dir ", self.out_dir)
+            print("prepare_experiment: Using warm_start_path as out_dir ", self.out_dir, flush=True)
 
         # If we start fresh, we read in the "runs_dir" and "run_name" parameters and set up an out_dir
         # All out_dir names get a random number added to avoid unintentionally overwriting old experiments
@@ -76,12 +76,12 @@ class Z2_Experiment(Experiment):
             runs_dir = get(self.params, "runs_dir", None)
             if runs_dir is None:
                 runs_dir = os.path.join(os.getcwd(), "runs")
-                print("prepare_experiment: runs_dir not specified. Working in ", runs_dir)
+                print("prepare_experiment: runs_dir not specified. Working in ", runs_dir, flush=True)
             run_name = get(self.params, "run_name", None)
             rnd_number = np.random.randint(low=1000, high=9999)
             if run_name is None:
                 self.out_dir = os.path.join(runs_dir, str(rnd_number))
-                print("prepare_experiment: run_name not specified. Using random number")
+                print("prepare_experiment: run_name not specified. Using random number", flush=True)
             else:
                 self.out_dir = os.path.join(runs_dir, run_name + str(rnd_number))
             os.makedirs(self.out_dir)
@@ -94,10 +94,10 @@ class Z2_Experiment(Experiment):
         if get(self.params, "redirect_console", True):
             sys.stdout = open("stdout.txt", "w")
             sys.stderr = open("stderr.txt", "w")
-            print(f"prepare_experiment: Redirecting console output to out_dir")
+            print(f"prepare_experiment: Redirecting console output to out_dir", flush=True)
 
-        print("prepare_experiment: Using out_dir ", self.out_dir)
-        print(f"prepare_experiment: Using device {self.device}")
+        print("prepare_experiment: Using out_dir ", self.out_dir, flush=True)
+        print(f"prepare_experiment: Using device {self.device}", flush=True)
 
     def load_data(self):
         """
@@ -118,10 +118,10 @@ class Z2_Experiment(Experiment):
         data_type = get(self.params, "data_type", "np")
         if data_type == "np":
             self.data_raw = np.load(data_path)
-            print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
+            print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path, flush=True)
         elif data_type == "torch":
             self.data_raw = torch.load(data_path)
-            print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
+            print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path, flush=True)
         elif data_type == "h5":
             data_path_internal = get(self.params, "data_path_internal", None)
             if data_path_internal is not None:
@@ -154,32 +154,32 @@ class Z2_Experiment(Experiment):
         self.channels = get(self.params, "channels", None)
         self.dim = get(self.params, "dim", None)
         if self.channels is None and self.dim is None:
-            print("preprocess_data: channels and dim not specified. Defaulting to 13 channels")
+            print("preprocess_data: channels and dim not specified. Defaulting to 13 channels", flush=True)
             self.dim = 13
             self.channels = np.array([i for i in range(self.data_raw.shape[1]) if i not in [1, 3, 7]])
             self.params["dim"] = len(self.channels)
         elif self.channels is None and self.dim == 4:
-            print("preprocess_data: channels not specified and dim=4. Using [9,10,13,14]")
+            print("preprocess_data: channels not specified and dim=4. Using [9,10,13,14]", flush=True)
             self.channels = [9, 10, 13, 14]
         elif self.channels is None and self.dim == 6:
-            print("preprocess_data: channels not specified and dim=6. Using [8,9,10,12,13,14]")
+            print("preprocess_data: channels not specified and dim=6. Using [8,9,10,12,13,14]", flush=True)
             self.channels = [8, 9, 10, 12, 13, 14]
         elif self.channels is None:
             raise ValueError(f"preprocess: channels not specified and dim is not 4,6,None")
         else:
             self.params["dim"] = len(self.channels)
-            print(f"preprocess_data: channels {self.channels} specified. Ignoring dim")
+            print(f"preprocess_data: channels {self.channels} specified. Ignoring dim", flush=True)
         self.params["channels"] = self.channels
         # Do the preprocessing
         # Currently using already preprocessed data is not implemented
         if not self.preprocess:
-            print("preprocess_data: preprocess set to False")
+            print("preprocess_data: preprocess set to False", flush=True)
             self.data = self.data_raw[:, self.channels]
             raise ValueError("preprocess_data: preprocess set to False. Not implemented properly")
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s \
                 = preprocess(self.data_raw, self.channels)
-            print("preprocess_data: Finished preprocessing")
+            print("preprocess_data: Finished preprocessing", flush=True)
         self.n_data = len(self.data)
         self.data_raw = undo_preprocessing(self.data, self.data_mean, self.data_std, self.data_u, self.data_s,
                                            self.channels, keep_all=True)
@@ -188,7 +188,7 @@ class Z2_Experiment(Experiment):
         if not isinstance(self.data, torch.Tensor):
             self.data = torch.from_numpy(self.data)
         self.data = self.data.to(self.device).float()
-        print(f"preprocess_data: Moved data to {self.data.device}")
+        print(f"preprocess_data: Moved data to {self.data.device}", flush=True)
 
     def build_model(self):
         """
@@ -217,7 +217,7 @@ class Z2_Experiment(Experiment):
         encode_t = get(self.params, "encode_t", False)
         print(f"build_model: Trying to build model {model} "
               f"with n_blocks {n_blocks}, layers_per_block {layers_per_block}, "
-              f"intermediate dim {intermediate_dim} and encode_t {encode_t}")
+              f"intermediate dim {intermediate_dim} and encode_t {encode_t}", flush=True)
         if model == "INN":
             self.model = INN(self.params)
         elif model == "TBD":
@@ -230,7 +230,7 @@ class Z2_Experiment(Experiment):
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         self.params["model_parameters"] = model_parameters
-        print(f"build_model: Built model {model}. Total number of parameters: {model_parameters}")
+        print(f"build_model: Built model {model}. Total number of parameters: {model_parameters}", flush=True)
 
         # If "warm_start", load the model parameters from the specified directory.
         # It is expected that they are found under warm_start_dir/models/checkpoint
@@ -241,10 +241,10 @@ class Z2_Experiment(Experiment):
                 raise ValueError(f"build_model: cannot load model for warm_start")
 
             self.model.load_state_dict(state_dict)
-            print(f"build_model: Loaded state_dict from warm_start_path {self.warm_start_path}")
+            print(f"build_model: Loaded state_dict from warm_start_path {self.warm_start_path}", flush=True)
         else:
             if not get(self.params, "train", True):
-                print("build_model: CARE !!! train set to False and warm_start set to False")
+                print("build_model: CARE !!! train set to False and warm_start set to False", flush=True)
 
         if get(self.params, "sample_periodically", False):
             # The Model needs these values to make intermediate plots
@@ -275,7 +275,7 @@ class Z2_Experiment(Experiment):
             optim = get(self.params, "optimizer", None)
             if optim is None:
                 optim = "Adam"
-                print(f"build_optimizer: optimizer not specified. Defaulting to {optim}")
+                print(f"build_optimizer: optimizer not specified. Defaulting to {optim}", flush=True)
 
             if optim == "Adam":
                 lr = get(self.params, "lr", 0.0001)
@@ -283,12 +283,12 @@ class Z2_Experiment(Experiment):
                 weight_decay = get(self.params, "weight_decay", 0)
                 self.model.optimizer = \
                     Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
-                print(f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
+                print(f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}", flush=True)
             else:
                 raise ValueError(f"build_optimizer: optimizer {optim} not implemented")
 
         else:
-            print("build_optimizer: train set to False. Not building optimizer")
+            print("build_optimizer: train set to False. Not building optimizer", flush=True)
 
     def build_dataloaders(self):
         """
@@ -322,9 +322,9 @@ class Z2_Experiment(Experiment):
                 DataLoader(dataset=self.data[cut2:],
                            batch_size=self.batch_size,
                            shuffle=True)
-            print(f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
+            print(f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}", flush=True)
         else:
-            print("build_dataloaders: train set to False. Not building dataloaders")
+            print("build_dataloaders: train set to False. Not building dataloaders", flush=True)
 
     def train_model(self):
         """
@@ -354,12 +354,12 @@ class Z2_Experiment(Experiment):
             traintime = t1-t0
             self.params["traintime"] = traintime
             n_epochs = self.params["n_epochs"]
-            print(f"train_model: Finished training {n_epochs} epochs after {traintime} seconds.")
+            print(f"train_model: Finished training {n_epochs} epochs after {traintime} seconds.", flush=True)
 
             if get(self.params, "validate", True):
                 best_val_loss = self.params["best_val_loss"]
                 best_val_epoch = self.params["best_val_epoch"]
-                print(f"train_model: Best val_loss {best_val_loss} at epoch {best_val_epoch}")
+                print(f"train_model: Best val_loss {best_val_loss} at epoch {best_val_epoch}", flush=True)
 
             # Save the final model. Update the total amount of training epochs the model has been trained for
             torch.save(self.model.state_dict(), f"models/model_run{self.runs}.pt")
@@ -367,8 +367,8 @@ class Z2_Experiment(Experiment):
             self.params["total_epochs"] = self.total_epochs
 
         else:
-            print("train_model: train set to False. Not training")
-        print(f"train_model: Model has been trained for a total of {self.total_epochs} epochs")
+            print("train_model: train set to False. Not training", flush=True)
+        print(f"train_model: Model has been trained for a total of {self.total_epochs} epochs", flush=True)
 
     def generate_samples(self):
         """
@@ -394,12 +394,12 @@ class Z2_Experiment(Experiment):
                     state_dict = torch.load(self.out_dir + "/models/checkpoint.pt", map_location=self.device)
                     self.model.load_state_dict(state_dict)
                 except Exception:
-                    print(f"generate_samples: cannot load best checkpoint. Sampling with current model")
+                    print(f"generate_samples: cannot load best checkpoint. Sampling with current model", flush=True)
 
             # Read in the "n_samples" parameter specifying how many samples to generate
             # Call the model.sample_n_parallel(n_samples) method to perform the sampling
             n_samples = get(self.params, "n_samples", 1000000)
-            print(f"generate_samples: Starting generation of {n_samples} samples")
+            print(f"generate_samples: Starting generation of {n_samples} samples", flush=True)
             t0 = time.time()
             self.samples = self.model.sample_n(n_samples)
             t1 = time.time()
@@ -415,9 +415,9 @@ class Z2_Experiment(Experiment):
 
             if get(self.params, "save_samples", False):
                 np.save("samples_final.npy", self.samples)
-            print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+            print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds", flush=True)
         else:
-            print("generate_samples: sample set to False")
+            print("generate_samples: sample set to False", flush=True)
 
     def make_plots(self):
         """
@@ -440,7 +440,7 @@ class Z2_Experiment(Experiment):
             # Default to all observables if not specified
             if self.plot_channels is None:
                 self.plot_channels = self.channels
-                print(f"make_plots: plot_channels not specified. Defaulting to all channels {self.channels}")
+                print(f"make_plots: plot_channels not specified. Defaulting to all channels {self.channels}", flush=True)
 
             # The cut between train and test data
             cut = int(self.n_data * (self.data_split[0] + self.data_split[1]))
@@ -481,7 +481,7 @@ class Z2_Experiment(Experiment):
                              name=obs_name,
                              range=[0,8])
                 else:
-                    print("make_plots: plot_deltaR ist set to True, but missing at least one required channel")
+                    print("make_plots: plot_deltaR ist set to True, but missing at least one required channel", flush=True)
 
             # Draw a 2d histogram DeltaEta vs DeltaPhi for the two jets
             # This requires that the channels 9,10,13,14 where part of the experiment
@@ -494,11 +494,11 @@ class Z2_Experiment(Experiment):
                                    data_test =self.data_raw[cut:],
                                    data_generated=self.samples[:])
                 else:
-                    print("make_plots: plot_Deta_Dphi ist set to True, but missing at least one required channel")
+                    print("make_plots: plot_Deta_Dphi ist set to True, but missing at least one required channel", flush=True)
 
-            print("make_lots: Finished making plots")
+            print("make_lots: Finished making plots", flush=True)
         else:
-            print("make_plots: plot set to False")
+            print("make_plots: plot set to False", flush=True)
 
     def finish_up(self):
         """
@@ -508,8 +508,8 @@ class Z2_Experiment(Experiment):
         self.params["datetime"] = str(datetime.now())
         self.params["experimenttime"] = time.time() - self.starttime
         save_params(self.params, "paramfile.yaml")
-        print("finish_up: Finished experiment.")
+        print("finish_up: Finished experiment.", flush=True)
 
-        if get(self.params, "redirect_output", True):
+        if get(self.params, "redirect_console", True):
             sys.stdout.close()
             sys.stderr.close()

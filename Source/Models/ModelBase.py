@@ -55,7 +55,7 @@ class GenerativeModel(nn.Module):
         pass
 
     def prepare_training(self):
-        print("train_model: Preparing model training")
+        print("train_model: Preparing model training", flush=True)
         self.train_losses = np.array([])
         self.train_losses_epoch = np.array([])
         self.n_trainbatches = len(self.train_loader)
@@ -69,9 +69,9 @@ class GenerativeModel(nn.Module):
             self.best_val_loss = get(self.params, "best_val_loss", 1e30)
             self.best_val_epoch = get(self.params, "best_val_loss", 0)
             self.no_improvements = get(self.params, "no_improvements", 0)
-            print(f"train_model: validate set to True. Validating every {self.validate_every} epochs")
+            print(f"train_model: validate set to True. Validating every {self.validate_every} epochs", flush=True)
         else:
-            print("train_model: validate set to False. No checkpoints will be created")
+            print("train_model: validate set to False. No checkpoints will be created", flush=True)
 
         self.sample_periodically = get(self.params, "sample_periodically", False)
         if self.sample_periodically:
@@ -92,23 +92,23 @@ class GenerativeModel(nn.Module):
                                                  channels=self.params["channels"],
                                                  keep_all=True)
             print(f"train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every"
-                  f"{self.sample_every} epochs. This may significantly slow down training!")
+                  f"{self.sample_every} epochs. This may significantly slow down training!", flush=True)
 
         self.log = get(self.params, "log", True)
         if self.log:
             log_dir = os.path.join(self.params["out_dir"], "logs")
             self.logger = SummaryWriter(log_dir)
-            print(f"train_model: Logging to log_dir {log_dir}")
+            print(f"train_model: Logging to log_dir {log_dir}", flush=True)
         else:
-            print("train_model: log set to False. No logs will be written")
+            print("train_model: log set to False. No logs will be written", flush=True)
 
     def run_training(self):
 
         self.prepare_training()
         n_epochs = get(self.params, "n_epochs", 100)
         past_epochs = get(self.params, "total_epochs", 0)
-        print(f"train_model: Model has been trained for {past_epochs} epochs before.")
-        print(f"train_model: Beginning training. n_epochs set to {n_epochs}")
+        print(f"train_model: Model has been trained for {past_epochs} epochs before.", flush=True)
+        print(f"train_model: Beginning training. n_epochs set to {n_epochs}", flush=True)
         for e in range(n_epochs):
             self.epoch = past_epochs + e
             self.train()
@@ -146,7 +146,7 @@ class GenerativeModel(nn.Module):
                 if self.log:
                     self.logger.add_scalar("train_losses", train_losses[-1], self.epoch*self.n_trainbatches + batch_id)
             else:
-                print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}")
+                print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}", flush=True)
 
         self.train_losses_epoch = np.append(self.train_losses_epoch, train_losses.mean())
         self.train_losses = np.concatenate([self.train_losses, train_losses], axis=0)
@@ -165,7 +165,7 @@ class GenerativeModel(nn.Module):
         self.val_losses_epoch = np.append(self.val_losses_epoch, val_losses.mean())
         if self.log:
             self.logger.add_scalar("val_losses_epoch", self.val_losses_epoch[-1], int(self.epoch/self.validate_every))
-        print(f"train_model: Validated after epoch {self.epoch}. Current val_loss is {val_losses.mean()}")
+        print(f"train_model: Validated after epoch {self.epoch}. Current val_loss is {val_losses.mean()}", flush=True)
         if val_losses.mean() < self.best_val_loss:
             self.no_improvements = 0
             self.best_val_epoch = self.epoch
@@ -175,7 +175,7 @@ class GenerativeModel(nn.Module):
             torch.save(self.state_dict(), f"models/checkpoint_val{len(self.val_losses_epoch)}.pt")
         else:
             self.no_improvements = self.no_improvements + 1
-            print(f"train_model: val_loss has not improved for {self.no_improvements} consecutive validations")
+            print(f"train_model: val_loss has not improved for {self.no_improvements} consecutive validations", flush=True)
 
     def batch_loss(self, x):
         pass
@@ -248,7 +248,7 @@ class GenerativeModel(nn.Module):
             self.epoch = state_dicts["epoch"]
         except:
             self.epoch = 0
-            print(f"Warning: Epoch number not provided in save file, setting to {self.epoch}")
+            print(f"Warning: Epoch number not provided in save file, setting to {self.epoch}", flush=True)
         try:
             self.optim.load_state_dict(state_dicts["opt"])
         except ValueError as e:
