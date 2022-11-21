@@ -5,8 +5,8 @@
 # -l determines the required computational ressources
 # -d determines the directory to jump into
 
-#PBS -q a30
-#PBS -l nodes=1:ppn=1:gpus=1
+#PBS -q gshort
+#PBS -l nodes=1:ppn=1:gpus=1:gshqort
 #PBS -l walltime=40:00:00
 #PBS -d /remote/gpu07/huetsch
 #PBS -o output.txt

@@ -68,7 +68,7 @@ class Z2_Experiment(Experiment):
                     f"prepare_experiment: warm_start set to True, but warm_start_path {self.warm_start_path} does not exist"
             self.out_dir = self.warm_start_path
             os.chdir(self.out_dir)
-            print("prepare_experiment: Using warm_start_path as out_dir ", self.out_dir)
+            print("prepare_experiment: Using warm_start_path as out_dir ", self.out_dir, flush=True)
 
         # If we start fresh, we read in the "runs_dir" and "run_name" parameters and set up an out_dir
         # All out_dir names get a random number added to avoid unintentionally overwriting old experiments
@@ -97,7 +97,7 @@ class Z2_Experiment(Experiment):
             print(f"prepare_experiment: Redirecting console output to out_dir")
 
         print("prepare_experiment: Using out_dir ", self.out_dir)
-        print(f"prepare_experiment: Using device {self.device}")
+        print(f"prepare_experiment: Using device {self.device}", flush=True)
 
     def load_data(self):
         """
