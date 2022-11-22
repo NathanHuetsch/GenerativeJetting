@@ -7,12 +7,19 @@ Code based on Theos implementation but somewhat changed
 """
 
 
-def preprocess(events_four_vector, channels=None):
+def preprocess(events_four_vector, channels=None, fraction=None):
     """
     :param events_four_vector: the data as a numpy array. Assumed to be of shape [* , 16]
     :param channels: a list of channels we want to keep
+    :param fraction: fraction of data kept
     :return: the preprocessed data and some statistics necessary to reproduce the original data
     """
+
+    # keep only fraction of dataset to run tests
+    if fraction is not None:
+        n = round(fraction * events_four_vector.shape[0])
+        events_four_vector = events_four_vector[:n]
+
     # convert to (pT, phi, eta, mu)
     events = EpppToPTPhiEta(events_four_vector, reduce_data=False, include_masses=True)
 

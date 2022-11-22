@@ -4,6 +4,8 @@ Python code to perform generative ML modelling of jet data.
 The idea is to be able to conveniently run new experiments, continue old experiments, change parameters, generate new samples and/or plots.
 Most of the boilerplate code is hidden behind the ExperimentClass. It takes a parameter dictionary as input and then takes care of everything.
 
+Sofia war hier.
+
 The code is written to run on our GPU cluster and hierarchically works as follows:
 
 - Experiments are initiated from a *.sh file in the runfiles folder. This should follow the syntax of the GPU cluster qsub system. This file should then call upon a main method in the main folder and pass the necessary parameters and flags, most importantly a *.yaml file including the parameters defining the experiment.
