@@ -4,9 +4,15 @@
 #PBS -d /remote/gpu07/huetsch
 
 export CUDA_VISIBLE_DEVICES=$(cat $PBS_GPUFILE | sed s/.*-gpu// )
+export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/lib/python3.9/site-packages
 
-source venv/bin/activate
+
+# Activate the python venv environment
+#source venv/bin/activate
+module load anaconda/3.0
+module load cuda/11.7
+# cd into the project folder
 cd GenerativeJetting
 
-python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/networks/TBD_base2690"
+python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z27c/TBD_15layers7935" --train=True
 

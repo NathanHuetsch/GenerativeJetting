@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/networks"
-run_name : "DDPM_BatchNorm"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/NoCheckpoint"
+run_name : "DDPM"
 redirect_console : True
 # #########
 # # Data: #
@@ -21,16 +21,16 @@ data_split: [0.5, 0.05, 0.45]
 
 optimizer: Adam
 lr : 1.e-4
-batch_size : 1024
+batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 200
+n_epochs : 6000
 validate: True
-validate_every : 20
+validate_every : 100
 
-sample_periodically: False
-sample_every: 1
+sample_periodically: True
+sample_every: 1000
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
@@ -42,7 +42,7 @@ layers_per_block : 10
 intermediate_dim : 256
 encode_t: False
 #dropout: 0.1
-normalization: LazyBatchNorm1d
+#normalization: LazyBatchNorm1d
 
 # ###################
 # # Loading/saving: #
@@ -54,7 +54,7 @@ warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5interna
 # # Sampling: #
 # #############
 sample: True
-load_best_checkpoint: True
+load_best_checkpoint: False
 n_samples : 1000000
 
 # #############

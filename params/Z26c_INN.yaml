@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/z26c"
-run_name : "Test_Flush"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/NoCheckpoint"
+run_name : "INN"
 redirect_console : True
 # #########
 # # Data: #
@@ -25,20 +25,20 @@ batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 10
+n_epochs : 1500
 validate: True
 validate_every : 20
 
-sample_periodically: False
-sample_every: 10
+sample_periodically: True
+sample_every: 100
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
 model: INN
 
-n_blocks : 1 #5
-layers_per_block : 1 #0
+n_blocks : 15
+layers_per_block : 10
 intermediate_dim : 256
 
 # ###################
@@ -51,7 +51,7 @@ warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5interna
 # # Sampling: #
 # #############
 sample: True
-load_best_checkpoint: True
+load_best_checkpoint: False
 n_samples : 1000000
 
 # #############

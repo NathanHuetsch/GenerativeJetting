@@ -16,7 +16,7 @@ from Source.Networks.classifier import Classifier
 device = get_device()
 
 events = np.load("/remote/gpu07/huetsch/data/events_undone.npy")[:1000000]
-samples = np.load("/remote/gpu07/huetsch/data/samples_undone.npy")
+samples = np.load("/remote/gpu07/huetsch/data/samples_bad.npy")
 
 dphi = events[:, 1] - events[:, 4]
 deta = events[:, 2] - events[:, 5]
@@ -88,5 +88,5 @@ for i in range(1000):
 predictions_events = np.concatenate(np.array(predictions_events))
 predictions_samples = np.concatenate(np.array(predictions_samples))
 
-np.save("/remote/gpu07/huetsch/data/classifier_predictions_events.npy", predictions_events)
-np.save("/remote/gpu07/huetsch/data/classifier_predictions_samples.npy", predictions_samples)
+np.save("/remote/gpu07/huetsch/data/classifier_predictions_events_bad.npy", predictions_events)
+np.save("/remote/gpu07/huetsch/data/classifier_predictions_samples_bad.npy", predictions_samples)

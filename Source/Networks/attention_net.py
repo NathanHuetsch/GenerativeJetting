@@ -66,7 +66,7 @@ class AttentionNet(nn.Module):
         for block in self.blocks[:-1]:
             e = block[0](x)
             q, k, v = e.split(self.dim + self.encode_t_dim, dim=1)
-            e = block[]
+            #e = block[]
             x = x + block(torch.cat([x, t], 1))
         x = self.blocks[-1](torch.cat([x, t], 1)) + x
         return x

@@ -6,7 +6,7 @@
 # -d determines the directory to jump into
 
 #PBS -q gshort
-#PBS -l nodes=1:ppn=1:gpus=1:gshqort
+#PBS -l nodes=1:ppn=1:gpus=1:gshort
 #PBS -l walltime=40:00:00
 #PBS -d /remote/gpu07/huetsch
 #PBS -o output.txt
@@ -25,5 +25,5 @@ module load cuda/11.7
 cd GenerativeJetting
 
 # Run the actual python script with necessary parameters
-python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z26c_INN.yaml
+python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z26c_DDPM.yaml
 

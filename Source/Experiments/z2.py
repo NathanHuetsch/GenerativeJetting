@@ -92,8 +92,8 @@ class Z2_Experiment(Experiment):
         # The "redirect_console" parameter controls weather or not we redirect console outputs and errors into text files
         # This is usefull when working on the cluster
         if get(self.params, "redirect_console", True):
-            sys.stdout = open("stdout.txt", "w")
-            sys.stderr = open("stderr.txt", "w")
+            sys.stdout = open("stdout.txt", "w", buffering=1)
+            sys.stderr = open("stderr.txt", "w", buffering=1)
             print(f"prepare_experiment: Redirecting console output to out_dir")
 
         print("prepare_experiment: Using out_dir ", self.out_dir)
@@ -235,10 +235,18 @@ class Z2_Experiment(Experiment):
         # If "warm_start", load the model parameters from the specified directory.
         # It is expected that they are found under warm_start_dir/models/checkpoint
         if get(self.params, "warm_start", False):
-            try:
-                state_dict = torch.load(self.warm_start_path + "/models/checkpoint.pt", map_location=self.device)
-            except FileNotFoundError:
-                raise ValueError(f"build_model: cannot load model for warm_start")
+            if get(self.params, "load_best_checkpoint", True):
+                print(f"build_model: warm_start set to True. Trying to load model from /models/checkpoint.pt")
+                try:
+                    state_dict = torch.load(self.warm_start_path + "/models/checkpoint.pt", map_location=self.device)
+                except FileNotFoundError:
+                    raise ValueError(f"build_model: cannot load model for warm_start")
+            else:
+                print(f"build_model: warm_start set to True. Trying to load model from /models/model.pt")
+                try:
+                    state_dict = torch.load(self.warm_start_path + f"/models/model.pt", map_location=self.device)
+                except Exception:
+                    raise ValueError(f"build_model: cannot load model for warm_start")
 
             self.model.load_state_dict(state_dict)
             print(f"build_model: Loaded state_dict from warm_start_path {self.warm_start_path}")
@@ -360,6 +368,7 @@ class Z2_Experiment(Experiment):
 
             # Save the final model. Update the total amount of training epochs the model has been trained for
             torch.save(self.model.state_dict(), f"models/model_run{self.runs}.pt")
+            torch.save(self.model.state_dict(), f"models/model.pt")
             self.total_epochs = self.total_epochs + get(self.params, "n_epochs", 1000)
             self.params["total_epochs"] = self.total_epochs
 
@@ -385,14 +394,19 @@ class Z2_Experiment(Experiment):
             # Read in the "load_best_checkpoint" parameter.
             # If it is set to True, try to load the best validation checkpoint of the model.
             # Otherwise, just use the model state after the last epoch
-            load_best_checkpoint = get(self.params, "load_best_checkpoint", True)
+            load_best_checkpoint = get(self.params, "load_best_checkpoint", False)
+            # TODO: Using load_best_checkpoint leads to significantly worse results
+            # The best validation loss is apparently not a good measure for the best model
+            # Can we replace it with something else?
             if load_best_checkpoint:
+                print(f"generate_samples: load_best_checkpoint set to True. Overwriting with False")
+                """
                 try:
                     state_dict = torch.load(self.out_dir + "/models/checkpoint.pt", map_location=self.device)
                     self.model.load_state_dict(state_dict)
                 except Exception:
                     print(f"generate_samples: cannot load best checkpoint. Sampling with current model")
-
+                """
             # Read in the "n_samples" parameter specifying how many samples to generate
             # Call the model.sample_n_parallel(n_samples) method to perform the sampling
             n_samples = get(self.params, "n_samples", 1000000)
@@ -412,7 +426,7 @@ class Z2_Experiment(Experiment):
 
             print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
 
-            save_sample = get(self.params, "save_sample", False)
+            save_sample = get(self.params, "save_sample", True)
             if save_sample:
                 os.makedirs("samples", exist_ok=True)
                 np.save(f"samples/run{self.runs}.npy", self.samples)

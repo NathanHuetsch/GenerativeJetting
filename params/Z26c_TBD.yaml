@@ -1,9 +1,9 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/6c"
-run_name : "TBD_Long"
-redirect_console : True
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/test_linear"
+run_name : "TBD"
+redirect_console : False #True
 # #########
 # # Data: #
 # #########
@@ -25,12 +25,12 @@ batch_size : 1024
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 4000
+n_epochs : 50
 validate: True
 validate_every : 100
 
 sample_periodically: True
-sample_every: 200
+sample_every: 100
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
@@ -40,6 +40,7 @@ model: TBD
 n_blocks : 15
 layers_per_block : 10
 intermediate_dim : 256
+trajectory: "linear_trajectory"
 encode_t: False
 encode_t_dim: 2
 encode_t_scale: 1
@@ -54,7 +55,7 @@ warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5interna
 # # Sampling: #
 # #############
 sample: True
-load_best_checkpoint: True
+load_best_checkpoint: False
 n_samples : 1000000
 
 # #############

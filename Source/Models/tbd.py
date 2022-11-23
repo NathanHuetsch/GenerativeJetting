@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from scipy.integrate import solve_ivp
-from Source.Networks.resnet import Resnet
+import Source.Networks
 from Source.Util.util import get
 from Source.Models.ModelBase import GenerativeModel
 
@@ -14,26 +14,28 @@ class TBD(GenerativeModel):
 
     def __init__(self, params):
         super().__init__(params)
+        trajectory = get(self.params, "trajectory", "sine_cosine_trajectory")
+        try:
+            self.trajectory = getattr(Source.Models.tbd, trajectory)
+        except AttributeError:
+            raise NotImplementedError(f"build_model: Trajectory type {trajectory} not implemented")
 
     def build_net(self):
         """
-        Build the Resnet
+        Build the network
         """
-        return Resnet(self.params).to(self.device)
+        network = get(self.params, "network", "Resnet")
+        try:
+            return getattr(Source.Networks, network)(self.params).to(self.device)
+        except AttributeError:
+            raise NotImplementedError(f"build_model: Network class {network} not recognised")
 
     def batch_loss(self, x):
-        """
-        Calculate batch loss as described by Peter
-        TODO Write section in dropbox
-        """
         t = torch.rand(x.size(0), 1, device=x.device)
-        c = torch.cos(t * np.pi / 2)
-        s = torch.sin(t * np.pi / 2)
-        c_dot = -np.pi / 2 * s
-        s_dot = np.pi / 2 * c
         x_1 = torch.randn_like(x)
-        x_t = c * x + s * x_1
-        x_t_dot = c_dot * x + s_dot * x_1
+
+        x_t, x_t_dot = self.trajectory(x, x_1, t)
+
         drift = self.net(x_t, t)
         loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
         return loss
@@ -63,5 +65,19 @@ class TBD(GenerativeModel):
         return np.concatenate(events, axis=0)[:n_samples]
 
 
+def sine_cosine_trajectory(x, x_1, t):
+
+    c = torch.cos(t * np.pi / 2)
+    s = torch.sin(t * np.pi / 2)
+    x_t = c * x + s * x_1
+
+    c_dot = -np.pi / 2 * s
+    s_dot = np.pi / 2 * c
+    x_t_dot = c_dot * x + s_dot * x_1
+    return x_t, x_t_dot
 
 
+def linear_trajectory(x, x_1, t):
+    x_t = t * x + (1-t) * x_1
+    x_t_dot = x - x_1
+    return x_t, x_t_dot
