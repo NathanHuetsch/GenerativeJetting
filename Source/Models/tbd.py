@@ -66,7 +66,6 @@ class TBD(GenerativeModel):
 
 
 def sine_cosine_trajectory(x, x_1, t):
-
     c = torch.cos(t * np.pi / 2)
     s = torch.sin(t * np.pi / 2)
     x_t = c * x + s * x_1

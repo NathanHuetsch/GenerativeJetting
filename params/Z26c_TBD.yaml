@@ -2,8 +2,8 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/test_linear"
-run_name : "TBD"
-redirect_console : False #True
+run_name : "TBD_512batch"
+redirect_console : True
 # #########
 # # Data: #
 # #########
@@ -21,16 +21,16 @@ data_split: [0.6, 0.05, 0.35]
 
 optimizer: Adam
 lr : 1.e-4
-batch_size : 1024
+batch_size : 512
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 50
+n_epochs : 4000
 validate: True
 validate_every : 100
 
 sample_periodically: True
-sample_every: 100
+sample_every: 400
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
@@ -38,7 +38,7 @@ sample_every_n_samples: 100000
 model: TBD
 
 n_blocks : 15
-layers_per_block : 10
+layers_per_block : 15
 intermediate_dim : 256
 trajectory: "linear_trajectory"
 encode_t: False

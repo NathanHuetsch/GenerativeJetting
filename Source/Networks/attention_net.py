@@ -4,7 +4,8 @@ import torch.nn as nn
 
 class AttentionNet(nn.Module):
     """
-    Simple Conditional Resnet class to build from a params dict
+    AttentionNet. Not finished
+    TODO: Finish implementation
     """
     def __init__(self, param):
         super().__init__()
