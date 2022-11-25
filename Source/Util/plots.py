@@ -21,9 +21,13 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
-LABEL_XGEN = "Gen."
+LABEL_XGEN = "Generated"
 LABEL_XTRAIN = "Train"
-LABEL_TRUTH = "True"
+LABEL_TRUTH = "Truth"
+
+LABEL_XGEN = "Reweighted"
+LABEL_XTRAIN = "Generated"
+LABEL_TRUTH = "Train"
 
 
 def plot_obs(pp, obs_train, obs_test, obs_predict, name, range=[0, 100], num_bins=60, FONTSIZE=14, weights=None):
@@ -44,7 +48,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, range=[0, 100], num_bin
         axs[0].step(x_tr[:num_bins], y_tr,label=LABEL_XTRAIN, color=traincolor, linewidth=1.0, where='mid')
 
         axs[0].legend(loc='upper right', frameon=False)
-        axs[0].set_ylabel(r'$\frac{\mathrm{d} \sigma}{\mathrm{d} {%s}}$ [pb/GeV]' % name, fontsize = FONTSIZE)
+        axs[0].set_ylabel(r'$\frac{\mathrm{d} \sigma}{\mathrm{d} {%s}}$' % name, fontsize = FONTSIZE)
         if "p_{T" in name:
             axs[0].set_yscale('log')
         y_rel = y_t/y_g

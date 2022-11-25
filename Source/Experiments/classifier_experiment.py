@@ -18,7 +18,7 @@ import pandas
 from torch.optim import Adam
 
 
-class Z2_Experiment(Experiment):
+class Classifier_Experiment(Experiment):
     """
     Class to run Z+2jet generative modelling experiments
 
@@ -252,7 +252,7 @@ class Z2_Experiment(Experiment):
             print(f"build_model: Loaded state_dict from warm_start_path {self.warm_start_path}")
         else:
             if not get(self.params, "train", True):
-                print("build_model: Care! train set to False and warm_start set to False")
+                print("build_model: CARE !!! train set to False and warm_start set to False")
 
         if get(self.params, "sample_periodically", False):
             # The Model needs these values to make intermediate plots

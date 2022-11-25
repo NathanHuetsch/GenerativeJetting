@@ -77,6 +77,6 @@ def sine_cosine_trajectory(x, x_1, t):
 
 
 def linear_trajectory(x, x_1, t):
-    x_t = t * x + (1-t) * x_1
-    x_t_dot = x - x_1
+    x_t = (1-t) * x + t * x_1
+    x_t_dot = x_1 - x
     return x_t, x_t_dot
