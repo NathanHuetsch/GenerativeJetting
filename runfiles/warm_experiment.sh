@@ -14,5 +14,5 @@ module load cuda/11.7
 # cd into the project folder
 cd GenerativeJetting
 
-python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z27c/TBD_15layers7935" --train=True
+python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/DDPMtests/8dim5569"
 

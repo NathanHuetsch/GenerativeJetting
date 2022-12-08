@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/test_linear"
-run_name : "fixed"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/test_Attention"
+run_name : "DDPM_init_55lr"
 redirect_console : True
 # #########
 # # Data: #
@@ -10,7 +10,7 @@ redirect_console : True
 data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
 data_type: np
 preprocess : True
-channels : [8, 9, 10, 12, 13, 14]
+#channels : [0, 4, 8, 9, 10, 12, 13, 14]
 #dim : 4
 # ##############
 # # Training:  #
@@ -20,30 +20,32 @@ log: True
 data_split: [0.6, 0.05, 0.35]
 
 optimizer: Adam
-lr : 1.e-4
-batch_size : 1024
+lr : 5.e-5
+batch_size : 4096
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 10
-validate: True
+n_epochs : 2000
+validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 200
+sample_every: 500
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-model: TBD
+model: DDPM
 
-n_blocks : 15
+network: "AttentionNet"
+n_blocks : 4
 layers_per_block : 15
-intermediate_dim : 256
-trajectory: "linear_trajectory"
+intermediate_dim : 64
+n_head: 4
+trajectory: "sine_cosine_trajectory"
 encode_t: False
-encode_t_dim: 2
-encode_t_scale: 1
+encode_t_dim: 4
+encode_t_scale: 10
 
 # ###################
 # # Loading/saving: #
@@ -56,7 +58,7 @@ warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5interna
 # #############
 sample: True
 load_best_checkpoint: False
-n_samples : 100000
+n_samples : 1000000
 
 # #############
 # # Plotting: #

@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from Source.Util.util import get
 from Source.Models.ModelBase import GenerativeModel
-from Source.Networks.resnet import Resnet
+import Source.Networks
 
 
 class DDPM(GenerativeModel):
@@ -42,7 +42,14 @@ class DDPM(GenerativeModel):
         self.to(self.device)
 
     def build_net(self):
-        return Resnet(self.params)
+        """
+        Build the network
+        """
+        network = get(self.params, "network", "Resnet")
+        try:
+            return getattr(Source.Networks, network)(self.params).to(self.device)
+        except AttributeError:
+            raise NotImplementedError(f"build_model: Network class {network} not recognised")
 
     def xT_from_x0_and_noise(self, x0, t, noise):
         return self.sqrt_alphas_bar[t]*x0 + self.sqrt_One_minus_alphas_bar[t]*noise

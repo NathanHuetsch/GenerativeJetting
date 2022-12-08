@@ -1,7 +1,7 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/NoCheckpoint"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/4d"
 run_name : "DDPM"
 redirect_console : True
 # #########
@@ -10,7 +10,7 @@ redirect_console : True
 data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
 data_type: np
 preprocess : True
-channels : [8, 9, 10, 12, 13, 14]
+channels : [9, 10, 13, 14]
 #dim : 4
 # ##############
 # # Training:  #
@@ -25,8 +25,8 @@ batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 6000
-validate: True
+n_epochs : 100
+validate: False
 validate_every : 100
 
 sample_periodically: True
@@ -37,10 +37,10 @@ sample_every_n_samples: 100000
 # #################
 model: DDPM
 
-n_blocks : 15
+n_blocks : 10
 layers_per_block : 10
 intermediate_dim : 256
-encode_t: False
+#encode_t: True
 #dropout: 0.1
 #normalization: LazyBatchNorm1d
 

@@ -228,9 +228,9 @@ class Z2_Experiment(Experiment):
             raise ValueError(f"build_model: model class {model} not recognised. Use INN, TBD or DDPM")
 
         # Keep track of the total number of trainable model parameters
-        #model_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-        #self.params["model_parameters"] = model_parameters
-        print(f"build_model: Built model {model}")#. Total number of parameters: {model_parameters}")
+        model_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        self.params["model_parameters"] = model_parameters
+        print(f"build_model: Built model {model}. Total number of parameters: {model_parameters}")
 
         # If "warm_start", load the model parameters from the specified directory.
         # It is expected that they are found under warm_start_dir/models/checkpoint

@@ -118,6 +118,8 @@ class GenerativeModel(nn.Module):
                 if (self.epoch + 1) % self.validate_every == 0:
                     self.eval()
                     self.validate_one_epoch()
+            else:
+                torch.save(self.state_dict(), "models/checkpoint.pt")
 
             if self.sample_periodically:
                 if (self.epoch + 1) % self.sample_every == 0:
