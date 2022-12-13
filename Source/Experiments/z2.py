@@ -8,6 +8,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
 from Source.Util.util import get_device, save_params, get
+from Source.Util.lr_scheduler import OneCycleLR
 from Source.Experiments.ExperimentBase import Experiment
 import time
 from datetime import datetime
@@ -153,19 +154,11 @@ class Z2_Experiment(Experiment):
         self.preprocess = get(self.params, "preprocess", True)
         self.channels = get(self.params, "channels", None)
         self.dim = get(self.params, "dim", None)
-        if self.channels is None and self.dim is None:
+        if self.channels is None:
             print("preprocess_data: channels and dim not specified. Defaulting to 13 channels")
             self.dim = 13
-            self.channels = np.array([i for i in range(self.data_raw.shape[1]) if i not in [1, 3, 7]])
+            self.channels = [0, 2, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15]
             self.params["dim"] = len(self.channels)
-        elif self.channels is None and self.dim == 4:
-            print("preprocess_data: channels not specified and dim=4. Using [9,10,13,14]")
-            self.channels = [9, 10, 13, 14]
-        elif self.channels is None and self.dim == 6:
-            print("preprocess_data: channels not specified and dim=6. Using [8,9,10,12,13,14]")
-            self.channels = [8, 9, 10, 12, 13, 14]
-        elif self.channels is None:
-            raise ValueError(f"preprocess: channels not specified and dim is not 4,6,None")
         else:
             self.params["dim"] = len(self.channels)
             print(f"preprocess_data: channels {self.channels} specified. Ignoring dim")
@@ -235,19 +228,14 @@ class Z2_Experiment(Experiment):
         # If "warm_start", load the model parameters from the specified directory.
         # It is expected that they are found under warm_start_dir/models/checkpoint
         if get(self.params, "warm_start", False):
-            if get(self.params, "load_best_checkpoint", True):
-                print(f"build_model: warm_start set to True. Trying to load model from /models/checkpoint.pt")
-                try:
-                    state_dict = torch.load(self.warm_start_path + "/models/checkpoint.pt", map_location=self.device)
-                except FileNotFoundError:
-                    raise ValueError(f"build_model: cannot load model for warm_start")
-            else:
+            try:
                 print(f"build_model: warm_start set to True. Trying to load model from /models/model.pt")
-                try:
-                    state_dict = torch.load(self.warm_start_path + f"/models/model.pt", map_location=self.device)
-                except Exception:
-                    raise ValueError(f"build_model: cannot load model for warm_start")
-
+                state_dict = torch.load(self.warm_start_path + f"/models/model.pt", map_location=self.device)
+            except FileNotFoundError:
+                print(f"build_model: Failed. Trying to load model from /models/checkpoint.pt")
+                state_dict = torch.load(self.warm_start_path + "/models/checkpoint.pt", map_location=self.device)
+            except Exception:
+                raise ValueError(f"build_model: cannot load model for warm_start")
             self.model.load_state_dict(state_dict)
             print(f"build_model: Loaded state_dict from warm_start_path {self.warm_start_path}")
         else:
@@ -331,6 +319,17 @@ class Z2_Experiment(Experiment):
                            batch_size=self.batch_size,
                            shuffle=True)
             print(f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
+
+            lr_scheduler = get(self.params, "lr_scheduler", True)
+            if lr_scheduler:
+                lr = get(self.params, "lr", 0.0001)
+                n_epochs = get(self.params, "n_epochs", 100)
+                self.model.scheduler = OneCycleLR(
+                    self.model.optimizer,
+                    lr * 10,
+                    epochs=n_epochs,
+                    steps_per_epoch=len(self.model.train_loader))
+                print("build_dataloaders: Using one-cycle lr scheduler")
         else:
             print("build_dataloaders: train set to False. Not building dataloaders")
 
@@ -345,7 +344,7 @@ class Z2_Experiment(Experiment):
 
         Overwrite this method if a different way of performing the training is needed.
         """
-
+        save_params(self.params, "paramfile.yaml")
         # Read in the "train" parameter. If it is set to True, perform the training, otherwise skip it.
         train = get(self.params, "train", True)
         if train:

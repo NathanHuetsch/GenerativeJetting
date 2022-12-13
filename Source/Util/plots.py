@@ -21,13 +21,10 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
+
 LABEL_XGEN = "Generated"
 LABEL_XTRAIN = "Train"
 LABEL_TRUTH = "Truth"
-
-LABEL_XGEN = "Reweighted"
-LABEL_XTRAIN = "Generated"
-LABEL_TRUTH = "Train"
 
 
 def plot_obs(pp, obs_train, obs_test, obs_predict, name, range=[0, 100], num_bins=60, FONTSIZE=14, weights=None):

@@ -56,6 +56,7 @@ class GenerativeModel(nn.Module):
 
     def prepare_training(self):
         print("train_model: Preparing model training")
+        self.lr_scheduler = get(self.params, "lr_scheduler", True)
         self.train_losses = np.array([])
         self.train_losses_epoch = np.array([])
         self.n_trainbatches = len(self.train_loader)
@@ -147,6 +148,10 @@ class GenerativeModel(nn.Module):
                 train_losses = np.append(train_losses, loss.item())
                 if self.log:
                     self.logger.add_scalar("train_losses", train_losses[-1], self.epoch*self.n_trainbatches + batch_id)
+
+                if self.lr_scheduler:
+                    self.scheduler.step()
+
             else:
                 print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}")
 
@@ -154,6 +159,9 @@ class GenerativeModel(nn.Module):
         self.train_losses = np.concatenate([self.train_losses, train_losses], axis=0)
         if self.log:
             self.logger.add_scalar("train_losses_epoch", self.train_losses_epoch[-1], self.epoch)
+
+        #epoch_lr = self.scheduler.optimizer.param_groups[0]['lr']
+        #print(f"current epoch {self.epoch}, current lr {epoch_lr}")
 
     def validate_one_epoch(self):
         val_losses = np.array([])
