@@ -46,6 +46,7 @@ def define_flags():
     flags.DEFINE_boolean('sample', None, "Overwrite sample parameter in params")
     flags.DEFINE_integer('n_samples', None, "Overwrite n_samples in params")
     flags.DEFINE_boolean('plot', None, "Overwrite plot parameter in params")
+    flags.DEFINE_boolean('save_samples', None, "Overwrite save_samples parameter in params")
 
 
 def main(argv):
@@ -80,6 +81,10 @@ def main(argv):
     # Explicitly overwrite the plot parameter
     if FLAGS.plot is not None:
         params["plot"] = FLAGS.plot
+
+    # Explicitly overwrite the plot parameter
+    if FLAGS.save_samples is not None:
+        params['save_samples'] = FLAGS.save_samples
 
     # Instantiate the experiment class
     experiment = z2.Z2_Experiment(params)

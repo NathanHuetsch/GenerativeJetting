@@ -50,6 +50,8 @@ class GenerativeModel(nn.Module):
         self.device = get(self.params, "device", get_device())
         self.dim = self.params["dim"]
         self.net = self.build_net()
+        self.conditional = self.params['conditional']
+        self.n_con = self.params['n_con']
 
     def build_net(self):
         pass
@@ -77,22 +79,24 @@ class GenerativeModel(nn.Module):
         if self.sample_periodically:
             self.sample_every = get(self.params, "sample_every", 1)
             self.sample_every_n_samples = get(self.params, "sample_every_n_samples", 100000)
-            self.data_train = undo_preprocessing(events=self.train_loader.dataset.detach().cpu().numpy(),
+            self.data_train = undo_preprocessing(data=self.train_loader.dataset.detach().cpu().numpy(),
                                                  events_mean=self.data_mean,
                                                  events_std=self.data_std,
                                                  u=self.data_u,
                                                  s=self.data_s,
                                                  channels=self.params["channels"],
-                                                 keep_all=True)
-            self.data_test = undo_preprocessing(events=self.test_loader.dataset.detach().cpu().numpy(),
+                                                 keep_all=True,
+                                                 conditional=self.conditional)
+            self.data_test = undo_preprocessing(data=self.test_loader.dataset.detach().cpu().numpy(),
                                                  events_mean=self.data_mean,
                                                  events_std=self.data_std,
                                                  u=self.data_u,
                                                  s=self.data_s,
                                                  channels=self.params["channels"],
-                                                 keep_all=True)
-            print(f"train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every"
-                  f"{self.sample_every} epochs. This may significantly slow down training!")
+                                                 keep_all=True,
+                                                 conditional=self.conditional)
+            print(f'train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every'
+                  f' {self.sample_every} epochs. This may significantly slow down training!')
 
         self.log = get(self.params, "log", True)
         if self.log:
@@ -134,10 +138,10 @@ class GenerativeModel(nn.Module):
         for batch_id, x in enumerate(self.train_loader):
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(x)
+            loss = self.batch_loss(x, conditional=self.conditional)
 
-            loss_m = self.train_losses[-1000:].mean()
-            loss_s = self.train_losses[-1000:].std()
+            #loss_m = self.train_losses[-1000:].mean()
+            #loss_s = self.train_losses[-1000:].std()
 
             if np.isfinite(loss.item()): # and (abs(loss.item() - loss_m) / loss_s < 5 or len(self.train_losses_epoch) == 0):
                 loss.backward()
@@ -157,7 +161,7 @@ class GenerativeModel(nn.Module):
         val_losses = np.array([])
         for batch_id, x in enumerate(self.val_loader):
             with torch.no_grad():
-                loss = self.batch_loss(x)
+                loss = self.batch_loss(x, conditional=self.conditional)
             val_losses = np.append(val_losses, loss.item())
             if self.log:
                 self.logger.add_scalar("val_losses", val_losses[-1],
@@ -177,43 +181,68 @@ class GenerativeModel(nn.Module):
             self.no_improvements = self.no_improvements + 1
             print(f"train_model: val_loss has not improved for {self.no_improvements} consecutive validations")
 
-    def batch_loss(self, x):
+    def batch_loss(self, x, conditional=False):
         pass
 
     def sample_n(self, n_samples):
         pass
 
     def sample_and_plot(self, n_samples):
-        os.makedirs(f"plots/epoch{self.epoch}", exist_ok=True)
+        os.makedirs(f"plots", exist_ok=True)
         samples = self.sample_n(n_samples)
-        samples = undo_preprocessing(events=samples,
+        samples = undo_preprocessing(data=samples,
                                      events_mean=self.data_mean,
                                      events_std=self.data_std,
                                      u=self.data_u,
                                      s=self.data_s,
                                      channels=self.params["channels"],
-                                     keep_all=True)
+                                     keep_all=True,
+                                     conditional=self.conditional)
 
-        with PdfPages(f"plots/epoch{self.epoch}/1d_histograms") as out:
-            # Loop over the plot_channels
-            for i, channel in enumerate(self.params["channels"]):
-                # Get the train data, test data and generated data for the channel
-                obs_train = self.data_train[:, channel]
-                obs_test = self.data_test[:, channel]
-                obs_generated = samples[:, channel]
-                # Get the name and the range of the observable
-                obs_name = self.obs_names[channel]
-                obs_range = self.obs_ranges[channel]
-                # Create the plot
-                plot_obs(pp=out,
-                         obs_train=obs_train,
-                         obs_test=obs_test,
-                         obs_predict=obs_generated,
-                         name=obs_name,
-                         range=obs_range)
+        with PdfPages(f"plots/1d_hist_epoch_{self.epoch}.pdf") as out:
 
+            if self.conditional:
+                plot_train = []
+                plot_test = []
+                plot_samples = []
+                for i in range(1, self.n_con + 1):
+                    plot_train_jets = self.data_train[self.data_train[:, -1] == i]
+                    plot_train.append(plot_train_jets)
+
+                    plot_test_jets = self.data_test[self.data_test[:, -1] == i]
+                    plot_test.append(plot_test_jets)
+
+                    plot_samples_jets = samples[samples[:, -1] == i]
+                    plot_samples.append(plot_samples_jets)
+
+            else:
+                plot_train = self.data_train
+                plot_test = self.data_test
+                plot_samples = samples
+
+            for j, _ in enumerate(plot_train):
+                # Loop over the plot_channels
+                for i, channel in enumerate(self.params["channels"]):
+                    # Get the train data, test data and generated data for the channel
+                    obs_train = plot_train[j][:, channel]
+                    obs_test = plot_test[j][:, channel]
+                    obs_generated = plot_samples[j][:, channel]
+                    # Get the name and the range of the observable
+                    obs_name = self.obs_names[channel]
+                    obs_range = self.obs_ranges[channel]
+                    n_epochs = self.epoch
+                    # Create the plot
+                    plot_obs(pp=out,
+                             obs_train=obs_train,
+                             obs_test=obs_test,
+                             obs_predict=obs_generated,
+                             name=obs_name,
+                             range=obs_range,
+                             n_epochs=n_epochs,
+                             n_jets=j + 1,
+                             conditional=self.conditional)
         if all(c in self.params["channels"] for c in [9, 10, 13, 14]):
-            file_name = f"plots/epoch{self.epoch}/deltaR_j1_j2.pdf"
+            file_name = f"plots/deltaR12_epoch_{self.epoch}.pdf"
             obs_name = "\Delta R_{j_1 j_2}"
             obs_train = delta_r(self.data_train)
             obs_test = delta_r(self.data_test)
@@ -225,7 +254,7 @@ class GenerativeModel(nn.Module):
                      name=obs_name,
                      range=[0, 8])
 
-            file_name = f"plots/epoch{self.epoch}/deta_dphi.png"
+            file_name = f"plots/deltadphi_epoch_{self.epoch}.pdf"
             plot_deta_dphi(file_name=file_name,
                            data_train=self.data_train,
                            data_test=self.data_test,

@@ -7,6 +7,7 @@ from Source.Models.ddpm import DDPM
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
+from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get
 from Source.Experiments.ExperimentBase import Experiment
 import time
@@ -41,14 +42,15 @@ class Z2_Experiment(Experiment):
                           "p_{T,j2}", "\phi_{j2}", "\eta_{j2}", "\mu_{j2}"]
 
         # Ranges of the observables for plotting
-        self.obs_ranges = [[0, 150], [-4, 4], [-6, 6], [0, 100],
-                           [0, 150], [-4, 4], [-6, 6], [0, 100],
-                           [0, 150], [-4, 4], [-6, 6], [0, 100],
-                           [0, 150], [-4, 4], [-6, 6], [0, 100]]
+        self.obs_ranges = [[17, 150], [-4, 4], [-6, 6], [0, 100],
+                           [17, 150], [-4, 4], [-6, 6], [0, 100],
+                           [17, 150], [-4, 4], [-6, 6], [0, 100],
+                           [17, 150], [-4, 4], [-6, 6], [0, 100]]
 
         # Keep track of how many runs and epochs of training the model got before
         self.runs = get(self.params, "runs", 0)
         self.total_epochs = get(self.params, "total_epochs", 0)
+        self.conditional = get(self.params, "conditional", False)
 
         self.starttime = time.time()
 
@@ -92,8 +94,8 @@ class Z2_Experiment(Experiment):
         # The "redirect_console" parameter controls weather or not we redirect console outputs and errors into text files
         # This is usefull when working on the cluster
         if get(self.params, "redirect_console", True):
-            sys.stdout = open("stdout.txt", "w")
-            sys.stderr = open("stderr.txt", "w")
+            sys.stdout = open("stdout.txt", "w",buffering=1)
+            sys.stderr = open("stderr.txt", "w",buffering=1)
             print(f"prepare_experiment: Redirecting console output to out_dir")
 
         print("prepare_experiment: Using out_dir ", self.out_dir)
@@ -107,33 +109,45 @@ class Z2_Experiment(Experiment):
         Overwrite this method if other ways of reading in data are needed
         This method should place the data under self.data_raw
         """
-
+        self.load_data = get(self.params,"load_data", True)
         # Read in the "data_path" parameter. Raise and error if it is not specified or does not exist
         data_path = get(self.params, "data_path", None)
         if data_path is None:
             raise ValueError("load_data: data_path is None. Please specify in params")
         assert os.path.exists(data_path), f"load_data: data_path {data_path} does not exist"
 
-        # Read in the "data_type" parameter, defaulting to np if not specified. Try to read in the data accordingly
-        data_type = get(self.params, "data_type", "np")
-        if data_type == "np":
-            self.data_raw = np.load(data_path)
-            print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
-        elif data_type == "torch":
-            self.data_raw = torch.load(data_path)
-            print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
-        elif data_type == "h5":
-            data_path_internal = get(self.params, "data_path_internal", None)
-            if data_path_internal is not None:
-                with h5py.File(data_path, "r") as f:
-                    self.data_raw = f[data_path_internal][:]
+        if self.load_data:
+            # Read in the "data_type" parameter, defaulting to np if not specified. Try to read in the data accordingly
+            data_type = get(self.params, "data_type", "np")
+            if data_type == "np":
+                self.data_raw = np.load(data_path)
+                print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
+            elif data_type == "torch":
+                self.data_raw = torch.load(data_path)
+                print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
+            elif data_type == "h5":
+                data_path_internal = get(self.params, "data_path_internal", None)
+                if data_path_internal is not None:
+                    with h5py.File(data_path, "r") as f:
+                       self.data_raw = f[data_path_internal][:]
+                else:
+                    try:
+                        self.data_raw = pandas.read_hdf(data_path).values
+                    except Exception as e:
+                        raise ValueError("load_data: Failed to read h5 file in data_path")
             else:
-                try:
-                    self.data_raw = pandas.read_hdf(data_path).values
-                except Exception as e:
-                    raise ValueError("load_data: Failed to read h5 file in data_path")
+                raise ValueError(f"load_data: Cannot load data from {data_path}")
         else:
-            raise ValueError(f"load_data: Cannot load data from {data_path}")
+            data_all = Dataset(data_path)
+            self.n_jets = get(self.params,"n_jets",2)
+            if self.n_jets == 1:
+                self.data_raw = data_all.z_1
+            elif self.n_jets == 2:
+                self.data_raw = data_all.z_2
+            else:
+                self.data_raw = data_all.z_3
+
+
 
     def preprocess_data(self):
         """
@@ -152,40 +166,33 @@ class Z2_Experiment(Experiment):
         # If "channels" is not specified, only "dim" 4,6 and None are valid
         self.preprocess = get(self.params, "preprocess", True)
         self.channels = get(self.params, "channels", None)
-        self.dim = get(self.params, "dim", None)
+        self.n_jets = get(self.params,"n_jets", 2)
         self.fraction = get(self.params, "fraction", None)
-        if self.channels is None and self.dim is None:
-            print("preprocess_data: channels and dim not specified. Defaulting to 13 channels")
-            self.dim = 13
+        self.n_con = get(self.params,"n_con", 0)
+        if self.channels is None:
+            print("preprocess_data: channels and dim not specified. Defaulting to 5+4*n_jets channels")
             self.channels = np.array([i for i in range(self.data_raw.shape[1]) if i not in [1, 3, 7]])
-            self.params["dim"] = len(self.channels)
-        elif self.channels is None and self.dim == 4:
-            print("preprocess_data: channels not specified and dim=4. Using [9,10,13,14]")
-            self.channels = [9, 10, 13, 14]
-        elif self.channels is None and self.dim == 6:
-            print("preprocess_data: channels not specified and dim=6. Using [8,9,10,12,13,14]")
-            self.channels = [8, 9, 10, 12, 13, 14]
-        elif self.channels is None:
-            raise ValueError(f"preprocess: channels not specified and dim is not 4,6,None")
         else:
-            self.params["dim"] = len(self.channels)
-            print(f"preprocess_data: channels {self.channels} specified. Ignoring dim")
+            print(f"preprocess_data: channels {self.channels} specified.")
+
+        self.params["dim"] = len(self.channels) + self.n_con
         self.params["channels"] = self.channels
         # Do the preprocessing
         # Currently using already preprocessed data is not implemented
         if not self.preprocess:
             print("preprocess_data: preprocess set to False")
             self.data = self.data_raw[:, self.channels]
+            self.condition = self.data_raw[:, -1]
             raise ValueError("preprocess_data: preprocess set to False. Not implemented properly")
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s \
-                = preprocess(self.data_raw, self.channels, self.fraction)
+                = preprocess(self.data_raw, self.channels, self.fraction, conditional=self.conditional)
             print("preprocess_data: Finished preprocessing")
 
         print(f"preprocess_data: input shape is {self.data.shape}")
         self.n_data = len(self.data)
         self.data_raw = undo_preprocessing(self.data, self.data_mean, self.data_std, self.data_u, self.data_s,
-                                           self.channels, keep_all=True)
+                                           self.channels, keep_all=True, conditional=self.conditional)
 
         # Make sure the data is a torch.Tensor and move it to device
         if not isinstance(self.data, torch.Tensor):
@@ -416,11 +423,12 @@ class Z2_Experiment(Experiment):
             if get(self.params, "preprocess", True):
                 self.samples = undo_preprocessing(self.samples,
                                                   self.data_mean, self.data_std, self.data_u, self.data_s,
-                                                  self.channels, keep_all=True)
-
-            if get(self.params, "save_samples", False):
-                np.save("samples_final.npy", self.samples)
+                                                  self.channels, keep_all=True, conditional=self.conditional)
             print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+            if get(self.params, "save_samples", False):
+                os.makedirs('samples', exist_ok=True)
+                np.save("samples/samples_final.npy", self.samples)
+                print(f"save_samples: generated samples have been saved")
         else:
             print("generate_samples: sample set to False")
 
@@ -452,22 +460,47 @@ class Z2_Experiment(Experiment):
 
             # Draw all 1d histograms into one PDF file
             with PdfPages(f"plots/run{self.runs}/1d_histograms") as out:
+                # Loop over the number of jets
+                if self.conditional:
+                    plot_train = []
+                    plot_test = []
+                    plot_samples = []
+                    for i in range(1, self.n_con+1):
+                        plot_train_jets = self.data_raw[:cut][self.data_raw[:cut , -1] == i]
+                        plot_train.append(plot_train_jets)
+
+                        plot_test_jets = self.data_raw[cut:][self.data_raw[cut:, -1] == i]
+                        plot_test.append(plot_test_jets)
+
+                        plot_samples_jets = self.samples[self.samples[:,-1]==i]
+                        plot_samples.append(plot_samples_jets)
+
+                else:
+                    plot_train = self.data_raw[cut:]
+                    plot_test = self.data_raw[:cut]
+                    plot_samples = self.samples
+
                 # Loop over the plot_channels
-                for i, channel in enumerate(self.plot_channels):
-                    # Get the train data, test data and generated data for the channel
-                    obs_train = self.data_raw[:cut, channel]
-                    obs_test = self.data_raw[cut:, channel]
-                    obs_generated = self.samples[:, channel]
-                    # Get the name and the range of the observable
-                    obs_name = self.obs_names[channel]
-                    obs_range = self.obs_ranges[channel]
-                    # Create the plot
-                    plot_obs(pp=out,
+                for j, _ in enumerate(plot_train):
+                    for i, channel in enumerate(self.plot_channels):
+                        # Get the train data, test data and generated data for the channel
+                        obs_train = plot_train[j][:, channel]
+                        obs_test = plot_test[j][:, channel]
+                        obs_generated = plot_samples[j][:, channel]
+                        # Get the name and the range of the observable
+                        obs_name = self.obs_names[channel]
+                        obs_range = self.obs_ranges[channel]
+                        n_epochs = self.total_epochs
+                        # Create the plot
+                        plot_obs(pp=out,
                              obs_train=obs_train,
                              obs_test=obs_test,
                              obs_predict=obs_generated,
                              name=obs_name,
-                             range=obs_range)
+                             range=obs_range,
+                             n_epochs=n_epochs,
+                             n_jets=j+1,
+                             conditional=self.conditional)
 
             # Draw a 1d histogram for the DeltaR between the two jets
             # This requires that the channels 9,10,13,14 where part of the experiment
@@ -501,7 +534,7 @@ class Z2_Experiment(Experiment):
                 else:
                     print("make_plots: plot_Deta_Dphi ist set to True, but missing at least one required channel")
 
-            print("make_lots: Finished making plots")
+            print("make_plots: Finished making plots")
         else:
             print("make_plots: plot set to False")
 

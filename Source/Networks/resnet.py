@@ -13,11 +13,13 @@ class Resnet(nn.Module):
         self.n_blocks = param["n_blocks"]
         self.intermediate_dim = self.param["intermediate_dim"]
         self.dim = self.param["dim"]
+        self.n_con = self.param["n_con"]
         self.layers_per_block = self.param["layers_per_block"]
         self.dropout = self.param.get("dropout", None)
         self.normalization = self.param.get("normalization", None)
         self.activation = self.param.get("activation", nn.SiLU)
         self.encode_t = self.param.get("encode_t", False)
+        self.conditional = self.param.get("conditional", False)
 
         # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
@@ -50,18 +52,24 @@ class Resnet(nn.Module):
             if self.dropout is not None:
                 layers.append(nn.Dropout(p=self.dropout))
             layers.append(self.activation())
-        layers.append(nn.Linear(self.intermediate_dim, self.dim))
+        layers.append(nn.Linear(self.intermediate_dim, self.dim-self.n_con))
         return nn.Sequential(*layers)
 
-    def forward(self, x, t):
+    def forward(self, x, t, condition=None):
         """
         forward method of our Resnet
         """
         if self.encode_t:
             t = self.embed(t)
+
+        if self.conditional:
+            add_input = torch.cat([t, condition], 1)
+        else:
+            add_input = t
+
         for block in self.blocks[:-1]:
-            x = x + block(torch.cat([x, t], 1))
-        x = self.blocks[-1](torch.cat([x, t], 1))
+            x = x + block(torch.cat([x, add_input], 1))
+        x = self.blocks[-1](torch.cat([x, add_input], 1))
         return x
 
 

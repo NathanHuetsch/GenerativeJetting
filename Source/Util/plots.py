@@ -25,19 +25,21 @@ LABEL_XGEN = "Gen."
 LABEL_XTRAIN = "Train"
 LABEL_TRUTH = "True"
 
-
-def plot_obs(pp, obs_train, obs_test, obs_predict, name, range=[0, 100], num_bins=60, FONTSIZE=14, weights=None):
+def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100], num_bins=60,FONTSIZE=14, weights=None,conditional=False, n_jets=2):
         fig1, axs = plt.subplots(3, 1, sharex=True, gridspec_kw={'height_ratios' : [4, 1, 1], 'hspace' : 0.00})
 
         y_t, x_t = np.histogram(obs_test, bins=num_bins, range=range, density=True)
-        if not weights is None:
+        if weights is not None:
             y_g, x_g = np.histogram(obs_predict, bins=num_bins, range=range, density=True, weights=weights)
         else:
             y_g, x_g = np.histogram(obs_predict, bins=num_bins, range=range, density=True)
         y_tr, x_tr = np.histogram(obs_train, bins=num_bins, range=range, density=True)
         y_tr, y_g, y_t = y_tr/np.sum(y_tr), y_g/np.sum(y_g), y_t/np.sum(y_t)
 
-
+        if conditional:
+            fig1.suptitle(f"After training for {n_epochs} epochs for {n_jets} jets")
+        else:
+            fig1.suptitle(f"After training for {n_epochs} epochs")
         #Histogram
         axs[0].step(x_t[:num_bins], y_t, label=LABEL_TRUTH, color=truthcolor, linewidth=1.0, where='mid')
         axs[0].step(x_g[:num_bins], y_g,label=LABEL_XGEN, color=netcolor, linewidth=1.0, where='mid')
@@ -159,3 +161,8 @@ def plot_deta_dphi(file_name, data_train, data_test, data_generated):
 
     plt.savefig(file_name)
     plt.close()
+
+
+def get_obs(obs,data):
+    return []
+
