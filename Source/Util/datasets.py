@@ -57,7 +57,7 @@ class Dataset:
                 y = np.append(y, m)
                 z_2.append(y)
 
-            elif m!=2:
+            elif m==3:
                 z = event[c_2:]
                 z = np.append(z, m)
                 z_3.append(z)
