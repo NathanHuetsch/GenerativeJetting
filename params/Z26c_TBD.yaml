@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Attention_full"
-run_name : "Net2_linear_3h"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Attention_4d"
+run_name : "Net2_sine_cosine_higherLR"
 redirect_console : True
 # #########
 # # Data: #
@@ -10,7 +10,8 @@ redirect_console : True
 data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
 data_type: np
 preprocess : True
-channels : #[0, 4, 8, 9, 10, 12, 13, 14]
+channels : [9, 10, 13, 14]
+#[0, 4, 8, 9, 10, 12, 13, 14]
 #dim : 4
 # ##############
 # # Training:  #
@@ -20,18 +21,18 @@ log: True
 data_split: [0.6, 0.05, 0.35]
 
 optimizer: Adam
-lr : 5.e-5
+lr : 4.e-5
 batch_size : 4096
 weight_decay : 0.0
 betas : [0.9, 0.99]
 lr_scheduler: True
 
-n_epochs : 4000
+n_epochs : 1000
 validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 1000
+sample_every: 200
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
@@ -39,11 +40,11 @@ sample_every_n_samples: 100000
 model: TBD
 
 network: "AttentionNet2"
-n_blocks : 6
+n_blocks : 4
 layers_per_block : 15
-intermediate_dim : 192
-n_head: 1
-trajectory: "linear_trajectory"
+intermediate_dim : 60
+n_head: 2
+trajectory: "sine_cosine_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
