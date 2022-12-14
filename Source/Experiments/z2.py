@@ -138,8 +138,8 @@ class Z2_Experiment(Experiment):
             else:
                 raise ValueError(f"load_data: Cannot load data from {data_path}")
         else:
-            data_all = Dataset(data_path)
-            self.n_jets = get(self.params,"n_jets",2)
+            data_all = Dataset(data_path, conditional=self.conditional)
+            self.n_jets = get(self.params, "n_jets", 2)
             if self.n_jets == 1:
                 self.data_raw = data_all.z_1
             elif self.n_jets == 2:
@@ -171,7 +171,7 @@ class Z2_Experiment(Experiment):
         self.n_con = get(self.params,"n_con", 0)
         if self.channels is None:
             print("preprocess_data: channels and dim not specified. Defaulting to 5+4*n_jets channels")
-            self.channels = np.array([i for i in range(self.data_raw.shape[1]) if i not in [1, 3, 7]])
+            self.channels = np.array([i for i in range(self.n_jets*4 + 8) if i not in [1, 3, 7]])
         else:
             print(f"preprocess_data: channels {self.channels} specified.")
 
@@ -182,7 +182,6 @@ class Z2_Experiment(Experiment):
         if not self.preprocess:
             print("preprocess_data: preprocess set to False")
             self.data = self.data_raw[:, self.channels]
-            self.condition = self.data_raw[:, -1]
             raise ValueError("preprocess_data: preprocess set to False. Not implemented properly")
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s \
@@ -461,10 +460,10 @@ class Z2_Experiment(Experiment):
             # Draw all 1d histograms into one PDF file
             with PdfPages(f"plots/run{self.runs}/1d_histograms") as out:
                 # Loop over the number of jets
+                plot_train = []
+                plot_test = []
+                plot_samples = []
                 if self.conditional:
-                    plot_train = []
-                    plot_test = []
-                    plot_samples = []
                     for i in range(1, self.n_con+1):
                         plot_train_jets = self.data_raw[:cut][self.data_raw[:cut , -1] == i]
                         plot_train.append(plot_train_jets)
@@ -476,9 +475,9 @@ class Z2_Experiment(Experiment):
                         plot_samples.append(plot_samples_jets)
 
                 else:
-                    plot_train = self.data_raw[cut:]
-                    plot_test = self.data_raw[:cut]
-                    plot_samples = self.samples
+                    plot_train.append(self.data_raw[cut:])
+                    plot_test.append(self.data_raw[:cut])
+                    plot_samples.append(self.samples)
 
                 # Loop over the plot_channels
                 for j, _ in enumerate(plot_train):
@@ -490,7 +489,7 @@ class Z2_Experiment(Experiment):
                         # Get the name and the range of the observable
                         obs_name = self.obs_names[channel]
                         obs_range = self.obs_ranges[channel]
-                        n_epochs = self.total_epochs
+                        n_epochs = self.total_epochs -1
                         # Create the plot
                         plot_obs(pp=out,
                              obs_train=obs_train,

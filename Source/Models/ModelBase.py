@@ -201,10 +201,11 @@ class GenerativeModel(nn.Module):
 
         with PdfPages(f"plots/1d_hist_epoch_{self.epoch}.pdf") as out:
 
+            plot_train = []
+            plot_test = []
+            plot_samples = []
+
             if self.conditional:
-                plot_train = []
-                plot_test = []
-                plot_samples = []
                 for i in range(1, self.n_con + 1):
                     plot_train_jets = self.data_train[self.data_train[:, -1] == i]
                     plot_train.append(plot_train_jets)
@@ -216,9 +217,9 @@ class GenerativeModel(nn.Module):
                     plot_samples.append(plot_samples_jets)
 
             else:
-                plot_train = self.data_train
-                plot_test = self.data_test
-                plot_samples = samples
+                plot_train.append(self.data_train)
+                plot_test.append(self.data_test)
+                plot_samples.append(samples)
 
             for j, _ in enumerate(plot_train):
                 # Loop over the plot_channels

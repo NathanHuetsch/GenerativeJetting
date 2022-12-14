@@ -37,9 +37,9 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100]
         y_tr, y_g, y_t = y_tr/np.sum(y_tr), y_g/np.sum(y_g), y_t/np.sum(y_t)
 
         if conditional:
-            fig1.suptitle(f"After training for {n_epochs} epochs for {n_jets} jets")
+            fig1.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
         else:
-            fig1.suptitle(f"After training for {n_epochs} epochs")
+            fig1.suptitle(f"After training for {n_epochs +1} epochs")
         #Histogram
         axs[0].step(x_t[:num_bins], y_t, label=LABEL_TRUTH, color=truthcolor, linewidth=1.0, where='mid')
         axs[0].step(x_g[:num_bins], y_g,label=LABEL_XGEN, color=netcolor, linewidth=1.0, where='mid')
@@ -49,7 +49,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100]
         axs[0].set_ylabel(r'$\frac{\mathrm{d} \sigma}{\mathrm{d} {%s}}$ [pb/GeV]' % name, fontsize = FONTSIZE)
         if "p_{T" in name:
             axs[0].set_yscale('log')
-        y_rel = y_t/y_g
+        y_rel = y_g/y_t
         y_rel[np.isnan(y_rel)==True] = 1
         y_rel[y_rel==np.inf] = 1
 
@@ -64,7 +64,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100]
         axs[1].step(x_t[:num_bins], y_rel + diff_stat/100, color=netcolor, alpha=0.5, label='$+- stat$', linewidth=0.5, where='mid')
         axs[1].step(x_t[:num_bins], y_rel - diff_stat/100, color=netcolor, alpha=0.5, linewidth=0.5, where='mid')
         axs[1].fill_between(x_t[:num_bins], y_rel - diff_stat/100, y_rel + diff_stat/100, facecolor=netcolor, alpha = 0.3, step = 'mid')
-        axs[1].set_ylabel(r'$\frac{\mathrm{True}}{\mathrm{Model}}$', fontsize = FONTSIZE)
+        axs[1].set_ylabel(r'$\frac{\mathrm{Model}}{\mathrm{True}}$', fontsize = FONTSIZE)
         axs[1].set_yticks([0.95,1,1.05])
         axs[1].set_ylim([0.9,1.1])
         axs[1].axhline(y=1, c='black', ls='--', lw=0.7)
@@ -91,7 +91,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100]
         axs[2].axhspan(0, 1.0, facecolor='#cccccc', alpha=0.3)
 
         #Lower panels train data
-        y_rel = y_t/y_tr
+        y_rel = y_tr/y_t
         y_rel[np.isnan(y_rel)==True] = 1
         y_rel[y_rel==np.inf] = 1
 

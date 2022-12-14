@@ -22,7 +22,10 @@ def preprocess(data, channels=None, fraction=None, conditional=False):
         data = data[:n]
 
     # convert to (pT, phi, eta, mu)
-    events = EpppToPTPhiEta(data[:, :-1], reduce_data=False, include_masses=True)
+    if conditional:
+        events = EpppToPTPhiEta(data[:, :-1], reduce_data=False, include_masses=True)
+    else:
+        events = EpppToPTPhiEta(data, reduce_data=False, include_masses=True)
 
     # apply log transform to pT
     events[:, 0] = np.log(events[:, 0])
@@ -80,7 +83,11 @@ def undo_preprocessing(data, events_mean, events_std, u, s,
                      [* , 16] where the remaining channels are filled with zeros
     :return: the data in the original format with the preprocessing undone
     """
-    events = data[:, :-3]
+    if conditional:
+        events = data[:, :-3]
+    else:
+        events = data
+
     # undo whitening
     events = events * np.sqrt(s)[None]
     events = events @ u.T

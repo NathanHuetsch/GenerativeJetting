@@ -74,7 +74,8 @@ class TBD(GenerativeModel):
             x_t_torch = torch.Tensor(x_t).reshape((batch_size, self.dim - self.n_con)).to(self.device)
             t_torch = t * torch.ones_like(x_t_torch[:, [0]])
 
-            c_torch = torch.Tensor(c).reshape((batch_size, self.n_con)).to(self.device)
+            if self.conditional:
+                c_torch = torch.Tensor(c).reshape((batch_size, self.n_con)).to(self.device)
 
             with torch.no_grad():
                 if c is not None:
@@ -86,8 +87,16 @@ class TBD(GenerativeModel):
         events = []
         with torch.no_grad():
             for i in range(int(n_samples / batch_size) + 1):
-                c = condition[batch_size * i: batch_size * (i + 1)].flatten()
+                if self.conditional:
+                    c = condition[batch_size * i: batch_size * (i + 1)].flatten()
+                else:
+                    c = None
                 sol = solve_ivp(f, (1, 0), x_T[batch_size * i: batch_size * (i + 1)].flatten(), args=[c])
-                s = np.concatenate([sol.y[:, -1].reshape(batch_size, self.dim - self.n_con), c.reshape(batch_size, self.n_con)], axis=1)
+
+                if self.conditional:
+                    s = np.concatenate([sol.y[:, -1].reshape(batch_size, self.dim - self.n_con), c.reshape(batch_size, self.n_con)], axis=1)
+                else:
+                    s = sol.y[:, -1].reshape(batch_size, self.dim)
+
                 events.append(s)
         return np.concatenate(events, axis=0)[:n_samples]
