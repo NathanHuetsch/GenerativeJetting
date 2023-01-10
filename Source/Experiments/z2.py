@@ -200,17 +200,7 @@ class Z2_Experiment(Experiment):
         model = get(self.params, "model", None)
         if model is None:
             raise ValueError("build_model: model not specified")
-        # Read in the parameters required to build the model. Raise an error if one of them is not specified
-        n_blocks = get(self.params, "n_blocks", None)
-        assert n_blocks is not None, "build_model: n_blocks not specified"
-        layers_per_block = get(self.params, "layers_per_block", None)
-        assert layers_per_block is not None, "build_model: layers_per_block not specified"
-        intermediate_dim = get(self.params, "intermediate_dim", None)
-        assert intermediate_dim is not None, "build_model: intermediate_dim not specified"
-        encode_t = get(self.params, "encode_t", False)
-        print(f"build_model: Trying to build model {model} "
-              f"with n_blocks {n_blocks}, layers_per_block {layers_per_block}, "
-              f"intermediate dim {intermediate_dim} and encode_t {encode_t}")
+        print(f"build_model: Trying to build model {model}")
         if model == "INN":
             self.model = INN(self.params)
         elif model == "TBD":

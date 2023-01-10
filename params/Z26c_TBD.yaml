@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Attention_4d"
-run_name : "Net2_sine_cosine_higherLR"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/4d"
+run_name : "TBD_AttentionNet1_small_long_5e5"
 redirect_console : True
 # #########
 # # Data: #
@@ -18,32 +18,33 @@ channels : [9, 10, 13, 14]
 # ##############
 train: True
 log: True
-data_split: [0.6, 0.05, 0.35]
+data_split: [0.5, 0.05, 0.45]
 
 optimizer: Adam
-lr : 4.e-5
-batch_size : 4096
+lr : 5.e-5
+batch_size : 2048
 weight_decay : 0.0
-betas : [0.9, 0.99]
+betas : [0.9, 0.999]
 lr_scheduler: True
 
-n_epochs : 1000
+n_epochs : 6000
 validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 200
+sample_every: 500
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
 model: TBD
 
-network: "AttentionNet2"
+network: "AttentionNet"
 n_blocks : 4
-layers_per_block : 15
-intermediate_dim : 60
-n_head: 2
+intermediate_dim : 64
+n_layers: 5
+layers_per_block: 5
+n_head: 4
 trajectory: "sine_cosine_trajectory"
 encode_t: False
 encode_t_dim: 4

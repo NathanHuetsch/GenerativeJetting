@@ -7,15 +7,18 @@ Code based on Theos implementation but somewhat changed
 """
 
 
-def preprocess(events_four_vector, channels=None):
+def preprocess(events_four_vector, channels=None, convert=True):
     """
     :param events_four_vector: the data as a numpy array. Assumed to be of shape [* , 16]
     :param channels: a list of channels we want to keep
+    :param convert: convert from Eppp tp PTPhiEtaM
     :return: the preprocessed data and some statistics necessary to reproduce the original data
     """
-    # convert to (pT, phi, eta, mu)
-    events = EpppToPTPhiEta(events_four_vector, reduce_data=False, include_masses=True)
-
+    if convert:
+        # convert to (pT, phi, eta, mu)
+        events = EpppToPTPhiEta(events_four_vector, reduce_data=False, include_masses=True)
+    else:
+        events = events_four_vector
     # apply log transform to pT
     events[:, 0] = np.log(events[:, 0])
     events[:, 4] = np.log(events[:, 4])

@@ -5,5 +5,7 @@
 #PBS -e error.txt
 
 export CUDA_VISIBLE_DEVICES=$(cat $PBS_GPUFILE | sed s/.*-gpu// )
-export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/lib/python3.9/site-packages
-export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/GenerativeJetting
+# export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/lib/python3.9/site-packages
+# export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/GenerativeJetting
+# module load anaconda/3.0
+# module load cuda/11.7
