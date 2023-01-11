@@ -99,14 +99,14 @@ class Classifier_Experiment(Experiment):
         self.data_true_raw = undo_preprocessing(self.data_true, self.data_mean, self.data_std,
                                                 self.data_u, self.data_s, self.channels, keep_all=True)
 
-        self.data_generated, self.data_mean, self.data_std, self.data_u, self.data_s \
+        self.data_generated, a, b, c, d \
             = preprocess(self.data_generated_raw, self.channels, convert=False)
         self.data_generated_raw = undo_preprocessing(self.data_generated, self.data_mean, self.data_std,
                                                      self.data_u, self.data_s, self.channels, keep_all=True)
 
 
-        self.data_true = self.data_true_raw[:, self.channels]
-        self.data_generated = self.data_generated_raw[:, self.channels]
+        #self.data_true = self.data_true_raw[:, self.channels]
+        #self.data_generated = self.data_generated_raw[:, self.channels]
 
         self.add_dR = get(self.params, "add_dR", False)
         if self.add_dR:
@@ -512,12 +512,14 @@ class Classifier_Experiment(Experiment):
 
         experiment_data_split = self.experiment_params["data_split"]
         cut = int(len(self.data_true_raw) * (experiment_data_split[0] + experiment_data_split[1]))
+        self.data_train_raw = self.data_true_raw
+        self.data_train = self.data_true
 
         print("make_plots: Drawing histograms")
         with PdfPages(f"plots/1d_histograms") as out:
             # Loop over the plot_channels
             for i, channel in enumerate(self.channels):
-                obs_train = self.data_true_raw[:cut, channel]
+                obs_train = self.data_train_raw[:cut, channel]
                 obs_test = self.data_true_raw[cut:, channel]
                 obs_generated = self.data_generated_raw[:, channel]
                 # Get the name and the range of the observable
@@ -531,7 +533,7 @@ class Classifier_Experiment(Experiment):
                          name=obs_name,
                          range=obs_range)
             if self.add_dR:
-                obs_train = self.data_true_raw[:cut, -1]
+                obs_train = self.data_train_raw[:cut, -1]
                 obs_test = self.data_true_raw[cut:, -1]
                 obs_generated = self.data_generated_raw[:, -1]
                 # Get the name and the range of the observable
@@ -547,8 +549,8 @@ class Classifier_Experiment(Experiment):
 
         with PdfPages(f"plots/1d_histograms_preprocessed") as out:
             # Loop over the plot_channels
-            for i, channel in enumerate(range(4)):
-                obs_train = self.data_true[:cut, channel]
+            for i, channel in enumerate(range(6)):
+                obs_train = self.data_train[:cut, channel]
                 obs_test = self.data_true[cut:, channel]
                 obs_generated = self.data_generated[:, channel]
                 # Get the name and the range of the observable
@@ -568,7 +570,7 @@ class Classifier_Experiment(Experiment):
             # weights = np.concatenate([self.generated_train_weights, self.generated_test_weights], axis=0)
             weights = self.generated_weights
             for i, channel in enumerate(self.channels):
-                obs_train = self.data_true_raw[:cut, channel]
+                obs_train = self.data_train_raw[:cut, channel]
                 obs_test = self.data_true_raw[cut:, channel]
                 obs_generated = self.data_generated_raw[:, channel]
                 obs_name = self.obs_names[channel]
@@ -581,7 +583,7 @@ class Classifier_Experiment(Experiment):
                          name=obs_name,
                          range=obs_range)
             if self.add_dR:
-                obs_train = self.data_true_raw[:cut, -1]
+                obs_train = self.data_train_raw[:cut, -1]
                 obs_test = self.data_true_raw[cut:, -1]
                 obs_generated = self.data_generated_raw[:, channel]
                 obs_name = "dR"

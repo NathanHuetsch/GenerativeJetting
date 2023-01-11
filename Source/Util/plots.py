@@ -110,6 +110,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, range=[0, 100], num_bin
         [cap.set_alpha(0.5) for cap in caps]
         [bar.set_alpha(0.5) for bar in bars]
 
+        #plt.savefig(pp, bbox_inches='tight', format='pdf', pad_inches=0.05)
         plt.savefig(pp, bbox_inches='tight', format='pdf', pad_inches=0.05)
         plt.close()
 
