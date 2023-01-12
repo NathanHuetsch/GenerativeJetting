@@ -44,7 +44,7 @@ class Resnet(nn.Module):
         """
         Method to build the Resnet blocks with the defined specifications
         """
-        layers = [nn.Linear(self.dim + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
+        layers = [nn.Linear(self.dim + self.n_con + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
         for _ in range(1, self.layers_per_block-1):
             layers.append(nn.Linear(self.intermediate_dim, self.intermediate_dim))
             if self.normalization is not None:
@@ -52,7 +52,7 @@ class Resnet(nn.Module):
             if self.dropout is not None:
                 layers.append(nn.Dropout(p=self.dropout))
             layers.append(self.activation())
-        layers.append(nn.Linear(self.intermediate_dim, self.dim-self.n_con))
+        layers.append(nn.Linear(self.intermediate_dim, self.dim))
         return nn.Sequential(*layers)
 
     def forward(self, x, t, condition=None):

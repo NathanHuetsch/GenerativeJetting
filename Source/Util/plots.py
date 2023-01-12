@@ -130,11 +130,12 @@ def delta_r(y,  idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14):
     return np.sqrt(delta_phi(y, idx_phi1, idx_phi2)**2 + delta_eta(y, idx_eta1, idx_eta2)**2)
 
 
-def plot_deta_dphi(file_name, data_train, data_test, data_generated):
+def plot_deta_dphi(file_name, data_train, data_test, data_generated, n_epochs, idx_phi1=9, idx_eta1=10, idx_phi2=13,
+                   idx_eta2=14, conditional=False, n_jets=2):
     fig = plt.figure(figsize=(12, 6))
     fig.add_subplot(1, 3, 1)
-    dphi = data_train[:, 9] - data_train[:, 13]
-    deta = data_train[:, 10] - data_train[:, 14]
+    dphi = data_train[:, idx_phi1] - data_train[:, idx_phi2]
+    deta = data_train[:, idx_eta1] - data_train[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
     plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]])
     plt.xlabel('$\Delta \eta$')
@@ -142,8 +143,8 @@ def plot_deta_dphi(file_name, data_train, data_test, data_generated):
     plt.title('train')
 
     fig.add_subplot(1, 3, 2)
-    dphi = data_test[:, 9] - data_test[:, 13]
-    deta = data_test[:, 10] - data_test[:, 14]
+    dphi = data_test[:,idx_phi1] - data_test[:, idx_phi2]
+    deta = data_test[:, idx_eta1] - data_test[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
     plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]])
     plt.xlabel('$\Delta \eta$')
@@ -151,18 +152,18 @@ def plot_deta_dphi(file_name, data_train, data_test, data_generated):
     plt.title('test')
 
     fig.add_subplot(1, 3, 3)
-    dphi = data_generated[:, 9] - data_generated[:, 13]
-    deta = data_generated[:, 10] - data_generated[:, 14]
+    dphi = data_generated[:, idx_phi1] - data_generated[:, idx_phi2]
+    deta = data_generated[:, idx_eta1] - data_generated[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
     plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]])
     plt.xlabel('$\Delta \eta$')
     plt.ylabel('$\Delta \phi$')
     plt.title('generated')
 
+    if conditional:
+        fig.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
+    else:
+        fig.suptitle(f"After training for {n_epochs + 1} epochs")
     plt.savefig(file_name)
     plt.close()
-
-
-def get_obs(obs,data):
-    return []
 

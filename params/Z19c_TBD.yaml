@@ -1,0 +1,74 @@
+# #########
+# # General: #
+# #########
+runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z13"
+run_name : "TBD_att_full"
+redirect_console : True
+# #########
+# # Data: #
+# #########
+load_data : False
+data_path : "/remote/gpu05/palacios/data/z+njet_full.h5"
+data_type: np
+preprocess : True
+channels : [0, 2, 4, 5, 6, 8, 9, 10, 11]
+need_prior_model: False
+n_jets: 1
+n_con: 3
+con_depth: 0
+#dim : 4
+# ##############
+# # Training:  #
+# ##############
+train: True
+log: False
+conditional: True
+data_split: [0.6, 0.05, 0.35]
+
+optimizer: Adam
+lr : 1.e-4
+batch_size : 2048
+weight_decay : 0.0
+betas : [0.9, 0.99]
+
+n_epochs : 100
+validate: False
+validate_every : 10
+
+sample_periodically: True
+sample_every: 10
+sample_every_n_samples: 1000000
+# #################
+# # Architecture: #
+# #################
+model: TBD
+network: "AttentionNet"
+n_blocks : 4
+layers_per_block : 15
+intermediate_dim : 60
+n_head: 2
+trajectory: "sine_cosine_trajectory"
+encode_t: False
+encode_t_dim: 4
+encode_t_scale: 10
+
+# #################
+# # Loading/saving: #
+# ###################
+warm_start : False
+warm_start_path : "/remote/gpu05/palacios/GenerativeJetting/runs/z13/TBD_Visualize7322/models/model_run0.pt"
+
+# #############
+# # Sampling: #
+# #############
+sample: True
+load_best_checkpoint: False
+n_samples : 1000000
+
+# #############
+# # Plotting: #
+# #############
+plot : True
+#plot_channels : [9, 10, 13, 14]
+plot_deltaR: False
+plot_Deta_Dphi: False

@@ -52,6 +52,9 @@ class GenerativeModel(nn.Module):
         self.net = self.build_net()
         self.conditional = self.params['conditional']
         self.n_con = self.params['n_con']
+        self.n_jets = self.params['n_jets']
+        self.con_depth = get(self.params,'con_depth',0)
+        self.batch_size = self.params["batch_size"]
 
     def build_net(self):
         pass
@@ -86,7 +89,8 @@ class GenerativeModel(nn.Module):
                                                  s=self.data_s,
                                                  channels=self.params["channels"],
                                                  keep_all=True,
-                                                 conditional=self.conditional)
+                                                 conditional=self.conditional,
+                                                 n_jets=self.n_jets)
             self.data_test = undo_preprocessing(data=self.test_loader.dataset.detach().cpu().numpy(),
                                                  events_mean=self.data_mean,
                                                  events_std=self.data_std,
@@ -94,7 +98,8 @@ class GenerativeModel(nn.Module):
                                                  s=self.data_s,
                                                  channels=self.params["channels"],
                                                  keep_all=True,
-                                                 conditional=self.conditional)
+                                                 conditional=self.conditional,
+                                                 n_jets=self.n_jets)
             print(f'train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every'
                   f' {self.sample_every} epochs. This may significantly slow down training!')
 
@@ -106,9 +111,10 @@ class GenerativeModel(nn.Module):
         else:
             print("train_model: log set to False. No logs will be written")
 
-    def run_training(self):
+    def run_training(self, prior_model=None, prior_prior_model=None):
 
         self.prepare_training()
+        samples = []
         n_epochs = get(self.params, "n_epochs", 100)
         past_epochs = get(self.params, "total_epochs", 0)
         print(f"train_model: Model has been trained for {past_epochs} epochs before.")
@@ -126,12 +132,33 @@ class GenerativeModel(nn.Module):
             if self.sample_periodically:
                 if (self.epoch + 1) % self.sample_every == 0:
                     self.eval()
-                    self.sample_and_plot(self.sample_every_n_samples)
+                    if prior_model is not None:
+                        if prior_prior_model is not None:
+                            prior_prior_sample = prior_prior_model.sample_n(self.sample_every_n_samples+2*self.batch_size,
+                                                                            con_depth=self.con_depth)
+                        else:
+                            prior_prior_sample = None
+                        prior_sample = prior_model.sample_n(self.sample_every_n_samples+self.batch_size,
+                                                            prior_samples=prior_prior_sample, con_depth=self.con_depth)
+                    else:
+                        prior_sample = None
+
+                    sample = self.sample_n(self.sample_every_n_samples, prior_samples=prior_sample,
+                                                 con_depth=self.con_depth)
+                    sample = np.concatenate([prior_sample,sample],axis=1)
+                    samples.append(sample)
+
+                    #self.sample_and_plot(self.sample_every_n_samples,
+                     #                    x=prior_sample)
 
         if self.validate:
             self.params["no_improvements"] = self.no_improvements
             self.params["best_val_epoch"] = self.best_val_epoch
             self.params["best_val_loss"] = float(self.best_val_loss)
+        if self.sample_periodically:
+            self.samples = samples
+        else:
+            self.samples = None
 
     def train_one_epoch(self):
         train_losses = np.array([])
@@ -184,12 +211,12 @@ class GenerativeModel(nn.Module):
     def batch_loss(self, x, conditional=False):
         pass
 
-    def sample_n(self, n_samples):
+    def sample_n(self, n_samples, jets=None, prior_samples=None, con_depth=0):
         pass
 
-    def sample_and_plot(self, n_samples):
+    def sample_and_plot(self, n_samples, jets=None, x=None):
         os.makedirs(f"plots", exist_ok=True)
-        samples = self.sample_n(n_samples)
+        samples = self.sample_n(n_samples, jets=jets, prior_samples=x, con_depth=self.con_depth)
         samples = undo_preprocessing(data=samples,
                                      events_mean=self.data_mean,
                                      events_std=self.data_std,
@@ -197,7 +224,8 @@ class GenerativeModel(nn.Module):
                                      s=self.data_s,
                                      channels=self.params["channels"],
                                      keep_all=True,
-                                     conditional=self.conditional)
+                                     conditional=self.conditional,
+                                     n_jets=self.n_jets)
 
         with PdfPages(f"plots/1d_hist_epoch_{self.epoch}.pdf") as out:
 
@@ -205,8 +233,8 @@ class GenerativeModel(nn.Module):
             plot_test = []
             plot_samples = []
 
-            if self.conditional:
-                for i in range(1, self.n_con + 1):
+            if self.conditional and self.n_jets != 3:
+                for i in range(self.n_jets, 4):
                     plot_train_jets = self.data_train[self.data_train[:, -1] == i]
                     plot_train.append(plot_train_jets)
 
@@ -240,26 +268,92 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              range=obs_range,
                              n_epochs=n_epochs,
-                             n_jets=j + 1,
+                             n_jets=j + self.n_jets,
                              conditional=self.conditional)
-        if all(c in self.params["channels"] for c in [9, 10, 13, 14]):
-            file_name = f"plots/deltaR12_epoch_{self.epoch}.pdf"
-            obs_name = "\Delta R_{j_1 j_2}"
-            obs_train = delta_r(self.data_train)
-            obs_test = delta_r(self.data_test)
-            obs_generated = delta_r(samples)
-            plot_obs(pp=file_name,
-                     obs_train=obs_train,
-                     obs_test=obs_test,
-                     obs_predict=obs_generated,
-                     name=obs_name,
-                     range=[0, 8])
 
-            file_name = f"plots/deltadphi_epoch_{self.epoch}.pdf"
-            plot_deta_dphi(file_name=file_name,
-                           data_train=self.data_train,
-                           data_test=self.data_test,
-                           data_generated=samples)
+        if all(c in self.params["channels"] for c in [9, 10, 13, 14]):
+            obs_name = "\Delta R_{j_1 j_2}"
+            with PdfPages(f"plots/deltaR_j1_j2_epoch_{self.epoch}.pdf") as out:
+                for j, _ in enumerate(plot_train):
+                    obs_train = delta_r(plot_train[j])
+                    obs_test = delta_r(plot_test[j])
+                    obs_generated = delta_r(plot_samples[j])
+                    plot_obs(pp=out,
+                             obs_train=obs_train,
+                             obs_test=obs_test,
+                             obs_predict=obs_generated,
+                             name=obs_name,
+                             n_epochs=n_epochs,
+                             n_jets=j + self.n_jets,
+                             conditional=self.conditional,
+                             range=[0, 8])
+                    if self.n_jets == 3:
+                        obs_name = "\Delta R_{j_1 j_3}"
+                        obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                        obs_test = delta_r(plot_test[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                        obs_generated = delta_r(plot_samples[j], idx_phi1=9, idx_eta1=10, idx_phi2=17,
+                                                idx_eta2=18)
+                        plot_obs(pp=out,
+                                 obs_train=obs_train,
+                                 obs_test=obs_test,
+                                 obs_predict=obs_generated,
+                                 name=obs_name,
+                                 n_epochs=n_epochs,
+                                 n_jets=j + self.n_jets,
+                                 conditional=self.conditional,
+                                 range=[0, 8])
+                        obs_name = "\Delta R_{j_2 j_3}"
+                        obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                        obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                        obs_generated = delta_r(plot_samples[j], idx_phi1=13, idx_eta1=14, idx_phi2=17,
+                                                idx_eta2=18)
+                        plot_obs(pp=out,
+                                 obs_train=obs_train,
+                                 obs_test=obs_test,
+                                 obs_predict=obs_generated,
+                                 name=obs_name,
+                                 n_epochs=n_epochs,
+                                 n_jets=j + self.n_jets,
+                                 conditional=self.conditional,
+                                 range=[0, 8])
+
+            for j, _ in enumerate(plot_train):
+                file_name = f"plots/deta_dphi_jets_{j + self.n_jets}_epoch_{self.epoch}.pdf"
+                plot_deta_dphi(file_name=file_name,
+                               data_train=plot_train[j],
+                               data_test=plot_test[j],
+                               data_generated=plot_samples[j],
+                               n_jets=j + self.n_jets,
+                               conditional=self.conditional,
+                               n_epochs=n_epochs)
+
+                if self.n_jets == 3:
+                    file_name = f"plots/deta_dphi_jets_{j + self.n_jets}_13_epoch_{self.epoch}.pdf"
+                    plot_deta_dphi(file_name=file_name,
+                                   data_train=plot_train[j],
+                                   data_test=plot_test[j],
+                                   data_generated=plot_samples[j],
+                                   idx_phi1=9,
+                                   idx_phi2=17,
+                                   idx_eta1=10,
+                                   idx_eta2=18,
+                                   n_jets=j + self.n_jets,
+                                   conditional=self.conditional,
+                                   n_epochs=n_epochs)
+
+                    file_name = f"plots/deta_dphi_jets_{j + self.n_jets}_23_epoch_{self.epoch}.pdf"
+                    plot_deta_dphi(file_name=file_name,
+                                   data_train=plot_train[j],
+                                   data_test=plot_test[j],
+                                   data_generated=plot_samples[j],
+                                   idx_phi1=13,
+                                   idx_phi2=14,
+                                   idx_eta1=10,
+                                   idx_eta2=18,
+                                   n_jets=j + self.n_jets,
+                                   conditional=self.conditional,
+                                   n_epochs=n_epochs)
+
 
     def save(self, epoch=""):
         # Deprecated TOD0

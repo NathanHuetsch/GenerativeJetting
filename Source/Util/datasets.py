@@ -53,12 +53,12 @@ class Dataset:
 
             if m != 1:
 
-                y = event[c_1:c_2]
+                y = event[:c_2]
                 y = np.append(y, m)
                 z_2.append(y)
 
             if m == 3:
-                z = event[c_2:]
+                z = event
                 z = np.append(z, m)
                 z_3.append(z)
 

@@ -47,6 +47,8 @@ def define_flags():
     flags.DEFINE_integer('n_samples', None, "Overwrite n_samples in params")
     flags.DEFINE_boolean('plot', None, "Overwrite plot parameter in params")
     flags.DEFINE_boolean('save_samples', None, "Overwrite save_samples parameter in params")
+    flags.DEFINE_boolean("redirect_console", None, "Overwrite redirect_console in params")
+    flags.DEFINE_integer("con_depth", None, "Overwrite con_depth in params")
 
 
 def main(argv):
@@ -82,9 +84,15 @@ def main(argv):
     if FLAGS.plot is not None:
         params["plot"] = FLAGS.plot
 
+    if FLAGS.redirect_console is not None:
+        params["redirect_console"] = FLAGS.redirect_console
+
     # Explicitly overwrite the plot parameter
     if FLAGS.save_samples is not None:
         params['save_samples'] = FLAGS.save_samples
+
+    if FLAGS.con_depth is not None:
+        params['con_depth'] = FLAGS.con_depth
 
     # Instantiate the experiment class
     experiment = z2.Z2_Experiment(params)
