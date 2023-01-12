@@ -19,6 +19,8 @@ class TBD(GenerativeModel):
             self.trajectory = getattr(Source.Models.tbd, trajectory)
         except AttributeError:
             raise NotImplementedError(f"build_model: Trajectory type {trajectory} not implemented")
+        self.loss_type = get(self.params, "loss_type", "l2")
+        assert self.loss_type in ["l1", "l2"], "Unknown loss type"
 
     def build_net(self):
         """
@@ -37,7 +39,10 @@ class TBD(GenerativeModel):
         x_t, x_t_dot = self.trajectory(x, x_1, t)
 
         drift = self.net(x_t, t)
-        loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
+        if self.loss_type=="l2":
+            loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
+        elif self.loss_type=="l1":
+            loss = torch.mean(torch.abs(drift-x_t_dot))
         return loss
 
     def sample_n(self, n_samples):

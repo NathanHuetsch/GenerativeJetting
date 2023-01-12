@@ -14,5 +14,5 @@ module load cuda/11.7
 # cd into the project folder
 cd GenerativeJetting
 
-python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/Attention_4d/Net2_sincos7473"
+python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/8d/TBD_AttentionNet1_small_long_5e5_noScheduler5334"
 

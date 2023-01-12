@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/4d"
-run_name : "TBD_Resnet_small_long_1e4_linear"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/8d"
+run_name : "TBD_AttentionNet1_small_long_5e5_linear_fullData_l1Loss"
 redirect_console : True
 # #########
 # # Data: #
@@ -10,7 +10,7 @@ redirect_console : True
 data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
 data_type: np
 preprocess : True
-channels : [9, 10, 13, 14]
+channels : [0, 4, 8, 9, 10, 12, 13, 14]
 #[0, 4, 8, 9, 10, 12, 13, 14]
 #dim : 4
 # ##############
@@ -18,29 +18,30 @@ channels : [9, 10, 13, 14]
 # ##############
 train: True
 log: True
-data_split: [0.5, 0.05, 0.45]
+data_split: [0.9, 0.05, 0.05]
 
 optimizer: Adam
-lr : 1.e-4
-batch_size : 2048
+lr : 5.e-5
+batch_size : 8192
 weight_decay : 0.0
 betas : [0.9, 0.999]
 lr_scheduler: True
+loss_type: "l2"
 
 n_epochs : 6000
 validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 500
+sample_every: 1000
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
 model: TBD
 
-network: "Resnet"
-n_blocks : 5
+network: "AttentionNet"
+n_blocks : 4
 intermediate_dim : 64
 n_layers: 5
 layers_per_block: 5
