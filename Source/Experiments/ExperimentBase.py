@@ -68,16 +68,9 @@ class Experiment:
         self.runs = get(self.params, "runs", 0)
         self.total_epochs = get(self.params, "total_epochs", 0)
         self.con_depth = get(self.params, "con_depth", 0)
-        self.model = None
-        self.prior_model= None
+        self.prior_model = None
         self.prior_prior_model = None
-        self.data = None
-        self.data_raw = None
-        self.data_mean = 0
-        self.data_std = 0
-        self.data_u = 0
-        self.data_s = 0
-        self.n_data = 0
+
 
         self.starttime = time.time()
 
@@ -128,7 +121,7 @@ class Experiment:
         print("prepare_experiment: Using out_dir ", self.out_dir)
         print(f"prepare_experiment: Using device {self.device}")
 
-    def load_data(self, p):
+    def load_data(self):
         """
         The load_data method gets the necessary parameters and reads in the data
         Currently supported are datasets of type *.npy ; *.torch ; *.h5
@@ -136,53 +129,27 @@ class Experiment:
         Overwrite this method if other ways of reading in data are needed
         This method should place the data under self.data_raw
                 """
-        load_dataset = get(p, "load_dataset", True)
+        load_dataset = get(self.params, "load_dataset", True)
         # Read in the "data_path" parameter. Raise and error if it is not specified or does not exist
-        data_path = get(p, "data_path", None)
+        data_path = get(self.params, "data_path", None)
+        fraction = get(self.params,"fraction",None)
         if data_path is None:
             raise ValueError("load_data: data_path is None. Please specify in params")
         assert os.path.exists(data_path), f"load_data: data_path {data_path} does not exist"
 
-        prior_data_raw = None
-        prior_prior_data_raw = None
-        data_raw = None
-
         if load_dataset:
             # Read in the "data_type" parameter, defaulting to np if not specified. Try to read in the data accordingly
-            data_type = get(p, "data_type", "np")
+            data_type = get(self.params, "data_type", "np")
             if data_type == "np":
                 data_raw = np.load(data_path)
                 print(f"load_data: Loaded data with shape {data_raw.shape} from ", data_path)
-            elif data_type == "torch":
-                data_raw = torch.load(data_path)
-                print(f"load_data: Loaded data with shape {data_raw.shape} from ", data_path)
-            elif data_type == "h5":
-                data_path_internal = get(p, "data_path_internal", None)
-                if data_path_internal is not None:
-                    with h5py.File(data_path, "r") as f:
-                        data_raw = f[data_path_internal][:]
-                else:
-                    try:
-                        data_raw = pandas.read_hdf(data_path).values
-                    except Exception as e:
-                        raise ValueError("load_data: Failed to read h5 file in data_path")
             else:
                 raise ValueError(f"load_data: Cannot load data from {data_path}")
         else:
-            data_all = Dataset(data_path, conditional=self.conditional)
-            n_jets = get(p, "n_jets", 2)
-            if n_jets == 1:
-                data_raw = data_all.z_1
-                prior_data_raw = None
-            elif n_jets == 2:
-                data_raw = data_all.z_2
-                prior_data_raw = data_all.z_1
-            elif n_jets == 3:
-                data_raw = data_all.z_3
-                prior_data_raw = data_all.z_2
-                prior_prior_data_raw = data_all.z_1
-
-        return data_raw, prior_data_raw, prior_prior_data_raw
+            data_all = Dataset(data_path, fraction=fraction, conditional=self.conditional)
+            self.z_1 = data_all.z_1
+            self.z_2 = data_all.z_2
+            self.z_3 = data_all.z_3
 
     def preprocess_data(self, p, data_raw, save_in_params=False, conditional=False):
         """
@@ -202,11 +169,9 @@ class Experiment:
         preprocess_data = get(p, "preprocess", True)
         channels = get(p, "channels", None)
         n_jets = get(p, "n_jets", 2)
-        fraction = get(p, "fraction", None)
-        n_con = get(p, "n_con", 0)
         if channels is None:
             print(f"preprocess_data: channels and dim not specified. Defaulting to {5 + 4 * n_jets} channels.")
-            channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]])
+            channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
         else:
             print(f"preprocess_data: channels {channels} specified.")
         # Do the preprocessing
@@ -217,7 +182,7 @@ class Experiment:
             raise ValueError("preprocess_data: preprocess set to False. Not implemented properly")
         else:
             data, data_mean, data_std, data_u, data_s \
-                = preprocess(data_raw, channels, fraction, conditional=conditional,
+                = preprocess(data_raw, channels, conditional=conditional,
                              n_jets=n_jets)
 
             print("preprocess_data: Finished preprocessing")
@@ -257,17 +222,6 @@ class Experiment:
         model_type = get(p, "model", None)
         if model_type is None:
             raise ValueError("build_model: model not specified")
-        # Read in the parameters required to build the model. Raise an error if one of them is not specified
-        n_blocks = get(p, "n_blocks", None)
-        assert n_blocks is not None, "build_model: n_blocks not specified"
-        layers_per_block = get(p, "layers_per_block", None)
-        assert layers_per_block is not None, "build_model: layers_per_block not specified"
-        intermediate_dim = get(p, "intermediate_dim", None)
-        assert intermediate_dim is not None, "build_model: intermediate_dim not specified"
-        encode_t = get(p, "encode_t", False)
-        print(f"build_model: Trying to build model {model_type} "
-              f"with n_blocks {n_blocks}, layers_per_block {layers_per_block}, "
-              f"intermediate dim {intermediate_dim} and encode_t {encode_t}")
         if model_type == "INN":
             model = INN(p)
         elif model_type == "TBD":
@@ -296,13 +250,9 @@ class Experiment:
         if save_in_params:
             self.params["model_parameters"] = model_parameters
 
-            if get(self.params, "sample_periodically", False):
-                # The Model needs these values to make intermediate plots
-                # TODO: Can we make this nicer?
-                self.intermediate_samples = model.samples
         return model
 
-    def build_optimizer(self,p, parameters):
+    def build_optimizer(self):
         """
         The build_optimizer method gets the necessary parameters and builds the training optimizer.
         Currently only vanilla Adam is implemented.
@@ -314,33 +264,31 @@ class Experiment:
         """
 
         # Read in the "train" parameter. If it is set to True, build the optimizer, otherwise skip it.
-        train = get(p, "train", True)
+        train = get(self.params, "train", True)
         if train:
             # Read in the "optimizer" parameter and build the specified optimizer
             # TODO: Not very nice
-            optim = get(p, "optimizer", None)
+            optim = get(self.params, "optimizer", None)
             if optim is None:
                 optim = "Adam"
                 print(f"build_optimizer: optimizer not specified. Defaulting to {optim}")
 
             if optim == "Adam":
-                lr = get(p, "lr", 0.0001)
-                betas = get(p, "betas", [0.9, 0.999])
-                weight_decay = get(p, "weight_decay", 0)
-                optimizer = \
-                    Adam(parameters, lr=lr, betas=betas, weight_decay=weight_decay)
+                lr = get(self.params, "lr", 0.0001)
+                betas = get(self.params, "betas", [0.9, 0.999])
+                weight_decay = get(self.params, "weight_decay", 0)
+                self.model.optimizer = \
+                    Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
                 print(
                     f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
             else:
                 raise ValueError(f"build_optimizer: optimizer {optim} not implemented")
 
         else:
-            optimizer = None
+            self.model.optimizer = None
             print("build_optimizer: train set to False. Not building optimizer")
 
-        return optimizer
-
-    def build_dataloaders(self,p):
+    def build_dataloaders(self):
         """
         The build_dataloaders methods gets the necessary parameters and builds the train_loader, val_loader and test_loader
         TODO: test_loader used for nothing atm
@@ -351,8 +299,8 @@ class Experiment:
         """
 
         # Read in the "train" parameter. If it is set to True, build the dataloaders, otherwise skip it.
-        train = get(p, "train", True)
-        n_data = get(p, "n_data", 1000000)
+        train = get(self.params, "train", True)
+        n_data = get(self.params, "n_data", 1000000)
         # Read in the "data_split" parameter, specifying which parts of the data to use for training, validation and test
 
         if train:
@@ -360,25 +308,27 @@ class Experiment:
             # Define the loaders
 
             cut1 = int(n_data * self.data_split[0])
-            cut2 = int(n_data * (self.data_split[0] + self.data_split[1]))
+            cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
+
             self.model.train_loader = \
                 DataLoader(dataset=self.data[:cut1],
-                           batch_size=self.batch_size,
-                           shuffle=True)
-            self.model.val_loader = \
-                DataLoader(dataset=self.data[cut1: cut2],
                            batch_size=self.batch_size,
                            shuffle=True)
             self.model.test_loader = \
                 DataLoader(dataset=self.data[cut2:],
                            batch_size=self.batch_size,
                            shuffle=True)
+
+            self.sample_periodically = get(self.params, "sample_periodically", False)
+            if self.sample_periodically:
+                self.model.data_train = self.data_raw[:cut1]
+                self.model.data_test = self.data_raw[cut2:]
             print(
                 f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
         else:
             print("build_dataloaders: train set to False. Not building dataloaders")
 
-    def train_model(self, p, save_in_params=True):
+    def train_model(self):
         """
         The train_model method performs the model training.
         Currently the training code is hidden as part of the model classes to keep the ExperimentClass shorter.
@@ -394,38 +344,79 @@ class Experiment:
         """
 
         # Read in the "train" parameter. If it is set to True, perform the training, otherwise skip it.
-        train = get(p, "train", True)
+        train = get(self.params, "train", True)
         if train:
             # Create a folder to save model checkpoints
             os.makedirs("models", exist_ok=True)
             # Keep track of the time and perform the model training
             # See the model classes for documentation on the run_training() method
             t0 = time.time()
-            sample_every_n_samples = get(p, "sample_every_n_samples", 100000)
             self.model.run_training(prior_model=self.prior_model, prior_prior_model=self.prior_prior_model)
             t1 = time.time()
             traintime = t1 - t0
-            n_epochs = get(p,"n_epochs",100)
+            n_epochs = get(self.params,"n_epochs",100)
             print(f"train_model: Finished training {n_epochs} epochs after {traintime} seconds.")
 
             # Save the final model. Update the total amount of training epochs the model has been trained for
             torch.save(self.model.state_dict(), f"models/model_run{self.runs}.pt")
 
-            if save_in_params:
-                self.params["total_epochs"] = self.total_epochs
-                self.params["traintime"] = traintime
-                self.total_epochs = self.total_epochs + n_epochs
+            self.params["total_epochs"] = self.total_epochs
+            self.params["traintime"] = traintime
+            self.total_epochs = self.total_epochs + n_epochs
 
         else:
             print("train_model: train set to False. Not training")
         print(f"train_model: Model has been trained for a total of {self.total_epochs} epochs")
 
-
     def generate_samples(self):
-        pass
+        """
+        The generate_samples method uses the trained or loaded model to generate samples.
+        Currently, the sampling code is hidden as part of the model classes to keep the ExperimentClass shorter.
+        All models have a sample_n_parallel() method, that performs the sampling.
+
+        New model classes implemented in this framework must have a sample_n_parallel(n_samples) method.
+        See documentation of ModelBase class for more guidelines on how to implement new model classes.
+
+        Overwrite this method if a different way of sampling is needed.
+        """
+
+        # Read in the "sample" parameter. If it is set to True, perform the sampling, otherwise skip it.
+        sample = get(self.params, "sample", True)
+        if sample:
+            # Read in the "n_samples" parameter specifying how many samples to generate
+            # Call the model.sample_n_parallel(n_samples) method to perform the sampling
+            n_samples = get(self.params, "n_samples", 1000000)
+            print(f"generate_samples: Starting generation of {n_samples} samples")
+            t0 = time.time()
+            self.samples = self.model.sample_and_undo(n_samples, prior_model=self.prior_model)
+            t1 = time.time()
+            sampletime = t1 - t0
+            self.params["sampletime"] = sampletime
+
+            print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+            if get(self.params, "save_samples", False):
+                os.makedirs('samples', exist_ok=True)
+                np.save("samples/samples_final.npy", self.samples)
+                print(f"save_samples: generated samples have been saved")
+        else:
+            print("generate_samples: sample set to False")
 
     def make_plots(self):
-        pass
+        """
+        The make_plots method uses the train data, the test data and the generated samples to draw a range of plots.
+
+        Overwrite this method if other plots are required.
+        """
+
+        # Read in the "plot" and "sample" parameters. If both are set to True, perform make the plots, otherwise skip it.
+        plot = get(self.params, "plot", True)
+        sample = get(self.params, "sample", True)
+        if plot and sample:
+            self.model.plot_samples(self.samples, finished=True)
+
+            print("make_plots: Finished making plots")
+        else:
+            print("make_plots: plot set to False")
 
     def finish_up(self):
         """

@@ -8,19 +8,12 @@ Code based on Theos implementation but somewhat changed
 """
 
 
-def preprocess(data, channels=None, fraction=None, conditional=False, n_jets=2):
+def preprocess(data, channels=None,conditional=False, n_jets=2):
     """
     :param data: the data as a numpy array. Assumed to be of shape [* , 8+4*n_jets+1]
     :param channels: a list of channels we want to keep
-    :param fraction: fraction of data kept
     :return: the preprocessed data, the hot-encoded condition and some statistics necessary to reproduce the original data
     """
-
-    # keep only fraction of dataset to run tests
-    if fraction is not None:
-        n = round(fraction * data.shape[0])
-        data = data[:n]
-
     # convert to (pT, phi, eta, mu)
     if conditional:
         events = EpppToPTPhiEta(data[:, :-1], reduce_data=False, include_masses=True)
@@ -31,23 +24,10 @@ def preprocess(data, channels=None, fraction=None, conditional=False, n_jets=2):
     events[:, 0] = np.log(events[:, 0])
     events[:, 4] = np.log(events[:, 4])
     events[:, 8::4] = np.log(events[:, 8::4] - 20 + 1e-2)
-    #events[:, 4] = np.log(events[:, 4])
-    #events[:, 8] = np.log(events[:, 8] - 20 + 1e-2)
-    #events[:, 12] = np.log(events[:, 12] - 20 + 1e-2)
 
     events[:, 5::4] = events[:, 5::4] - events[:,1,None]
     events[:, 1::4] = (events[:, 1::4] + np.pi) % (2*np.pi)- np.pi
     events[:, 1::4] = np.arctanh(events[:, 1::4]/np.pi)
-
-    #phi_idx = [1, 5, 9, 13]
-    #for i in phi_idx:
-        # make phi relative
-        #if i != 1:
-         #   events[:, i] = events[:, i] - events[:, 1]
-        # limit to [-pi, pi]
-        #events[:, i] = (events[:, i] + np.pi) % (2 * np.pi) - np.pi
-        # apply atanh transform
-        #events[:, i] = np.arctanh(events[:, i] / np.pi)
 
     # discard unwanted channels
     if channels is not None:
@@ -102,15 +82,11 @@ def undo_preprocessing(data, events_mean, events_std, u, s,
         events[:, channels] = temp
     # undo atanh transform
     events[:,1::4] = np.tanh(events[:, 1::4]) * np.pi
-    #phi_idx = [1, 5, 9, 13]
-    #for i in phi_idx:
-    #    events[:, i] = np.tanh(events[:, i]) * np.pi
 
     # undo log transform
     events[:, 0] = np.exp(events[:, 0])
     events[:, 4] = np.exp(events[:, 4])
     events[:, 8::4] = np.exp(events[:, 8::4]) + 20 - 1e-2
-    #events[:, 12] = np.exp(events[:, 12]) + 20 - 1e-2
 
     if channels is None or keep_all:
         events = events

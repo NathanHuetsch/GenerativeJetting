@@ -25,7 +25,7 @@ LABEL_XGEN = "Gen."
 LABEL_XTRAIN = "Train"
 LABEL_TRUTH = "True"
 
-def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100], num_bins=60,FONTSIZE=14, weights=None,conditional=False, n_jets=2):
+def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100], num_bins=60,FONTSIZE=14, weights=None, n_jets=2):
         fig1, axs = plt.subplots(3, 1, sharex=True, gridspec_kw={'height_ratios' : [4, 1, 1], 'hspace' : 0.00})
 
         y_t, x_t = np.histogram(obs_test, bins=num_bins, range=range, density=True)
@@ -36,10 +36,8 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100]
         y_tr, x_tr = np.histogram(obs_train, bins=num_bins, range=range, density=True)
         y_tr, y_g, y_t = y_tr/np.sum(y_tr), y_g/np.sum(y_g), y_t/np.sum(y_t)
 
-        if conditional:
-            fig1.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
-        else:
-            fig1.suptitle(f"After training for {n_epochs +1} epochs")
+        fig1.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
+
         #Histogram
         axs[0].step(x_t[:num_bins], y_t, label=LABEL_TRUTH, color=truthcolor, linewidth=1.0, where='mid')
         axs[0].step(x_g[:num_bins], y_g,label=LABEL_XGEN, color=netcolor, linewidth=1.0, where='mid')
@@ -130,14 +128,14 @@ def delta_r(y,  idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14):
     return np.sqrt(delta_phi(y, idx_phi1, idx_phi2)**2 + delta_eta(y, idx_eta1, idx_eta2)**2)
 
 
-def plot_deta_dphi(file_name, data_train, data_test, data_generated, n_epochs, idx_phi1=9, idx_eta1=10, idx_phi2=13,
-                   idx_eta2=14, conditional=False, n_jets=2):
+def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1=9, idx_eta1=10, idx_phi2=13,
+                   idx_eta2=14, n_jets=2):
     fig = plt.figure(figsize=(12, 6))
     fig.add_subplot(1, 3, 1)
     dphi = data_train[:, idx_phi1] - data_train[:, idx_phi2]
     deta = data_train[:, idx_eta1] - data_train[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
-    plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]])
+    plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]], rasterized=True)
     plt.xlabel('$\Delta \eta$')
     plt.ylabel('$\Delta \phi$')
     plt.title('train')
@@ -146,7 +144,7 @@ def plot_deta_dphi(file_name, data_train, data_test, data_generated, n_epochs, i
     dphi = data_test[:,idx_phi1] - data_test[:, idx_phi2]
     deta = data_test[:, idx_eta1] - data_test[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
-    plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]])
+    plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]], rasterized=True)
     plt.xlabel('$\Delta \eta$')
     plt.ylabel('$\Delta \phi$')
     plt.title('test')
@@ -155,15 +153,10 @@ def plot_deta_dphi(file_name, data_train, data_test, data_generated, n_epochs, i
     dphi = data_generated[:, idx_phi1] - data_generated[:, idx_phi2]
     deta = data_generated[:, idx_eta1] - data_generated[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
-    plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]])
+    plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]], rasterized=True)
     plt.xlabel('$\Delta \eta$')
     plt.ylabel('$\Delta \phi$')
     plt.title('generated')
-
-    if conditional:
-        fig.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
-    else:
-        fig.suptitle(f"After training for {n_epochs + 1} epochs")
-    plt.savefig(file_name)
+    fig.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
+    plt.savefig(pp, format="pdf")
     plt.close()
-

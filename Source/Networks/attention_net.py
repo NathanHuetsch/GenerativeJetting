@@ -99,7 +99,7 @@ class AttentionNet(nn.Module):
         self.n_blocks = param["n_blocks"]
         self.intermediate_dim = self.param["intermediate_dim"]
         self.dim = self.param["dim"]
-        self.n_con = self.param['n_con']
+        self.n_con = self.param.get('n_con',0)
         self.dropout = self.param.get("dropout", None)
         self.normalization = self.param.get("normalization", None)
         self.activation = self.param.get("activation", "SiLU")

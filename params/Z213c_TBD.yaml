@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z213"
-run_name : "TBD_att_full"
+run_name : "TBD_att_smallerlr"
 redirect_console : True
 # #########
 # # Data: #
@@ -13,10 +13,7 @@ data_type: np
 preprocess : True
 channels : [12,13,14,15]
 prior_path: "/remote/gpu05/palacios/GenerativeJetting/runs/z13/TBD_att_full"
-dim: 4
 n_jets: 2
-n_con: 11
-con_depth: 1
 #dim : 4
 # ##############
 # # Training:  #
@@ -27,12 +24,12 @@ conditional: True
 data_split: [0.6, 0.05, 0.35]
 
 optimizer: Adam
-lr : 1.e-4
+lr : 5.e-5
 batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 500
+n_epochs : 3000
 validate: False
 validate_every : 10
 
@@ -47,7 +44,7 @@ network: "AttentionNet"
 n_blocks : 4
 layers_per_block : 15
 intermediate_dim : 60
-n_head: 2
+n_head: 4
 trajectory: "sine_cosine_trajectory"
 encode_t: False
 encode_t_dim: 4

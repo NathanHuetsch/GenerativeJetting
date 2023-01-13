@@ -8,5 +8,5 @@ export CUDA_VISIBLE_DEVICES=$(cat $PBS_GPUFILE | sed s/.*-gpu// )
 source venv/bin/activate
 cd GenerativeJetting
 
-python run_Z2.py --warm_start_path="/remote/gpu05/palacios/GenerativeJetting/runs/z13/TBD_att_full" --train=False --save_samples=False --plot=True --redirect_console=False --con_depth=1
+python run_Z2.py --warm_start_path="/remote/gpu05/palacios/GenerativeJetting/runs/z213/TBD_att_full5452"
 

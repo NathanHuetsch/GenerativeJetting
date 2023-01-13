@@ -6,10 +6,13 @@ import h5py
 
 class Dataset:
 
-    def __init__(self, file_path, conditional=True):
+    def __init__(self, file_path, fraction=None, conditional=False):
         self.file_path = file_path
-        self.data = h5py.File(self.file_path)
-        self.entries = [np.count_nonzero(event) for event in self.data['events']['block0_values']]
+        self.data = h5py.File(self.file_path)['events']['block0_values']
+        if fraction is not None:
+            n = round(fraction * self.data.shape[0])
+            self.data = self.data[:n]
+        self.entries = [np.count_nonzero(event) for event in self.data]
         if conditional:
             self.z_1, self.z_2, self.z_3 = self.get_conditional_dataset()
         else:
@@ -20,7 +23,7 @@ class Dataset:
         z_2 = []
         z_3 = []
         failures = []
-        for i, event in enumerate(self.data['events']['block0_values']):
+        for i, event in enumerate(self.data):
             n = self.entries[i]
             x = event[:n]
             if n == 12:
@@ -42,7 +45,7 @@ class Dataset:
         z_1 = []
         z_2 = []
         z_3 = []
-        for i, event in enumerate(self.data['events']['block0_values']):
+        for i, event in enumerate(self.data):
             m = self.entries[i] / 4 - 2
 
             c_1 = 12

@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z13"
-run_name : "TBD_att_full"
+run_name : "TBD_att_full_4nheads"
 redirect_console : True
 # #########
 # # Data: #
@@ -12,10 +12,7 @@ data_path : "/remote/gpu05/palacios/data/z+njet_full.h5"
 data_type: np
 preprocess : True
 channels : [0, 2, 4, 5, 6, 8, 9, 10, 11]
-need_prior_model: False
 n_jets: 1
-n_con: 3
-con_depth: 0
 #dim : 4
 # ##############
 # # Training:  #
@@ -31,11 +28,11 @@ batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 100
+n_epochs : 300
 validate: False
 validate_every : 10
 
-sample_periodically: True
+sample_periodically: False
 sample_every: 10
 sample_every_n_samples: 1000000
 # #################
@@ -46,7 +43,7 @@ network: "AttentionNet"
 n_blocks : 4
 layers_per_block : 15
 intermediate_dim : 60
-n_head: 2
+n_head: 4
 trajectory: "sine_cosine_trajectory"
 encode_t: False
 encode_t_dim: 4

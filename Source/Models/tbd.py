@@ -66,7 +66,7 @@ class TBD(GenerativeModel):
         loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
         return loss
 
-    def sample_n(self, n_samples, jets=None, prior_samples=None, con_depth=0):
+    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
         """
         Generate n_samples new samples.
         Start from Gaussian random noise and solve the reverse ODE to obtain samples
@@ -75,42 +75,40 @@ class TBD(GenerativeModel):
         batch_size = get(self.params, "batch_size", 8192)
         x_T = np.random.randn(n_samples + batch_size, self.dim)
 
-        if jets is not None:
-            condition = torch.tensor(jets * (n_samples + batch_size))
+        if conditional:
+            if self.n_jets == 1 and con_depth == 0:
+                n_c = (n_samples + batch_size) // 3
+                n_r = (n_samples + batch_size) - 2 * n_c
 
-        elif self.n_jets == 1 and con_depth == 0:
-            n_c = (n_samples + batch_size) // 3
-            n_r = (n_samples + batch_size) - 2 * n_c
+                c_1 = np.array([[1, 0, 0]] * n_c)
+                c_2 = np.array([[0, 1, 0]] * n_c)
+                c_3 = np.array([[0, 0, 1]] * n_r)
 
-            c_1 = np.array([[1, 0, 0]] * n_c)
-            c_2 = np.array([[0, 1, 0]] * n_c)
-            c_3 = np.array([[0, 0, 1]] * n_r)
+                condition = np.concatenate([c_1, c_2, c_3])
 
-            condition = np.concatenate([c_1, c_2, c_3])
+            elif self.n_jets == 1 and con_depth == 1:
+                n_c = (n_samples + batch_size) // 2
+                n_r = (n_samples + batch_size) - n_c
 
-        elif self.n_jets == 1 and con_depth == 1:
-            n_c = (n_samples + batch_size) // 2
-            n_r = (n_samples + batch_size) - n_c
+                c_1 = np.array([[0, 1, 0]] * n_c)
+                c_2 = np.array([[0, 0, 1]] * n_r)
 
-            c_1 = np.array([[0, 1, 0]] * n_c)
-            c_2 = np.array([[0, 0, 1]] * n_r)
+                condition = np.concatenate([c_1, c_2])
 
-            condition = np.concatenate([c_1, c_2])
+            elif self.n_jets == 1 and con_depth == 2:
+                n_c = n_samples + batch_size
 
-        elif self.n_jets == 1 and con_depth == 2:
-            n_c = n_samples + batch_size
+                condition = np.array([[0, 0, 1]] * n_c)
 
-            condition = np.array([[0, 0, 1]] * n_c)
+            elif self.n_jets == 2:
 
-        elif self.n_jets == 2:
+                condition_1 = prior_samples[:,:9]
+                condition_2 = prior_samples[:, -2:]
 
-            condition_1 = prior_samples[:,:9]
-            condition_2 = prior_samples[:, -2:]
+                condition = np.concatenate([condition_1, condition_2], axis=1)
 
-            condition = np.concatenate([condition_1, condition_2], axis=1)
-
-        elif self.n_jets == 3:
-            condition = prior_samples[:,:13]
+            elif self.n_jets == 3:
+                condition = prior_samples[:,:13]
 
         else:
             condition = None
