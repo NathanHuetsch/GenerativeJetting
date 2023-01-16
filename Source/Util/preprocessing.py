@@ -6,19 +6,29 @@ Methods to perform the physics preprocessing of the 16dim Z+2jets input data
 Code based on Theos implementation but somewhat changed 
 """
 
+def prepreprocess(events):
 
-def preprocess(events_four_vector, channels=None, convert=True):
+    events = EpppToPTPhiEta(events, reduce_data=False, include_masses=True)
+    phi_idx = [5, 9, 13]
+    for i in phi_idx:
+        events[:, i] = events[:, i] - events[:, 1]
+        events[:, i] = (events[:, i] + np.pi) % (2 * np.pi) - np.pi
+    return events
+
+
+def preprocess(events_in, channels=None, prepre=True):
     """
     :param events_four_vector: the data as a numpy array. Assumed to be of shape [* , 16]
     :param channels: a list of channels we want to keep
     :param convert: convert from Eppp tp PTPhiEtaM
+    :param convert: subtract phi_1 from the other phi_i
     :return: the preprocessed data and some statistics necessary to reproduce the original data
     """
-    if convert:
+    if prepre:
         # convert to (pT, phi, eta, mu)
-        events = EpppToPTPhiEta(events_four_vector, reduce_data=False, include_masses=True)
+        events = prepreprocess(events_in)
     else:
-        events = events_four_vector
+        events = events_in
     # apply log transform to pT
     events[:, 0] = np.log(events[:, 0])
     events[:, 4] = np.log(events[:, 4])
@@ -27,9 +37,6 @@ def preprocess(events_four_vector, channels=None, convert=True):
 
     phi_idx = [1, 5, 9, 13]
     for i in phi_idx:
-        # make phi relative
-        if i != 1:
-            events[:, i] = events[:, i] - events[:, 1]
         # limit to [-pi, pi]
         events[:, i] = (events[:, i] + np.pi) % (2 * np.pi) - np.pi
         # apply atanh transform

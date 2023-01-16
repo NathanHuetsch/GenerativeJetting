@@ -85,6 +85,7 @@ class Classifier_Experiment(Experiment):
     def preprocess_data(self):
 
         self.channels = get(self.experiment_params, "channels", None)
+        self.preprocess = get(self.params, "preprocess", True)
         if self.channels is None:
             print("preprocess_data: channels and dim not specified. Defaulting to 13 channels")
             self.channels = [0, 2, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15]
@@ -100,13 +101,14 @@ class Classifier_Experiment(Experiment):
                                                 self.data_u, self.data_s, self.channels, keep_all=True)
 
         self.data_generated, a, b, c, d \
-            = preprocess(self.data_generated_raw, self.channels, convert=False)
+            = preprocess(self.data_generated_raw, self.channels, prepre=False)
         self.data_generated_raw = undo_preprocessing(self.data_generated, self.data_mean, self.data_std,
                                                      self.data_u, self.data_s, self.channels, keep_all=True)
 
 
-        #self.data_true = self.data_true_raw[:, self.channels]
-        #self.data_generated = self.data_generated_raw[:, self.channels]
+        if not self.preprocess:
+            self.data_true = self.data_true_raw[:, self.channels]
+            self.data_generated = self.data_generated_raw[:, self.channels]
 
         self.add_dR = get(self.params, "add_dR", False)
         if self.add_dR:

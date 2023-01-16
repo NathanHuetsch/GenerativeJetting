@@ -19,8 +19,11 @@ class TBD(GenerativeModel):
             self.trajectory = getattr(Source.Models.tbd, trajectory)
         except AttributeError:
             raise NotImplementedError(f"build_model: Trajectory type {trajectory} not implemented")
+
         self.loss_type = get(self.params, "loss_type", "l2")
         assert self.loss_type in ["l1", "l2"], "Unknown loss type"
+
+        self.multiple_t = get(self.params, "multiple_t", False)
 
     def build_net(self):
         """
@@ -33,10 +36,14 @@ class TBD(GenerativeModel):
             raise NotImplementedError(f"build_model: Network class {network} not recognised")
 
     def batch_loss(self, x):
-        t = torch.rand(x.size(0), 1, device=x.device)
-        x_1 = torch.randn_like(x)
-
-        x_t, x_t_dot = self.trajectory(x, x_1, t)
+        if self.multiple_t:
+            t = torch.rand(10*x.size(0), 1, device=x.device)
+            x_1 = torch.randn_like(x)
+            x_t, x_t_dot = self.trajectory(x.repeat(10, 1), x_1.repeat(10, 1), t)
+        else:
+            t = torch.rand(x.size(0), 1, device=x.device)
+            x_1 = torch.randn_like(x)
+            x_t, x_t_dot = self.trajectory(x, x_1, t)
 
         drift = self.net(x_t, t)
         if self.loss_type=="l2":

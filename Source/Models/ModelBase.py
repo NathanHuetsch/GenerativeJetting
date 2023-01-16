@@ -56,7 +56,7 @@ class GenerativeModel(nn.Module):
 
     def prepare_training(self):
         print("train_model: Preparing model training")
-        self.lr_scheduler = get(self.params, "lr_scheduler", True)
+        self.use_scheduler = get(self.params, "use_scheduler", False)
         self.train_losses = np.array([])
         self.train_losses_epoch = np.array([])
         self.n_trainbatches = len(self.train_loader)
@@ -149,7 +149,7 @@ class GenerativeModel(nn.Module):
                 if self.log:
                     self.logger.add_scalar("train_losses", train_losses[-1], self.epoch*self.n_trainbatches + batch_id)
 
-                if self.lr_scheduler:
+                if self.use_scheduler:
                     self.scheduler.step()
 
             else:

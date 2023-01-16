@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
@@ -310,16 +311,28 @@ class Z2_Experiment(Experiment):
                            shuffle=True)
             print(f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
 
-            lr_scheduler = get(self.params, "lr_scheduler", True)
-            if lr_scheduler:
-                lr = get(self.params, "lr", 0.0001)
-                n_epochs = get(self.params, "n_epochs", 100)
-                self.model.scheduler = OneCycleLR(
-                    self.model.optimizer,
-                    lr * 10,
-                    epochs=n_epochs,
-                    steps_per_epoch=len(self.model.train_loader))
-                print("build_dataloaders: Using one-cycle lr scheduler")
+            use_scheduler = get(self.params, "use_scheduler", "False")
+            if use_scheduler:
+                lr_scheduler = get(self.params, "lr_scheduler", "OneCycle")
+                if lr_scheduler == "OneCycle":
+                    lr = get(self.params, "lr", 0.0001)
+                    n_epochs = get(self.params, "n_epochs", 100)
+                    self.model.scheduler = OneCycleLR(
+                        self.model.optimizer,
+                        lr * 10,
+                        epochs=n_epochs,
+                        steps_per_epoch=len(self.model.train_loader))
+                    print("build_dataloaders: Using one-cycle lr scheduler")
+                elif lr_scheduler == "CosineAnnealing":
+                    n_epochs = get(self.params, "n_epochs", 100)
+                    self.model.scheduler = CosineAnnealingLR(
+                        self.model.optimizer,
+                        n_epochs*len(self.model.train_loader)
+                    )
+                    print("build_dataloaders: Using CosineAnnealing lr scheduler")
+                else:
+                    print(f"build_dataloaders: lr_scheduler {lr_scheduler} not recognised. Not using it")
+                    self.params["use_scheduler"]=False
         else:
             print("build_dataloaders: train set to False. Not building dataloaders")
 
