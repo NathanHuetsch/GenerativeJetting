@@ -141,7 +141,7 @@ class TBD(GenerativeModel):
                     elif self.n_jets == 2:
                         s = np.concatenate([sol.y[:, -1].reshape(batch_size, self.dim), c[:,-2:]], axis=1)
                     elif self.n_jets == 3:
-                        s = np.concatenate([sol.y[:, -1].reshape(batch_size, self.dim)], axis=1)
+                        s = sol.y[:, -1].reshape(batch_size, self.dim)
                 else:
                     s = sol.y[:, -1].reshape(batch_size, self.dim)
 

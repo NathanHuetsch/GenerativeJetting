@@ -151,9 +151,9 @@ class GenerativeModel(nn.Module):
             prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size, conditional=True,
                                                          con_depth=self.con_depth)
             prior_samples = prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
-                                             condtional=True, con_depth=self.con_depth)
+                                             conditional=True, con_depth=self.con_depth)
 
-            priors = np.concatenate([prior_prior_samples[:,:9],prior_samples[:,:4]], axis=1)
+            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
             samples = self.sample_n(n_samples, prior_samples=priors, conditional=True, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
                                            self.prior_prior_u, self.prior_prior_s, self.prior_prior_channels,
@@ -162,7 +162,7 @@ class GenerativeModel(nn.Module):
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
                                            self.prior_u, self.prior_s, self.prior_channels,
                                            keep_all=True, conditional=True,
-                                           n_jets=1)
+                                           n_jets=2)
             samples = undo_preprocessing(samples, self.data_mean, self.data_std,
                                      self.data_u, self.data_s, self.params["channels"],
                                      keep_all=True, conditional=self.conditional,
