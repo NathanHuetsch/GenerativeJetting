@@ -1,6 +1,6 @@
 import os
-from Source.Experiments import z2
-from Source.Util.util import load_params
+from Source.Experiments import z1,z2,z3
+from Source.Util.util import load_params, get
 from absl import app
 from absl import flags
 import sys
@@ -16,7 +16,7 @@ There are several ways to call this script:
 Call this function and pass as single argument the path to the *.yaml file containing the experiment parameters.
 No flags have to be specified and the experiment will just run from the parameter *.yaml.
 Example:
-python run_Z2.py /remote/gpu07/huetsch/GenerativeJetting/params/Z2_test_gpu.yaml
+python run_Zn.py /remote/gpu07/huetsch/GenerativeJetting/params/Z2_test_gpu.yaml
 
 2) The WarmStart way
 Call this function as pass a path to a warm start folder as warm_start_path flag. 
@@ -24,7 +24,7 @@ In this case we do not need a path to a *.yaml parameter file. It is assumed tha
 file called "parameters.yaml". These will be read and used for the experiment.
 This is convenient if we want to continue a past experiment, as we will just load the parameters from that experiment.
 Example:
-python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z2/LongerAndBigger_TBD3038"
+python run_Zn.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z2/LongerAndBigger_TBD3038"
 
 3) The Overwrite way
 Can be combined with 2)
@@ -35,7 +35,7 @@ continue a past experiment, but change some of the parameters, but are too lazy 
 The most common use case for this is if we want to load a pretrained model and generate new samples and/or plots with it.
 In this case we can load the past experiment with 2) and overwrite the train parameter in it. 
 Example:
-python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z2/LongerAndBigger_TBD3038" --train=False --n_samples=1000000
+python run_Zn.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/z2/LongerAndBigger_TBD3038" --train=False --n_samples=1000000
 """
 
 
@@ -95,7 +95,16 @@ def main(argv):
         params['con_depth'] = FLAGS.con_depth
 
     # Instantiate the experiment class
-    experiment = z2.Z2_Experiment(params)
+    n_jets = get(params,"n_jets",2)
+    if n_jets == 1:
+        experiment = z1.Z1_Experiment(params)
+    elif n_jets == 2:
+        experiment = z2.Z2_Experiment(params)
+    elif n_jets == 3:
+        experiment = z3.Z3_Experiment(params)
+    else:
+        raise ValueError("n_jets must be either 1,2 or 3")
+
     # Run the experiment
     experiment.full_run()
 

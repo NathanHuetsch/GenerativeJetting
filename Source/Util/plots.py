@@ -130,14 +130,23 @@ def delta_r(y,  idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14):
 
 def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1=9, idx_eta1=10, idx_phi2=13,
                    idx_eta2=14, n_jets=2):
+    if idx_phi1 == 9 and idx_phi2 == 13:
+        i = 1
+        j = 2
+    elif idx_phi1 == 9 and idx_phi2 == 17:
+        i = 1
+        j = 3
+    elif idx_phi1 == 13 and idx_phi2 == 17:
+        i = 2
+        j = 3
     fig = plt.figure(figsize=(12, 6))
     fig.add_subplot(1, 3, 1)
     dphi = data_train[:, idx_phi1] - data_train[:, idx_phi2]
     deta = data_train[:, idx_eta1] - data_train[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
     plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]], rasterized=True)
-    plt.xlabel('$\Delta \eta$')
-    plt.ylabel('$\Delta \phi$')
+    plt.xlabel(f'$\Delta \eta{i,j}$')
+    plt.ylabel(f'$\Delta \phi{i,j}$')
     plt.title('train')
 
     fig.add_subplot(1, 3, 2)
@@ -145,17 +154,16 @@ def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1
     deta = data_test[:, idx_eta1] - data_test[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
     plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]], rasterized=True)
-    plt.xlabel('$\Delta \eta$')
-    plt.ylabel('$\Delta \phi$')
+    plt.xlabel(f'$\Delta \eta{i,j}$')
+    plt.ylabel(f'$\Delta \phi{i,j}$')
     plt.title('test')
-
     fig.add_subplot(1, 3, 3)
     dphi = data_generated[:, idx_phi1] - data_generated[:, idx_phi2]
     deta = data_generated[:, idx_eta1] - data_generated[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
     plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]], rasterized=True)
-    plt.xlabel('$\Delta \eta$')
-    plt.ylabel('$\Delta \phi$')
+    plt.xlabel(f'$\Delta \eta{i,j}$')
+    plt.ylabel(f'$\Delta \phi{i,j}$')
     plt.title('generated')
     fig.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
     plt.savefig(pp, format="pdf")

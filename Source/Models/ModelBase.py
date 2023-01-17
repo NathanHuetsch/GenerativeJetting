@@ -134,7 +134,7 @@ class GenerativeModel(nn.Module):
     def sample_and_undo(self, n_samples, prior_model=None, prior_prior_model=None,n_jets=2):
         if self.conditional and n_jets ==2:
             prior_samples = prior_model.sample_n(n_samples+self.batch_size, conditional=True, con_depth=self.con_depth)
-            samples = self.sample_n(self.sample_every_n_samples, prior_samples=prior_samples, conditional=True,
+            samples = self.sample_n(n_samples, prior_samples=prior_samples, conditional=True,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
                                                 self.prior_u, self.prior_s, self.prior_channels,
@@ -194,9 +194,12 @@ class GenerativeModel(nn.Module):
         else:
             path = "plots"
 
+        n_epochs = self.epoch + get(self.params, "total_epochs", 0)
+
         plot_train = []
         plot_test = []
         plot_samples = []
+
 
         if self.conditional and self.n_jets != 3:
             for i in range(self.n_jets, 4):
@@ -214,7 +217,7 @@ class GenerativeModel(nn.Module):
             plot_test.append(self.data_test)
             plot_samples.append(samples)
 
-        with PdfPages(f"{path}/1d_hist_epoch_{self.epoch}") as out:
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
             for j, _ in enumerate(plot_train):
                 # Loop over the plot_channels
                 for i, channel in enumerate(self.params["plot_channels"]):
@@ -225,7 +228,6 @@ class GenerativeModel(nn.Module):
                     # Get the name and the range of the observable
                     obs_name = self.obs_names[channel]
                     obs_range = self.obs_ranges[channel]
-                    n_epochs = self.epoch
                     # Create the plot
                     plot_obs(pp=out,
                              obs_train=obs_train,
@@ -237,13 +239,14 @@ class GenerativeModel(nn.Module):
                              n_jets=j + self.n_jets)
 
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
-            obs_name = "\Delta R_{j_1 j_2}"
-            with PdfPages(f"{path}/deltaR_jl_jm_epoch_{self.epoch}") as out:
-                for j, _ in enumerate(plot_train):
-                    obs_train = delta_r(plot_train[j])
-                    obs_test = delta_r(plot_test[j])
-                    obs_generated = delta_r(plot_samples[j])
-                    plot_obs(pp=out,
+            if get(self.params,"plot_deltaR", False):
+                obs_name = "\Delta R_{j_1 j_2}"
+                with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}") as out:
+                    for j, _ in enumerate(plot_train):
+                        obs_train = delta_r(plot_train[j])
+                        obs_test = delta_r(plot_test[j])
+                        obs_generated = delta_r(plot_samples[j])
+                        plot_obs(pp=out,
                              obs_train=obs_train,
                              obs_test=obs_test,
                              obs_predict=obs_generated,
@@ -251,13 +254,13 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
                              range=[0, 8])
-                    if self.n_jets == 3:
-                        obs_name = "\Delta R_{j_1 j_3}"
-                        obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
-                        obs_test = delta_r(plot_test[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
-                        obs_generated = delta_r(plot_samples[j], idx_phi1=9, idx_eta1=10, idx_phi2=17,
+                        if self.n_jets == 3:
+                            obs_name = "\Delta R_{j_1 j_3}"
+                            obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                            obs_test = delta_r(plot_test[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                            obs_generated = delta_r(plot_samples[j], idx_phi1=9, idx_eta1=10, idx_phi2=17,
                                                 idx_eta2=18)
-                        plot_obs(pp=out,
+                            plot_obs(pp=out,
                                  obs_train=obs_train,
                                  obs_test=obs_test,
                                  obs_predict=obs_generated,
@@ -265,12 +268,12 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8])
-                        obs_name = "\Delta R_{j_2 j_3}"
-                        obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-                        obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-                        obs_generated = delta_r(plot_samples[j], idx_phi1=13, idx_eta1=14, idx_phi2=17,
+                            obs_name = "\Delta R_{j_2 j_3}"
+                            obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                            obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                            obs_generated = delta_r(plot_samples[j], idx_phi1=13, idx_eta1=14, idx_phi2=17,
                                                 idx_eta2=18)
-                        plot_obs(pp=out,
+                            plot_obs(pp=out,
                                  obs_train=obs_train,
                                  obs_test=obs_test,
                                  obs_predict=obs_generated,
@@ -278,17 +281,18 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8])
-            with PdfPages(f"{path}/deta_dphi_jets_epoch_{self.epoch}.pdf") as out:
-                for j, _ in enumerate(plot_train):
-                    plot_deta_dphi(pp=out,
+            if get(self.params,"plot_Deta_Dphi",False):
+                with PdfPages(f"{path}/deta_dphi_jets_epoch_{n_epochs}.pdf") as out:
+                    for j, _ in enumerate(plot_train):
+                        plot_deta_dphi(pp=out,
                                data_train=plot_train[j],
                                data_test=plot_test[j],
                                data_generated=plot_samples[j],
                                n_jets=j + self.n_jets,
                                n_epochs=n_epochs)
 
-                    if self.n_jets == 3:
-                        plot_deta_dphi(pp=out,
+                        if self.n_jets == 3:
+                            plot_deta_dphi(pp=out,
                                    data_train=plot_train[j],
                                    data_test=plot_test[j],
                                    data_generated=plot_samples[j],
@@ -299,15 +303,15 @@ class GenerativeModel(nn.Module):
                                    n_jets=j + self.n_jets,
                                    n_epochs=n_epochs)
 
-                        plot_deta_dphi(pp=out,
+                            plot_deta_dphi(pp=out,
                                    data_train=plot_train[j],
                                    data_test=plot_test[j],
                                    data_generated=plot_samples[j],
                                    idx_phi1=13,
-                                   idx_phi2=14,
-                                   idx_eta1=10,
+                                   idx_phi2=17,
+                                   idx_eta1=14,
                                    idx_eta2=18,
                                    n_jets=j + self.n_jets,
                                    n_epochs=n_epochs)
-        else:
-            print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
+            else:
+                print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
