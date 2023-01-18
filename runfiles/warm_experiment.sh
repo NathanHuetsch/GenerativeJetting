@@ -14,5 +14,5 @@ module load cuda/11.7
 # cd into the project folder
 cd GenerativeJetting
 
-python run_Z2.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/6d/TBD_Resnet_DenseNet512_long_5e52826"
+python run_Zn.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/6d/TBD_Resnet_DenseNet512_long_5e52826"
 
