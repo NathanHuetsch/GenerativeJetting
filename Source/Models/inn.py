@@ -13,12 +13,12 @@ class INN(GenerativeModel):
     def build_net(self):
         return build_INN(self.params).to(self.device)
 
-    def batch_loss(self, x):
+    def batch_loss(self, x, conditional=False):
         z, jac = self.net(x)
         loss = torch.mean(z ** 2) / 2 - torch.mean(jac) / z.shape[1]
         return loss
 
-    def sample_n(self, n_samples):
+    def sample_n(self, n_samples, jets=None, prior_samples=None, con_depth=0):
         self.eval()
         gauss_input = torch.randn((n_samples, self.dim)).to(self.device)
         events_predict = []

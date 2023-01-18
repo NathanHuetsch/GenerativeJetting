@@ -50,6 +50,11 @@ class GenerativeModel(nn.Module):
         self.device = get(self.params, "device", get_device())
         self.dim = self.params["dim"]
         self.net = self.build_net()
+        self.conditional = get(self.params,'conditional',False)
+        self.n_con = get(self.params,'n_con',0)
+        self.n_jets = get(self.params,'n_jets',2)
+        self.con_depth = get(self.params,'con_depth',0)
+        self.batch_size = self.params["batch_size"]
 
     def build_net(self):
         pass
@@ -61,39 +66,12 @@ class GenerativeModel(nn.Module):
         self.train_losses_epoch = np.array([])
         self.n_trainbatches = len(self.train_loader)
 
-        self.validate = get(self.params, "validate", True)
-        if self.validate:
-            self.force_checkpoints = get(self.params, "force_checkpoints", False)
-            self.n_valbatches = len(self.val_loader)
-            self.val_losses_epoch = np.array([])
-            self.validate_every = get(self.params, "validate_every", 10)
-            self.best_val_loss = get(self.params, "best_val_loss", 1e30)
-            self.best_val_epoch = get(self.params, "best_val_loss", 0)
-            self.no_improvements = get(self.params, "no_improvements", 0)
-            print(f"train_model: validate set to True. Validating every {self.validate_every} epochs")
-        else:
-            print("train_model: validate set to False. No checkpoints will be created")
-
         self.sample_periodically = get(self.params, "sample_periodically", False)
         if self.sample_periodically:
             self.sample_every = get(self.params, "sample_every", 1)
             self.sample_every_n_samples = get(self.params, "sample_every_n_samples", 100000)
-            self.data_train = undo_preprocessing(events=self.train_loader.dataset.detach().cpu().numpy(),
-                                                 events_mean=self.data_mean,
-                                                 events_std=self.data_std,
-                                                 u=self.data_u,
-                                                 s=self.data_s,
-                                                 channels=self.params["channels"],
-                                                 keep_all=True)
-            self.data_test = undo_preprocessing(events=self.test_loader.dataset.detach().cpu().numpy(),
-                                                 events_mean=self.data_mean,
-                                                 events_std=self.data_std,
-                                                 u=self.data_u,
-                                                 s=self.data_s,
-                                                 channels=self.params["channels"],
-                                                 keep_all=True)
-            print(f"train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every " 
-                  f"{self.sample_every} epochs. This may significantly slow down training!")
+            print(f'train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every'
+                  f' {self.sample_every} epochs. This may significantly slow down training!')
 
         self.log = get(self.params, "log", True)
         if self.log:
@@ -103,9 +81,10 @@ class GenerativeModel(nn.Module):
         else:
             print("train_model: log set to False. No logs will be written")
 
-    def run_training(self):
+    def run_training(self, prior_model=None, prior_prior_model=None):
 
         self.prepare_training()
+        samples = []
         n_epochs = get(self.params, "n_epochs", 100)
         past_epochs = get(self.params, "total_epochs", 0)
         print(f"train_model: Model has been trained for {past_epochs} epochs before.")
@@ -115,32 +94,23 @@ class GenerativeModel(nn.Module):
             self.train()
             self.train_one_epoch()
 
-            if self.validate:
-                if (self.epoch + 1) % self.validate_every == 0:
-                    self.eval()
-                    self.validate_one_epoch()
-            else:
-                torch.save(self.state_dict(), "models/checkpoint.pt")
-
             if self.sample_periodically:
                 if (self.epoch + 1) % self.sample_every == 0:
                     self.eval()
-                    self.sample_and_plot(self.sample_every_n_samples)
-
-        if self.validate:
-            self.params["no_improvements"] = self.no_improvements
-            self.params["best_val_epoch"] = self.best_val_epoch
-            self.params["best_val_loss"] = float(self.best_val_loss)
+                    samples = self.sample_and_undo(self.sample_every_n_samples, prior_model=prior_model,
+                                                   prior_prior_model=prior_prior_model,
+                                                   n_jets=self.n_jets)
+                    self.plot_samples(samples=samples)
 
     def train_one_epoch(self):
         train_losses = np.array([])
         for batch_id, x in enumerate(self.train_loader):
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(x)
+            loss = self.batch_loss(x, conditional=self.conditional)
 
-            loss_m = self.train_losses[-1000:].mean()
-            loss_s = self.train_losses[-1000:].std()
+            #loss_m = self.train_losses[-1000:].mean()
+            #loss_s = self.train_losses[-1000:].std()
 
             if np.isfinite(loss.item()): # and (abs(loss.item() - loss_m) / loss_s < 5 or len(self.train_losses_epoch) == 0):
                 loss.backward()
@@ -160,107 +130,193 @@ class GenerativeModel(nn.Module):
         if self.log:
             self.logger.add_scalar("train_losses_epoch", self.train_losses_epoch[-1], self.epoch)
 
-        #epoch_lr = self.scheduler.optimizer.param_groups[0]['lr']
-        #print(f"current epoch {self.epoch}, current lr {epoch_lr}")
+    def batch_loss(self, x, conditional=False):
+        pass
 
-    def validate_one_epoch(self):
-        val_losses = np.array([])
-        for batch_id, x in enumerate(self.val_loader):
-            with torch.no_grad():
-                loss = self.batch_loss(x)
-            val_losses = np.append(val_losses, loss.item())
-            if self.log:
-                self.logger.add_scalar("val_losses", val_losses[-1],
-                                       int(self.n_valbatches*self.epoch/self.validate_every) + batch_id)
-        self.val_losses_epoch = np.append(self.val_losses_epoch, val_losses.mean())
-        if self.log:
-            self.logger.add_scalar("val_losses_epoch", self.val_losses_epoch[-1], int(self.epoch/self.validate_every))
-        print(f"train_model: Validated after epoch {self.epoch}. Current val_loss is {val_losses.mean()}")
-        if val_losses.mean() < self.best_val_loss:
-            self.no_improvements = 0
-            self.best_val_epoch = self.epoch
-            self.best_val_loss = val_losses.mean()
-            torch.save(self.state_dict(), "models/checkpoint.pt")
-        if self.force_checkpoints:
-            torch.save(self.state_dict(), f"models/checkpoint_val{len(self.val_losses_epoch)}.pt")
+    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
+        pass
+
+    def sample_and_undo(self, n_samples, prior_model=None, prior_prior_model=None,n_jets=2):
+        if self.conditional and n_jets ==2:
+            prior_samples = prior_model.sample_n(n_samples+self.batch_size, conditional=True, con_depth=self.con_depth)
+            samples = self.sample_n(n_samples, prior_samples=prior_samples, conditional=True,
+                               con_depth=self.con_depth)
+            prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
+                                                self.prior_u, self.prior_s, self.prior_channels,
+                                                keep_all=True, conditional=True,
+                                                n_jets=1)
+            samples = undo_preprocessing(samples, self.data_mean, self.data_std,
+                                          self.data_u, self.data_s, self.params["channels"],
+                                          keep_all=True, conditional=True,
+                                          n_jets=self.n_jets)
+
+            samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
+
+        elif self.conditional and n_jets == 3:
+            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size, conditional=True,
+                                                         con_depth=self.con_depth)
+            prior_samples = prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
+                                             conditional=True, con_depth=self.con_depth)
+
+            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
+            samples = self.sample_n(n_samples, prior_samples=priors, conditional=True, con_depth=self.con_depth)
+            prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
+                                           self.prior_prior_u, self.prior_prior_s, self.prior_prior_channels,
+                                           keep_all=True, conditional=True,
+                                           n_jets=1)
+            prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
+                                           self.prior_u, self.prior_s, self.prior_channels,
+                                           keep_all=True, conditional=True,
+                                           n_jets=2)
+            samples = undo_preprocessing(samples, self.data_mean, self.data_std,
+                                     self.data_u, self.data_s, self.params["channels"],
+                                     keep_all=True, conditional=self.conditional,
+                                     n_jets=self.n_jets)
+
+            samples = np.concatenate([prior_prior_samples[:n_samples, :12], prior_samples[:n_samples, 12:16],
+                                      samples[:,16:]], axis=1)
+
         else:
-            self.no_improvements = self.no_improvements + 1
-            print(f"train_model: val_loss has not improved for {self.no_improvements} consecutive validations")
+            samples = self.sample_n(n_samples, conditional=self.conditional, con_depth=self.con_depth)
+            samples = undo_preprocessing(data=samples,
+                                         events_mean=self.data_mean,
+                                         events_std=self.data_std,
+                                         u=self.data_u,
+                                         s=self.data_s,
+                                         channels=self.params["channels"],
+                                         keep_all=True,
+                                         conditional=self.conditional,
+                                         n_jets=self.n_jets)
 
-    def batch_loss(self, x):
-        pass
+        return samples
 
-    def sample_n(self, n_samples):
-        pass
+    def plot_samples(self, samples, finished=False):
+        os.makedirs(f"plots", exist_ok=True)
+        if finished:
+            runs = get(self.params, "runs", 0)
+            path = f"plots/run{runs}"
+            os.makedirs(path, exist_ok=True)
+        else:
+            path = "plots"
 
-    def sample_and_plot(self, n_samples):
-        os.makedirs(f"plots/epoch{self.epoch}", exist_ok=True)
-        samples = self.sample_n(n_samples)
-        samples = undo_preprocessing(events=samples,
-                                     events_mean=self.data_mean,
-                                     events_std=self.data_std,
-                                     u=self.data_u,
-                                     s=self.data_s,
-                                     channels=self.params["channels"],
-                                     keep_all=True)
+        n_epochs = self.epoch + get(self.params, "total_epochs", 0)
 
-        with PdfPages(f"plots/epoch{self.epoch}/1d_histograms") as out:
-            # Loop over the plot_channels
-            for i, channel in enumerate(self.params["channels"]):
-                # Get the train data, test data and generated data for the channel
-                obs_train = self.data_train[:, channel]
-                obs_test = self.data_test[:, channel]
-                obs_generated = samples[:, channel]
-                # Get the name and the range of the observable
-                obs_name = self.obs_names[channel]
-                obs_range = self.obs_ranges[channel]
-                # Create the plot
-                plot_obs(pp=out,
-                         obs_train=obs_train,
-                         obs_test=obs_test,
-                         obs_predict=obs_generated,
-                         name=obs_name,
-                         range=obs_range)
+        plot_train = []
+        plot_test = []
+        plot_samples = []
 
-        if all(c in self.params["channels"] for c in [9, 10, 13, 14]):
-            file_name = f"plots/epoch{self.epoch}/deltaR_j1_j2.pdf"
-            obs_name = "\Delta R_{j_1 j_2}"
-            obs_train = delta_r(self.data_train)
-            obs_test = delta_r(self.data_test)
-            obs_generated = delta_r(samples)
-            plot_obs(pp=file_name,
-                     obs_train=obs_train,
-                     obs_test=obs_test,
-                     obs_predict=obs_generated,
-                     name=obs_name,
-                     range=[0, 8])
 
-            file_name = f"plots/epoch{self.epoch}/deta_dphi.png"
-            plot_deta_dphi(file_name=file_name,
-                           data_train=self.data_train,
-                           data_test=self.data_test,
-                           data_generated=samples)
+        if self.conditional and self.n_jets != 3:
+            for i in range(self.n_jets, 4):
+                plot_train_jets = self.data_train[self.data_train[:, -1] == i]
+                plot_train.append(plot_train_jets)
 
-    def save(self, epoch=""):
-        # Deprecated TOD0
-        os.makedirs(self.doc.get_file("model", False), exist_ok=True)
-        torch.save({"opt": self.optim.state_dict(),
-                    "net": self.net.state_dict(),
-                    "epoch": self.epoch}, self.doc.get_file(f"model/model{epoch}", False))
+                plot_test_jets = self.data_test[self.data_test[:, -1] == i]
+                plot_test.append(plot_test_jets)
 
-    def load(self, epoch=""):
-        # Deprecated TOD0
-        name = self.doc.get_file(f"model/model{epoch}", False)
-        state_dicts = torch.load(name, map_location=self.device)
-        self.net.load_state_dict(state_dicts["net"])
+                plot_samples_jets = samples[samples[:, -1] == i]
+                plot_samples.append(plot_samples_jets)
 
-        try:
-            self.epoch = state_dicts["epoch"]
-        except:
-            self.epoch = 0
-            print(f"Warning: Epoch number not provided in save file, setting to {self.epoch}")
-        try:
-            self.optim.load_state_dict(state_dicts["opt"])
-        except ValueError as e:
-            print(e)
-        self.net.to(self.device)
+        else:
+            plot_train.append(self.data_train)
+            plot_test.append(self.data_test)
+            plot_samples.append(samples)
+
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
+            for j, _ in enumerate(plot_train):
+                # Loop over the plot_channels
+                for i, channel in enumerate(self.params["plot_channels"]):
+                    # Get the train data, test data and generated data for the channel
+                    obs_train = plot_train[j][:, channel]
+                    obs_test = plot_test[j][:, channel]
+                    obs_generated = plot_samples[j][:, channel]
+                    # Get the name and the range of the observable
+                    obs_name = self.obs_names[channel]
+                    obs_range = self.obs_ranges[channel]
+                    # Create the plot
+                    plot_obs(pp=out,
+                             obs_train=obs_train,
+                             obs_test=obs_test,
+                             obs_predict=obs_generated,
+                             name=obs_name,
+                             range=obs_range,
+                             n_epochs=n_epochs,
+                             n_jets=j + self.n_jets)
+
+        if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
+            if get(self.params,"plot_deltaR", False):
+                obs_name = "\Delta R_{j_1 j_2}"
+                with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}") as out:
+                    for j, _ in enumerate(plot_train):
+                        obs_train = delta_r(plot_train[j])
+                        obs_test = delta_r(plot_test[j])
+                        obs_generated = delta_r(plot_samples[j])
+                        plot_obs(pp=out,
+                             obs_train=obs_train,
+                             obs_test=obs_test,
+                             obs_predict=obs_generated,
+                             name=obs_name,
+                             n_epochs=n_epochs,
+                             n_jets=j + self.n_jets,
+                             range=[0, 8])
+                        if self.n_jets == 3:
+                            obs_name = "\Delta R_{j_1 j_3}"
+                            obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                            obs_test = delta_r(plot_test[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                            obs_generated = delta_r(plot_samples[j], idx_phi1=9, idx_eta1=10, idx_phi2=17,
+                                                idx_eta2=18)
+                            plot_obs(pp=out,
+                                 obs_train=obs_train,
+                                 obs_test=obs_test,
+                                 obs_predict=obs_generated,
+                                 name=obs_name,
+                                 n_epochs=n_epochs,
+                                 n_jets=j + self.n_jets,
+                                 range=[0, 8])
+                            obs_name = "\Delta R_{j_2 j_3}"
+                            obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                            obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                            obs_generated = delta_r(plot_samples[j], idx_phi1=13, idx_eta1=14, idx_phi2=17,
+                                                idx_eta2=18)
+                            plot_obs(pp=out,
+                                 obs_train=obs_train,
+                                 obs_test=obs_test,
+                                 obs_predict=obs_generated,
+                                 name=obs_name,
+                                 n_epochs=n_epochs,
+                                 n_jets=j + self.n_jets,
+                                 range=[0, 8])
+            if get(self.params,"plot_Deta_Dphi",False):
+                with PdfPages(f"{path}/deta_dphi_jets_epoch_{n_epochs}.pdf") as out:
+                    for j, _ in enumerate(plot_train):
+                        plot_deta_dphi(pp=out,
+                               data_train=plot_train[j],
+                               data_test=plot_test[j],
+                               data_generated=plot_samples[j],
+                               n_jets=j + self.n_jets,
+                               n_epochs=n_epochs)
+
+                        if self.n_jets == 3:
+                            plot_deta_dphi(pp=out,
+                                   data_train=plot_train[j],
+                                   data_test=plot_test[j],
+                                   data_generated=plot_samples[j],
+                                   idx_phi1=9,
+                                   idx_phi2=17,
+                                   idx_eta1=10,
+                                   idx_eta2=18,
+                                   n_jets=j + self.n_jets,
+                                   n_epochs=n_epochs)
+
+                            plot_deta_dphi(pp=out,
+                                   data_train=plot_train[j],
+                                   data_test=plot_test[j],
+                                   data_generated=plot_samples[j],
+                                   idx_phi1=13,
+                                   idx_phi2=17,
+                                   idx_eta1=14,
+                                   idx_eta2=18,
+                                   n_jets=j + self.n_jets,
+                                   n_epochs=n_epochs)
+            else:
+                print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")

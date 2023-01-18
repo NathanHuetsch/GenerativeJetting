@@ -1,8 +1,6 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from Source.Util.lr_scheduler import OneCycleLR
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
@@ -21,7 +19,7 @@ import pandas
 from torch.optim import Adam
 
 
-class Z2_Experiment(Experiment):
+class Z3_Experiment(Experiment):
     """
     Class to run Z+2jet generative modelling experiments
 
@@ -35,43 +33,56 @@ class Z2_Experiment(Experiment):
         """
         super().__init__(params)
 
-        self.n_jets = 2
+        self.n_jets = 3
         self.params["n_jets"] = self.n_jets
         self.channels = get(self.params, "channels", None)
 
 
         if self.conditional:
-            self.n_con = 11
+            self.n_con = 13
             self.params["n_con"] = self.n_con
             self.prior_path = get(self.params,"prior_path", None)
             self.prior_params = load_params(os.path.join(self.prior_path, "paramfile.yaml"))
             self.prior_channels = get(self.prior_params, "channels", None)
+            self.prior_prior_path = get(self.prior_params, "prior_path", None)
+            self.prior_prior_params = load_params(os.path.join(self.prior_prior_path, "paramfile.yaml"))
+            self.prior_prior_channels = get(self.prior_prior_params, "channels", None)
             if get(self.params,"plot_channels",None) is None:
-                self.plot_channels = self.prior_channels + self.channels
+                self.plot_channels = self.prior_prior_channels + self.prior_channels + self.channels
                 self.params["plot_channels"] = self.plot_channels
         else:
             if get(self.params, "plot_channels", None) is None:
                 self.plot_channels = self.channels
                 self.params["plot_channels"] = self.channels
 
+            self.n_con = 0
+            self.params['n_con'] = self.n_con
+
         self.starttime = time.time()
 
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
-        self.data_raw = self.z_2
+        self.data_raw = self.z_3
 
         if self.conditional:
-            self.prior_raw = self.z_1
+            self.prior_prior_raw = self.z_1
+            self.prior_raw = self.z_2
+
+            self.prior_prior_data, self.prior_prior_mean, self.prior_prior_std, self.prior_prior_u, self.prior_prior_s, \
+            self.prior_prior_raw = self.preprocess_data(self.prior_prior_params, self.prior_prior_raw, conditional=True)
+            self.prior_prior_data = self.prior_prior_data[self.prior_prior_data[:, -1] == 1]
+            self.prior_prior_raw = self.prior_prior_raw[self.prior_prior_raw[:, -1] == 3]
+
             self.prior_data, self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_raw = \
                 self.preprocess_data(self.prior_params,self.prior_raw, conditional=True)
-            self.prior_data = self.prior_data[self.prior_data[:,-3]!=1]
-            self.prior_raw = self.prior_raw[self.prior_raw[:,-1]!=1]
+            self.prior_data = self.prior_data[self.prior_data[:,-1]==1]
+            self.prior_raw = self.prior_raw[self.prior_raw[:,-1]==3]
             self.new_data, self.data_mean, self.data_std, self.data_u, self.data_s, self.new_raw = \
                 self.preprocess_data(self.params, self.data_raw, save_in_params=True, conditional=True)
 
-            self.data = torch.concat([self.prior_data[:,:-3], self.new_data], dim=1)
-            self.data_raw = np.concatenate([self.prior_raw[:,:12], self.new_raw[:,12:]], axis=1)
+            self.data = torch.concat([self.prior_prior_data[:,:-3], self.prior_data[:,:-2],self.new_data], dim=1)
+            self.data_raw = np.concatenate([self.prior_prior_raw[:,:12], self.prior_raw[:,12:16], self.new_raw[:,16:]], axis=1)
 
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_raw = \
@@ -86,12 +97,21 @@ class Z2_Experiment(Experiment):
             self.model = self.build_model(self.params, save_in_params=True)
 
         if self.conditional:
+            #Build first model for the first 12(9) dimensions
+            self.prior_prior_model = self.build_model(self.prior_prior_params, self.prior_prior_path)
+            self.model.prior_prior_mean, self.model.prior_prior_std, self.model.prior_prior_u, self.model.prior_prior_s \
+                = self.prior_prior_mean, self.prior_prior_std, self.prior_prior_u, self.prior_prior_s
+            self.model.prior_prior_channels = self.prior_prior_channels
+
+            #Build second model for the following 4 dimensions
             self.prior_model = self.build_model(self.prior_params, self.prior_path)
             self.model.prior_mean, self.model.prior_std, self.model.prior_u, self.model.prior_s \
                 = self.prior_mean, self.prior_std, self.prior_u, self.prior_s
             self.model.prior_channels = self.prior_channels
         else:
             self.model.prior_mean, self.model.prior_mean, self.model.prior_u, self.model.prior_s \
+                = None, None, None, None
+            self.model.prior_prior_mean, self.model.prior_prior_mean, self.model.prior_prior_u, self.model.prior_prior_s \
                 = None, None, None, None
 
         self.model.data_mean, self.model.data_std, self.model.data_u,self.model.data_s  \

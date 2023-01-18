@@ -1,46 +1,33 @@
 from Source.Util.physics import EpppToPTPhiEta
 import numpy as np
+import  torch
 
 """
 Methods to perform the physics preprocessing of the 16dim Z+2jets input data
 Code based on Theos implementation but somewhat changed 
 """
 
-def prepreprocess(events):
 
-    events = EpppToPTPhiEta(events, reduce_data=False, include_masses=True)
-    phi_idx = [5, 9, 13]
-    for i in phi_idx:
-        events[:, i] = events[:, i] - events[:, 1]
-        events[:, i] = (events[:, i] + np.pi) % (2 * np.pi) - np.pi
-    return events
-
-
-def preprocess(events_in, channels=None, prepre=True):
+def preprocess(data, channels=None,conditional=False, n_jets=2):
     """
-    :param events_four_vector: the data as a numpy array. Assumed to be of shape [* , 16]
+    :param data: the data as a numpy array. Assumed to be of shape [* , 8+4*n_jets+1]
     :param channels: a list of channels we want to keep
-    :param convert: convert from Eppp tp PTPhiEtaM
-    :param convert: subtract phi_1 from the other phi_i
-    :return: the preprocessed data and some statistics necessary to reproduce the original data
+    :return: the preprocessed data, the hot-encoded condition and some statistics necessary to reproduce the original data
     """
-    if prepre:
-        # convert to (pT, phi, eta, mu)
-        events = prepreprocess(events_in)
+    # convert to (pT, phi, eta, mu)
+    if conditional:
+        events = EpppToPTPhiEta(data[:, :-1], reduce_data=False, include_masses=True)
     else:
-        events = events_in
+        events = EpppToPTPhiEta(data, reduce_data=False, include_masses=True)
+
     # apply log transform to pT
     events[:, 0] = np.log(events[:, 0])
     events[:, 4] = np.log(events[:, 4])
-    events[:, 8] = np.log(events[:, 8] - 20 + 1e-2)
-    events[:, 12] = np.log(events[:, 12] - 20 + 1e-2)
+    events[:, 8::4] = np.log(events[:, 8::4] - 20 + 1e-2)
 
-    phi_idx = [1, 5, 9, 13]
-    for i in phi_idx:
-        # limit to [-pi, pi]
-        events[:, i] = (events[:, i] + np.pi) % (2 * np.pi) - np.pi
-        # apply atanh transform
-        events[:, i] = np.arctanh(events[:, i] / np.pi)
+    events[:, 5::4] = events[:, 5::4] - events[:,1,None]
+    events[:, 1::4] = (events[:, 1::4] + np.pi) % (2*np.pi)- np.pi
+    events[:, 1::4] = np.arctanh(events[:, 1::4]/np.pi)
 
     # discard unwanted channels
     if channels is not None:
@@ -54,15 +41,19 @@ def preprocess(events_in, channels=None, prepre=True):
     events = events @ u
     events = events / np.sqrt(s)[None]
 
+    if conditional and n_jets != 3:
+        condition = encode_condition(data[:, -1], n=n_jets)
+        events = np.append(events, condition, axis=1)
+
     # return preprocessed events and information needed to undo transformations
     return events, events_mean, events_std, u, s
 
 
-def undo_preprocessing(events, events_mean, events_std, u, s,
+def undo_preprocessing(data, events_mean, events_std, u, s,
                        channels=None,
-                       keep_all=False):
+                       keep_all=False, conditional=False, n_jets=2):
     """
-    :param events: the preprocessed data as a numpy array of shape [* , len(channels)]
+    :param data: the preprocessed data as a numpy array of shape [* , len(channels)]
     :param events_mean: the mean of the original data (as returned by the preprocess() method)
     :param events_std: the std of the original data (as returned by the preprocess() method)
     :param u: the u of the original data (as returned by the preprocess() method)
@@ -72,6 +63,12 @@ def undo_preprocessing(events, events_mean, events_std, u, s,
                      [* , 16] where the remaining channels are filled with zeros
     :return: the data in the original format with the preprocessing undone
     """
+    if conditional and n_jets != 3:
+        cut = 4 - n_jets
+        events = data[:, :-cut]
+    else:
+        events = data
+
     # undo whitening
     events = events * np.sqrt(s)[None]
     events = events @ u.T
@@ -81,20 +78,42 @@ def undo_preprocessing(events, events_mean, events_std, u, s,
 
     if channels is not None:
         temp = events.copy()
-        events = np.zeros((events.shape[0], 16))
+        events = np.zeros((events.shape[0], 20))
         events[:, channels] = temp
     # undo atanh transform
-    phi_idx = [1, 5, 9, 13]
-    for i in phi_idx:
-        events[:, i] = np.tanh(events[:, i]) * np.pi
+    events[:,1::4] = np.tanh(events[:, 1::4]) * np.pi
 
     # undo log transform
     events[:, 0] = np.exp(events[:, 0])
     events[:, 4] = np.exp(events[:, 4])
-    events[:, 8] = np.exp(events[:, 8]) + 20 - 1e-2
-    events[:, 12] = np.exp(events[:, 12]) + 20 - 1e-2
+    events[:, 8::4] = np.exp(events[:, 8::4]) + 20 - 1e-2
 
     if channels is None or keep_all:
-        return events
+        events = events
     else:
-        return events[:, channels]
+        events = events[:, channels]
+
+    if conditional and n_jets != 3:
+        cut = 4 - n_jets
+        condition = decode_condition(data[:, -cut:], n=n_jets)
+        events = np.append(events, condition, axis=1)
+
+    return events
+
+
+def encode_condition(x, n=1):
+    m = 4 - n
+    con = []
+    for i in x:
+        a = np.zeros(m)
+        a[int(i) - n] = 1
+        con.append(a)
+    return torch.tensor(np.array(con))
+
+
+def decode_condition(x, n=1):
+    con = []
+    for i in x:
+        a = np.nonzero(i)[0]
+        con.append(a+n)
+    return np.array(con)

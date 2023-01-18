@@ -2,20 +2,7 @@ import torch
 import torch.nn as nn
 import math
 from torch.nn import functional as F
-
-
-class GaussianFourierProjection(nn.Module):
-    """Gaussian random features for encoding time steps."""
-
-    def __init__(self, embed_dim, scale=30.):
-        super().__init__()
-        # Randomly sample weights during initialization. These weights are fixed
-        # during optimization and are not trainable.
-        self.W = nn.Parameter(torch.randn(embed_dim // 2) * scale, requires_grad=False)
-
-    def forward(self, x):
-        x_proj = x * self.W * 2 * torch.pi
-        return torch.cat([torch.sin(x_proj), torch.cos(x_proj)], dim=1)
+from Source.Util.util import get_device
 
 
 class NewGELU(nn.Module):
@@ -112,9 +99,11 @@ class AttentionNet(nn.Module):
         self.n_blocks = param["n_blocks"]
         self.intermediate_dim = self.param["intermediate_dim"]
         self.dim = self.param["dim"]
+        self.n_con = self.param.get('n_con',0)
         self.dropout = self.param.get("dropout", None)
         self.normalization = self.param.get("normalization", None)
         self.activation = self.param.get("activation", "SiLU")
+        self.conditional = self.param.get("conditional", False)
 
         self.encode_t = self.param.get("encode_t", False)
 
@@ -133,9 +122,9 @@ class AttentionNet(nn.Module):
             TransformerBlock(param)
             for _ in range(self.n_blocks)])
 
-        self.up_project = nn.Linear(self.dim + self.encode_t_dim,
-                                    (self.dim + self.encode_t_dim) * self.intermediate_dim)
-        self.down_project = nn.Linear((self.dim + self.encode_t_dim) * self.intermediate_dim,
+        self.up_project = nn.Linear(self.dim + self.encode_t_dim + self.n_con,
+                                    (self.dim + self.encode_t_dim + self.n_con) * self.intermediate_dim)
+        self.down_project = nn.Linear((self.dim + self.encode_t_dim + self.n_con) * self.intermediate_dim,
                                       self.dim)
 
         self.apply(self._init_weights)
@@ -149,17 +138,24 @@ class AttentionNet(nn.Module):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
 
-    def forward(self, x, t):
+    def forward(self, x, t, condition=None):
         """
         forward method of our Resnet
         """
         if self.encode_t:
             t = self.embed(t)
-        x = self.up_project(torch.cat([x, t], 1)).reshape(-1, self.dim + self.encode_t_dim, self.intermediate_dim)
+
+        if self.conditional:
+            add_input = torch.cat([t, condition], 1)
+        else:
+            add_input = t
+
+        x = self.up_project(torch.cat([x, add_input], 1)).reshape(-1, self.dim + self.encode_t_dim + self.n_con,
+                                                                  self.intermediate_dim)
         for block in self.blocks[:-1]:
             x = block(x) + x
         x = self.blocks[-1](x) + x
-        x = self.down_project(x.reshape(-1, (self.dim + self.encode_t_dim) * self.intermediate_dim))
+        x = self.down_project(x.reshape(-1, (self.dim + self.encode_t_dim + self.n_con) * self.intermediate_dim))
         return x
 
 
@@ -176,15 +172,20 @@ class AttentionNet2(nn.Module):
         self.n_blocks = param["n_blocks"]
         self.intermediate_dim = self.param["intermediate_dim"]
         self.dim = self.param["dim"]
+        self.n_con = self.param['n_con']
         self.dropout = self.param.get("dropout", None)
         self.normalization = self.param.get("normalization", None)
         self.activation = self.param.get("activation", "SiLU")
+        self.conditional = self.param.get("conditional", False)
+        self.device = self.param.get("device", get_device())
 
         # Use GaussianFourierProjection for the time if specified
         self.encode_t_scale = self.param.get("encode_t_scale", 30)
-        self.embed = nn.Sequential(GaussianFourierProjection(embed_dim=self.intermediate_dim,
-                                                             scale=self.encode_t_scale),
-                                   nn.Linear(self.intermediate_dim, self.intermediate_dim))
+        self.t_embed = nn.Sequential(GaussianFourierProjection(embed_dim=self.intermediate_dim,
+                                                             scale=self.encode_t_scale, device=self.device))
+        self.c_embed = nn.Sequential(GaussianFourierProjection(embed_dim=self.intermediate_dim,
+                                                               scale=self.encode_t_scale, input_dim=self.n_con, device=self.device))
+                                   #nn.Linear(self.intermediate_dim, self.intermediate_dim))
         # Build the blocks
         self.blocks = nn.ModuleList([
             TransformerBlock(param)
@@ -204,14 +205,21 @@ class AttentionNet2(nn.Module):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
 
-    def forward(self, x, t):
+    def forward(self, x, t, condition=None):
         """
         forward method of our Resnet
         """
-        t = self.embed(t).unsqueeze(1)
+        t = self.t_embed(t).unsqueeze(1)
+
+        if self.conditional:
+            condition = self.c_embed(condition).unsqueeze(1)
+            add_input = t+condition
+        else:
+            add_input = t
+
         x = self.up_project(x).reshape(-1, self.dim, self.intermediate_dim)
         for block in self.blocks:
-            x = block(x+t)+x
+            x = block(x+add_input)+x
         x = self.down_project(x.reshape(-1, self.dim * self.intermediate_dim))
         return x
 
@@ -273,3 +281,17 @@ class AttentionNet3(nn.Module):
         return x
 
 
+
+class GaussianFourierProjection(nn.Module):
+    """Gaussian random features for encoding time steps."""
+
+    def __init__(self, embed_dim, input_dim=1, scale=30., device=get_device()):
+        super().__init__()
+        # Randomly sample weights during initialization. These weights are fixed
+        # during optimization and are not trainable.
+        self.W = nn.Parameter(torch.randn((input_dim, embed_dim // 2)) * scale, requires_grad=False)
+        self.W.to(device)
+
+    def forward(self, x):
+        x_proj = torch.matmul(x, self.W) * 2 * torch.pi
+        return torch.cat([torch.sin(x_proj), torch.cos(x_proj)], dim=1)
