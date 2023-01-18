@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/4d"
-run_name : "DDPM"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d"
+run_name : "DDPM_AttentionNet_100d_6b_CosSchedule"
 redirect_console : True
 # #########
 # # Data: #
@@ -10,39 +10,48 @@ redirect_console : True
 data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
 data_type: np
 preprocess : True
-channels : [9, 10, 13, 14]
+#channels : [0, 4, 8, 9, 10, 12, 13, 14]
+#[0, 4, 8, 9, 10, 12, 13, 14]
 #dim : 4
 # ##############
 # # Training:  #
 # ##############
 train: True
 log: True
-data_split: [0.5, 0.05, 0.45]
+data_split: [0.5, 0.45, 0.05]
 
 optimizer: Adam
-lr : 1.e-4
-batch_size : 2048
-weight_decay : 0.0
+lr : 1.e-3
+batch_size : 8192
 betas : [0.9, 0.99]
+use_scheduler: True
+lr_scheduler: "OneCycle"
+loss_type: "l2"
+multiple_t: False
 
-n_epochs : 100
+n_epochs : 20000
 validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 1000
+sample_every: 2000
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
 model: DDPM
 
-n_blocks : 10
-layers_per_block : 10
-intermediate_dim : 256
-#encode_t: True
-#dropout: 0.1
-#normalization: LazyBatchNorm1d
+network: "AttentionNet"
+n_blocks : 6
+intermediate_dim: 100
+n_layers: 5
+layers_per_block: 8
+n_head: 4
+trajectory: "linear_trajectory"
+encode_t: False
+encode_t_dim: 4
+encode_t_scale: 10
+#dropout: 0.2
 
 # ###################
 # # Loading/saving: #
