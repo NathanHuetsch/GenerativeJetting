@@ -6,6 +6,8 @@ from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from Source.Util.lr_scheduler import OneCycleLR
 from Source.Util.preprocessing import preprocess, undo_preprocessing
 from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get, load_params
@@ -60,6 +62,8 @@ class Experiment:
                            [0.5, 150], [-4, 4], [-6, 6], [0, 100]]
         self.params = params
         self.conditional = get(self.params, "conditional", False)
+        if not self.conditional:
+            self.params["n_con"]=0
         self.warm_start = get(self.params, "warm_start", False)
         self.warm_start_path = get(self.params, "warm_start_path", None)
         self.device = get(self.params, "device", get_device())
@@ -67,8 +71,8 @@ class Experiment:
         self.data_split = get(self.params, "data_split", [0.55, 0.05, 0.4])
         self.runs = get(self.params, "runs", 0)
         self.total_epochs = get(self.params, "total_epochs", 0)
-        self.params['n_con'] = get(self.params,"n_con",0)
         self.con_depth = get(self.params, "con_depth", 0)
+        self.load_dataset = get(self.params, "load_dataset", False)
         self.prior_model = None
         self.prior_prior_model = None
 
@@ -130,7 +134,6 @@ class Experiment:
         Overwrite this method if other ways of reading in data are needed
         This method should place the data under self.data_raw
                 """
-        load_dataset = get(self.params, "load_dataset", True)
         # Read in the "data_path" parameter. Raise and error if it is not specified or does not exist
         data_path = get(self.params, "data_path", None)
         fraction = get(self.params,"fraction",None)
@@ -138,12 +141,12 @@ class Experiment:
             raise ValueError("load_data: data_path is None. Please specify in params")
         assert os.path.exists(data_path), f"load_data: data_path {data_path} does not exist"
 
-        if load_dataset:
+        if self.load_dataset:
             # Read in the "data_type" parameter, defaulting to np if not specified. Try to read in the data accordingly
             data_type = get(self.params, "data_type", "np")
             if data_type == "np":
-                data_raw = np.load(data_path)
-                print(f"load_data: Loaded data with shape {data_raw.shape} from ", data_path)
+                self.data_raw = np.load(data_path)
+                print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
             else:
                 raise ValueError(f"load_data: Cannot load data from {data_path}")
         else:
@@ -326,6 +329,29 @@ class Experiment:
                 self.model.data_test = self.data_raw[cut2:]
             print(
                 f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
+
+            use_scheduler = get(self.params, "use_scheduler", "False")
+            if use_scheduler:
+                lr_scheduler = get(self.params, "lr_scheduler", "OneCycle")
+                if lr_scheduler == "OneCycle":
+                    lr = get(self.params, "lr", 0.0001)
+                    n_epochs = get(self.params, "n_epochs", 100)
+                    self.model.scheduler = OneCycleLR(
+                        self.model.optimizer,
+                        lr * 10,
+                        epochs=n_epochs,
+                        steps_per_epoch=len(self.model.train_loader))
+                    print("build_dataloaders: Using one-cycle lr scheduler")
+                elif lr_scheduler == "CosineAnnealing":
+                    n_epochs = get(self.params, "n_epochs", 100)
+                    self.model.scheduler = CosineAnnealingLR(
+                        self.model.optimizer,
+                        n_epochs*len(self.model.train_loader)
+                    )
+                    print("build_dataloaders: Using CosineAnnealing lr scheduler")
+                else:
+                    print(f"build_dataloaders: lr_scheduler {lr_scheduler} not recognised. Not using it")
+                    self.params["use_scheduler"]=False
         else:
             print("build_dataloaders: train set to False. Not building dataloaders")
 

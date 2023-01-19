@@ -224,6 +224,64 @@ class AttentionNet2(nn.Module):
         return x
 
 
+class AttentionNet3(nn.Module):
+    """
+    AttentionNet. Not finished
+    TODO: Finish implementation
+    """
+
+    def __init__(self, param):
+        super().__init__()
+        # Read in the network specifications from the params
+        self.param = param
+        self.device = param["device"]
+        self.n_blocks = param["n_blocks"]
+        self.intermediate_dim = self.param["intermediate_dim"]
+        self.dim = self.param["dim"]
+        self.dropout = self.param.get("dropout", None)
+        self.normalization = self.param.get("normalization", None)
+        self.activation = self.param.get("activation", "SiLU")
+
+        # Use GaussianFourierProjection for the time if specified
+        self.encode_t_scale = self.param.get("encode_t_scale", 30)
+        self.t_embed = nn.Sequential(GaussianFourierProjection(embed_dim=self.intermediate_dim,
+                                                             scale=self.encode_t_scale),
+                                   nn.Linear(self.intermediate_dim, self.intermediate_dim))
+        self.pos_embed = nn.Embedding(self.dim, self.intermediate_dim)
+        # Build the blocks
+        self.blocks = nn.ModuleList([
+            TransformerBlock(param)
+            for _ in range(self.n_blocks)])
+
+        self.up_project = nn.Linear(self.dim, self.dim * self.intermediate_dim)
+        self.down_project = nn.Linear(self.dim * self.intermediate_dim, self.dim)
+
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.LayerNorm):
+            torch.nn.init.zeros_(module.bias)
+            torch.nn.init.ones_(module.weight)
+
+    def forward(self, x, t):
+        """
+        forward method of our Resnet
+        """
+        t_emb = self.t_embed(t).unsqueeze(1)
+        pos = torch.arange(0, self.dim, device=self.device).unsqueeze(0)
+        pos_emb = self.pos_embed(pos)
+        x = self.up_project(x).reshape(-1, self.dim, self.intermediate_dim) + pos_emb
+        for block in self.blocks:
+            x = block(x+t_emb)+x
+        x = self.down_project(x.reshape(-1, self.dim * self.intermediate_dim))
+        return x
+
+
+
 class GaussianFourierProjection(nn.Module):
     """Gaussian random features for encoding time steps."""
 

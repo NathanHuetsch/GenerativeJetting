@@ -62,6 +62,7 @@ class GenerativeModel(nn.Module):
 
     def prepare_training(self):
         print("train_model: Preparing model training")
+        self.use_scheduler = get(self.params, "use_scheduler", False)
         self.train_losses = np.array([])
         self.train_losses_epoch = np.array([])
         self.n_trainbatches = len(self.train_loader)
@@ -122,6 +123,10 @@ class GenerativeModel(nn.Module):
                 train_losses = np.append(train_losses, loss.item())
                 if self.log:
                     self.logger.add_scalar("train_losses", train_losses[-1], self.epoch*self.n_trainbatches + batch_id)
+
+                if self.use_scheduler:
+                    self.scheduler.step()
+
             else:
                 print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}")
 
@@ -244,7 +249,7 @@ class GenerativeModel(nn.Module):
                              n_jets=j + self.n_jets)
 
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
-            if get(self.params,"plot_deltaR", False):
+            if get(self.params,"plot_deltaR", True):
                 obs_name = "\Delta R_{j_1 j_2}"
                 with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}") as out:
                     for j, _ in enumerate(plot_train):
@@ -286,7 +291,7 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8])
-            if get(self.params,"plot_Deta_Dphi",False):
+            if get(self.params,"plot_Deta_Dphi", True):
                 with PdfPages(f"{path}/deta_dphi_jets_epoch_{n_epochs}.pdf") as out:
                     for j, _ in enumerate(plot_train):
                         plot_deta_dphi(pp=out,

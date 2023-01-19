@@ -17,7 +17,7 @@ class Resnet(nn.Module):
         self.layers_per_block = self.param["layers_per_block"]
         self.dropout = self.param.get("dropout", None)
         self.normalization = self.param.get("normalization", None)
-        self.activation = self.param.get("activation", nn.SiLU)
+        self.activation = self.param.get("activation", "SiLU")
         self.encode_t = self.param.get("encode_t", False)
         self.conditional = self.param.get("conditional", False)
 
@@ -48,10 +48,10 @@ class Resnet(nn.Module):
         for _ in range(1, self.layers_per_block-1):
             layers.append(nn.Linear(self.intermediate_dim, self.intermediate_dim))
             if self.normalization is not None:
-                layers.append(self.normalization())
+                layers.append(getattr(nn, self.normalization)())
             if self.dropout is not None:
                 layers.append(nn.Dropout(p=self.dropout))
-            layers.append(self.activation())
+            layers.append(getattr(nn, self.activation)())
         layers.append(nn.Linear(self.intermediate_dim, self.dim))
         return nn.Sequential(*layers)
 

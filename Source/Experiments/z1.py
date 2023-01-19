@@ -49,7 +49,8 @@ class Z1_Experiment(Experiment):
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
-        self.data_raw = self.z_1
+        if not self.load_dataset:
+            self.data_raw = self.z_1
 
         self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_raw = \
             self.preprocess_data(self.params, self.data_raw, save_in_params=True, conditional=self.conditional)

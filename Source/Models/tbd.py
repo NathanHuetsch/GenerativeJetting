@@ -20,6 +20,11 @@ class TBD(GenerativeModel):
         except AttributeError:
             raise NotImplementedError(f"build_model: Trajectory type {trajectory} not implemented")
 
+        self.loss_type = get(self.params, "loss_type", "l2")
+        assert self.loss_type in ["l1", "l2"], "Unknown loss type"
+
+        self.multiple_t = get(self.params, "multiple_t", False)
+
     def build_net(self):
         """
         Build the network
@@ -56,14 +61,20 @@ class TBD(GenerativeModel):
         else:
             condition = None
 
-        t = torch.rand(x.size(0), 1, device=x.device)
-        x_1 = torch.randn_like(x)
-
-        x_t, x_t_dot = self.trajectory(x, x_1, t)
+        if self.multiple_t:
+            t = torch.rand(10*x.size(0), 1, device=x.device)
+            x_1 = torch.randn_like(x)
+            x_t, x_t_dot = self.trajectory(x.repeat(10, 1), x_1.repeat(10, 1), t)
+        else:
+            t = torch.rand(x.size(0), 1, device=x.device)
+            x_1 = torch.randn_like(x)
+            x_t, x_t_dot = self.trajectory(x, x_1, t)
 
         drift = self.net(x_t, t, condition)
-
-        loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
+        if self.loss_type=="l2":
+            loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
+        elif self.loss_type=="l1":
+            loss = torch.mean(torch.abs(drift-x_t_dot))
         return loss
 
     def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):

@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from Source.Util.lr_scheduler import OneCycleLR
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
@@ -36,7 +38,9 @@ class Z2_Experiment(Experiment):
         self.n_jets = 2
         self.params["n_jets"] = self.n_jets
         self.channels = get(self.params, "channels", None)
-
+        n_jets = get(self.params, "n_jets", 2)
+        if self.channels is None:
+            self.channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
 
         if self.conditional:
             self.n_con = 11
@@ -57,7 +61,8 @@ class Z2_Experiment(Experiment):
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
-        self.data_raw = self.z_2
+        if not self.load_dataset:
+            self.data_raw = self.z_2
 
         if self.conditional:
             self.prior_raw = self.z_1
