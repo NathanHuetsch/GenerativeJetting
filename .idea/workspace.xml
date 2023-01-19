@@ -2,24 +2,39 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/GenerativeJetting.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/GenerativeJetting.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/Experiments/toy.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/Util/simulateToyData.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/params/Z317c_TBD.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/classifier_experiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/classifier_experiment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z1.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z1.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Experiments/z2.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Networks/resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/resnet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/inn.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/inn.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/plots.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/plots.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/params/Z26c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z26c_TBD.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runfiles/interactive.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/interactive.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/script.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/script.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DjangoConsoleOptions" custom-start-script="import sys; print('Python %s on %s' % (sys.version, sys.platform))&#10;import django; print('Django %s' % django.get_version())&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;if 'setup' in dir(django): django.setup()&#10;import django_manage_shell; django_manage_shell.run(PROJECT_ROOT)">
+    <option name="myCustomStartScript" value="import sys; print('Python %s on %s' % (sys.version, sys.platform))&#10;import django; print('Django %s' % django.get_version())&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;if 'setup' in dir(django): django.setup()&#10;import django_manage_shell; django_manage_shell.run(PROJECT_ROOT)" />
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
@@ -62,6 +77,7 @@
       <workItem from="1674067162534" duration="341000" />
       <workItem from="1674103828202" duration="73000" />
       <workItem from="1674113008841" duration="613000" />
+      <workItem from="1674122970394" duration="11642000" />
     </task>
     <servers />
   </component>

@@ -72,6 +72,7 @@ class Experiment:
         self.runs = get(self.params, "runs", 0)
         self.total_epochs = get(self.params, "total_epochs", 0)
         self.con_depth = get(self.params, "con_depth", 0)
+        self.load_dataset = get(self.params, "load_dataset", False)
         self.prior_model = None
         self.prior_prior_model = None
 
@@ -141,7 +142,7 @@ class Experiment:
             raise ValueError("load_data: data_path is None. Please specify in params")
         assert os.path.exists(data_path), f"load_data: data_path {data_path} does not exist"
 
-        if load_dataset:
+        if self.load_dataset:
             # Read in the "data_type" parameter, defaulting to np if not specified. Try to read in the data accordingly
             data_type = get(self.params, "data_type", "np")
             if data_type == "np":

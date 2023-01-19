@@ -36,8 +36,10 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100]
         y_tr, x_tr = np.histogram(obs_train, bins=num_bins, range=range, density=True)
         y_tr, y_g, y_t = y_tr/np.sum(y_tr), y_g/np.sum(y_g), y_t/np.sum(y_t)
 
-        fig1.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
-
+        if n_jets is not None:
+            fig1.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
+        else:
+            fig1.suptitle(f"After training for {n_epochs + 1} epochs")
         #Histogram
         axs[0].step(x_t[:num_bins], y_t, label=LABEL_TRUTH, color=truthcolor, linewidth=1.0, where='mid')
         axs[0].step(x_g[:num_bins], y_g,label=LABEL_XGEN, color=netcolor, linewidth=1.0, where='mid')

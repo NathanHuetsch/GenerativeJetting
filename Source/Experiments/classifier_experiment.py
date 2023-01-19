@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from matplotlib.backends.backend_pdf import PdfPages
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, observable_histogram
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
 from Source.Util.util import get_device, save_params, get, load_params
 from Source.Experiments.ExperimentBase import Experiment
@@ -20,9 +20,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-class Classifier_Experiment(Experiment):
+class Classifier_Experiment():
     def __init__(self, params):
-        super().__init__(params)
+        #super().__init__(params)
         self.params = params
         self.device = get(self.params, "device", get_device())
 
@@ -78,6 +78,8 @@ class Classifier_Experiment(Experiment):
 
         try:
             self.data_generated_raw = np.load(samples_path)
+            mask = np.where(self.data_generated_raw > 10 ** 10)[0]
+            self.data_generated_raw = np.delete(self.data_generated_raw, mask, axis=0)
             print(f"load_data_generated: Loaded data with shape {self.data_generated_raw.shape} from ", samples_path)
         except Exception:
             raise ValueError(f"load_data_generated: Cannot load data from {samples_path}")
@@ -95,20 +97,23 @@ class Classifier_Experiment(Experiment):
         self.params["dim"] = self.dim
         self.params["channels"] = self.channels
 
+
         self.data_true, self.data_mean, self.data_std, self.data_u, self.data_s \
             = preprocess(self.data_true_raw, self.channels)
         self.data_true_raw = undo_preprocessing(self.data_true, self.data_mean, self.data_std,
                                                 self.data_u, self.data_s, self.channels, keep_all=True)
 
-        self.data_generated, a, b, c, d \
-            = preprocess(self.data_generated_raw, self.channels, prepre=False)
-        self.data_generated_raw = undo_preprocessing(self.data_generated, self.data_mean, self.data_std,
-                                                     self.data_u, self.data_s, self.channels, keep_all=True)
+        #self.data_generated, a, b, c, d \
+        #    = preprocess(self.data_generated_raw, self.channels)
+        #self.data_generated_raw = undo_preprocessing(self.data_generated, self.data_mean, self.data_std,
+        #                                             self.data_u, self.data_s, self.channels, keep_all=True)
 
 
         if not self.preprocess:
             self.data_true = self.data_true_raw[:, self.channels]
             self.data_generated = self.data_generated_raw[:, self.channels]
+
+
 
         self.add_dR = get(self.params, "add_dR", False)
         if self.add_dR:
@@ -131,7 +136,7 @@ class Classifier_Experiment(Experiment):
         print(f"prepare_training: Built network {network}")
 
         lr = get(self.params, "lr", 0.0001)
-        betas = get(self.params, "betas", [0.9, 0.999])
+        betas = get(self.params, "betas", [0.9, 0.99])
         weight_decay = get(self.params, "weight_decay", 0)
         self.optimizer = \
             Adam(self.network.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
@@ -167,24 +172,24 @@ class Classifier_Experiment(Experiment):
                        batch_size=self.batch_size,
                        shuffle=True)
         print(f"prepare_training: Built dataloaders")
-
     def train_model(self):
 
         log_dir = os.path.join(self.params["out_dir"], "logs")
         self.logger = SummaryWriter(log_dir)
         print(f"train_model: Logging to log_dir {log_dir}")
 
-        n_epochs = get(self.params, "n_epochs", 100)
+        self.n_epochs = get(self.params, "n_epochs", 100)
         T0 = time.time()
         self.network.train()
 
         l_trainloader = len(self.train_loader)
-        print(f"train_model: Beginning training for {n_epochs} epochs")
-        for e in range(n_epochs):
+        print(f"train_model: Beginning training for {self.n_epochs} epochs")
+        for e in range(self.n_epochs):
             train_losses = np.array([])
             t0 = time.time()
             epoch_loss = 0
             for i, batch in enumerate(self.train_loader):
+
                 self.optimizer.zero_grad()
 
                 data = batch[:, :-1]
@@ -206,7 +211,7 @@ class Classifier_Experiment(Experiment):
         traintime = round(T1-T0)
         self.params["traintime"] = traintime
         torch.save(self.network.state_dict(), "classifier.pt")
-        print(f"train_model: Finished training for {n_epochs} epochs after {traintime} seconds.")
+        print(f"train_model: Finished training for {self.n_epochs} epochs after {traintime} seconds.")
 
     def predict(self):
         self.true_predictions = np.zeros(len(self.data_true))
@@ -533,7 +538,7 @@ class Classifier_Experiment(Experiment):
                          obs_test=obs_test,
                          obs_predict=obs_generated,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
             if self.add_dR:
                 obs_train = self.data_train_raw[:cut, -1]
                 obs_test = self.data_true_raw[cut:, -1]
@@ -547,7 +552,7 @@ class Classifier_Experiment(Experiment):
                          obs_test=obs_test,
                          obs_predict=obs_generated,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
 
         with PdfPages(f"plots/1d_histograms_preprocessed") as out:
             # Loop over the plot_channels
@@ -564,7 +569,7 @@ class Classifier_Experiment(Experiment):
                          obs_test=obs_test,
                          obs_predict=obs_generated,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
 
 
         with PdfPages(f"plots/1d_histograms_reweighted") as out:
@@ -583,7 +588,7 @@ class Classifier_Experiment(Experiment):
                          obs_predict=obs_generated,
                          weights=weights,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
             if self.add_dR:
                 obs_train = self.data_train_raw[:cut, -1]
                 obs_test = self.data_true_raw[cut:, -1]
@@ -596,7 +601,7 @@ class Classifier_Experiment(Experiment):
                          obs_predict=obs_generated,
                          weights=weights,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
 
 
     def finish_up(self):

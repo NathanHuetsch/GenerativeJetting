@@ -17,64 +17,62 @@ import os
 import h5py
 import pandas
 from torch.optim import Adam
+from Source.Util.simulateToyData import ToySimulator
 
-
-class Z1_Experiment(Experiment):
-    """
-    Class to run Z+2jet generative modelling experiments
-
-    TODO: Implement logging
-    """
+class Toy_Experiment(Experiment):
 
     def __init__(self, params):
-        """
-        The __init__ method reads in the parameters and saves them under self.params
-        It also makes some useful definitions
-        """
+
         super().__init__(params)
 
-        self.n_jets = 1
-        self.con_depth = get(self.params, "con_depth", 0)
-        self.channels = get(self.params, "channels", None)
-        if self.channels is None:
-            self.channels = np.array([i for i in range(self.n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
-        if self.conditional:
-            self.n_con = 3
-            self.params['n_con'] = 3
+        self.obs_names = ["x", "y"]
+        self.obs_ranges = [[0, 1], [0, 1], [0, 1]]
+        self.istoy = get(self.params,"istoy", True)
+        self.params['istoy'] = self.istoy
+        self.n_data = get(self.params, "n_data", 1000000)
 
-        if get(self.params, "plot_channels", None) is None:
-            self.plot_channels = self.channels
-            self.params["plot_channels"] = self.plot_channels
 
-        self.starttime = time.time()
 
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
-        if not self.load_dataset:
-            self.data_raw = self.z_1
+        self.data_raw = self.data
+        self.model = self.build_model(self.params, save_in_params=True)
 
-        self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_raw = \
-            self.preprocess_data(self.params, self.data_raw, save_in_params=True, conditional=self.conditional)
-
-        print(f"preprocess_data: input shape is {self.data.shape}")
-        self.n_data = len(self.data)
-
-        if self.warm_start:
-            self.model = self.build_model(self.params, prior_path=self.warm_start_path, save_in_params=True)
-        else:
-            self.model = self.build_model(self.params, save_in_params=True)
-
-        self.model.data_mean, self.model.data_std, self.model.data_u, self.model.data_s \
-            = self.data_mean, self.data_std, self.data_u, self.data_s
         self.model.obs_names = self.obs_names
         self.model.obs_ranges = self.obs_ranges
+        self.model.data = self.data
+
         self.build_optimizer()
         self.build_dataloaders()
         self.train_model()
         self.generate_samples()
         self.make_plots()
-        self.finish_up()
+
+    def load_data(self):
+        load_dataset = get(self.params, "load_dataset", True)
+        # Read in the "data_path" parameter. Raise and error if it is not specified or does not exist
+        data_path = get(self.params, "data_path", None)
+        if load_dataset:
+            # Read in the "data_type" parameter, defaulting to np if not specified. Try to read in the data accordingly
+            data_type = get(self.params, "data_type", "np")
+            if data_type == "np":
+                self.data = np.load(data_path)
+                print(f"load_data: Loaded data with shape {self.data.shape} from ", data_path)
+            else:
+                raise ValueError(f"load_data: Cannot load data from {data_path}")
+        else:
+            self.data = ToySimulator(self.params).data
+
+        self.dim = self.data.shape[1]
+        self.params["dim"] = self.dim
+        print(f"load_data: Simulated data with shape {self.data.shape} following a "
+              f"{self.dim}-dimensional {get(self.params, 'toy_type', 'ramp')} distribution")
+
+        if not isinstance(self.data, torch.Tensor):
+            self.data = torch.from_numpy(self.data)
+        self.data = self.data.to(self.device).float()
+        print(f"load_data: Moved data to {self.data.device}")
 
     def generate_samples(self):
         """
@@ -91,16 +89,16 @@ class Z1_Experiment(Experiment):
         # Read in the "sample" parameter. If it is set to True, perform the sampling, otherwise skip it.
         sample = get(self.params, "sample", True)
         if sample:
-
             # Read in the "n_samples" parameter specifying how many samples to generate
             # Call the model.sample_n_parallel(n_samples) method to perform the sampling
             n_samples = get(self.params, "n_samples", 1000000)
             print(f"generate_samples: Starting generation of {n_samples} samples")
             t0 = time.time()
-            self.samples = self.model.sample_and_undo(n_samples, n_jets=self.n_jets)
+            self.samples = self.model.sample_n(n_samples)
             t1 = time.time()
             sampletime = t1 - t0
             self.params["sampletime"] = sampletime
+
             print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
             if get(self.params, "save_samples", False):
                 os.makedirs('samples', exist_ok=True)
@@ -110,14 +108,11 @@ class Z1_Experiment(Experiment):
             print("generate_samples: sample set to False")
 
     def make_plots(self):
-        """
-        The make_plots method uses the train data, the test data and the generated samples to draw a range of plots.
-
-        Overwrite this method if other plots are required.
-        """
-
-        # Read in the "plot" and "sample" parameters. If both are set to True, perform make the plots, otherwise skip it.
         plot = get(self.params, "plot", True)
         sample = get(self.params, "sample", True)
         if plot and sample:
-            self.model.plot_samples(self.samples, finished=True)
+            self.model.plot_toy(self.samples, finished=True)
+
+            print("make_plots: Finished making plots")
+        else:
+            print("make_plots: plot set to False")

@@ -36,6 +36,8 @@ class Z3_Experiment(Experiment):
         self.n_jets = 3
         self.params["n_jets"] = self.n_jets
         self.channels = get(self.params, "channels", None)
+        if self.channels is None:
+            self.channels = np.array([i for i in range(self.n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
 
 
         if self.conditional:
@@ -63,7 +65,8 @@ class Z3_Experiment(Experiment):
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
-        self.data_raw = self.z_3
+        if not self.load_dataset:
+            self.data_raw = self.z_3
 
         if self.conditional:
             self.prior_prior_raw = self.z_1
