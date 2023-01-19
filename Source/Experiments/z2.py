@@ -38,7 +38,9 @@ class Z2_Experiment(Experiment):
         self.n_jets = 2
         self.params["n_jets"] = self.n_jets
         self.channels = get(self.params, "channels", None)
-
+        n_jets = get(self.params, "n_jets", 2)
+        if self.channels is None:
+            self.channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
 
         if self.conditional:
             self.n_con = 11

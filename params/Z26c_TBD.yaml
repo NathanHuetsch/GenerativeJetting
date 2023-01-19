@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d"
-run_name : "TBD_Resnet_512d_6l_09Beta"
+run_name : "TBD_Resnet_512d_5l_06Beta"
 redirect_console : True
 # #########
 # # Data: #
@@ -27,7 +27,7 @@ optimizer: Adam
 lr : 1.e-3
 batch_size : 8192
 weight_decay : 0
-betas : [0.9, 0.99]
+betas : [0.5, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 loss_type: "l2"
