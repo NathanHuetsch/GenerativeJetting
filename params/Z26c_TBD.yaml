@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/8d"
-run_name : "TBD_DenseNet512_CosSchedule_l2_linear_WD_10l"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d"
+run_name : "TBD_Resnet_512d_6l_09Beta"
 redirect_console : True
 # #########
 # # Data: #
@@ -10,7 +10,9 @@ redirect_console : True
 data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
 data_type: np
 preprocess : True
-channels : [0, 4, 8, 9, 10, 12, 13, 14]
+n_jets: 2
+load_dataset : True
+#channels : [9, 10, 13, 14]
 #[0, 4, 8, 9, 10, 12, 13, 14]
 #dim : 4
 # ##############
@@ -19,11 +21,12 @@ channels : [0, 4, 8, 9, 10, 12, 13, 14]
 train: True
 log: True
 data_split: [0.5, 0.45, 0.05]
+conditional: False
 
 optimizer: Adam
 lr : 1.e-3
 batch_size : 8192
-weight_decay : 1.e-5
+weight_decay : 0
 betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
@@ -35,23 +38,26 @@ validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 2500
-sample_every_n_samples: 100000
+sample_every: 2000
+sample_every_n_samples: 1000000
 # #################
 # # Architecture: #
 # #################
 model: TBD
-
-network: "Resnet"
-n_blocks : 1
-intermediate_dim: 512
-n_layers: 5
-layers_per_block: 10
-n_head: 4
 trajectory: "linear_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
+
+
+network: "Resnet"
+n_blocks : 1
+intermediate_dim: 512
+layers_per_block: 6
+
+n_layers: 5
+n_head: 4
+
 #dropout: 0.2
 
 # ###################

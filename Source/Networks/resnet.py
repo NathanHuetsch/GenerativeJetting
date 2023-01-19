@@ -17,7 +17,7 @@ class Resnet(nn.Module):
         self.layers_per_block = self.param["layers_per_block"]
         self.dropout = self.param.get("dropout", None)
         self.normalization = self.param.get("normalization", None)
-        self.activation = self.param.get("activation", nn.SiLU)
+        self.activation = self.param.get("activation", "SiLU")
         self.encode_t = self.param.get("encode_t", False)
         self.conditional = self.param.get("conditional", False)
 

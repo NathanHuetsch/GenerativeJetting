@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/Diffusion.iml" filepath="$PROJECT_DIR$/.idea/Diffusion.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/GenerativeJetting.iml" filepath="$PROJECT_DIR$/.idea/GenerativeJetting.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../jet-diffusion-notebooks-peter/.idea/jet-diffusion-notebooks-peter.iml" filepath="$PROJECT_DIR$/../jet-diffusion-notebooks-peter/.idea/jet-diffusion-notebooks-peter.iml" />
     </modules>
   </component>
 </project>

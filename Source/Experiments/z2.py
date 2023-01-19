@@ -59,7 +59,6 @@ class Z2_Experiment(Experiment):
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
-        self.data_raw = self.z_2
 
         if self.conditional:
             self.prior_raw = self.z_1
