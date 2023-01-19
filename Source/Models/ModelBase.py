@@ -55,6 +55,7 @@ class GenerativeModel(nn.Module):
         self.n_jets = get(self.params,'n_jets',2)
         self.con_depth = get(self.params,'con_depth',0)
         self.batch_size = self.params["batch_size"]
+        self.istoy = get(self.params, "istoy", False)
 
     def build_net(self):
         pass
@@ -96,10 +97,14 @@ class GenerativeModel(nn.Module):
             if self.sample_periodically:
                 if (self.epoch + 1) % self.sample_every == 0:
                     self.eval()
-                    samples = self.sample_and_undo(self.sample_every_n_samples, prior_model=prior_model,
+                    if not self.istoy:
+                        samples = self.sample_and_undo(self.sample_every_n_samples, prior_model=prior_model,
                                                    prior_prior_model=prior_prior_model,
                                                    n_jets=self.n_jets)
-                    self.plot_samples(samples=samples)
+                        self.plot_samples(samples=samples)
+                    else:
+                        samples = self.sample_n(self.sample_every_n_samples)
+                        self.plot_toy(samples=samples)
 
     def train_one_epoch(self):
         train_losses = np.array([])
@@ -315,3 +320,33 @@ class GenerativeModel(nn.Module):
                                    n_epochs=n_epochs)
             else:
                 print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
+
+
+    def plot_toy(self, samples = None, finished=False):
+        os.makedirs(f"plots", exist_ok=True)
+        if finished:
+            runs = get(self.params, "runs", 0)
+            path = f"plots/run{runs}"
+            os.makedirs(path, exist_ok=True)
+        else:
+            path = "plots"
+
+        n_epochs = self.epoch + get(self.params, "total_epochs", 0)
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
+            for i in range(0, self.dim):
+                obs_train = self.data_train[:,i]
+                obs_test = self.data_test[:,i]
+                obs_generated = samples[:,i]
+                # Get the name and the range of the observable
+                obs_name = self.obs_names[i]
+                obs_range = self.obs_ranges[i]
+                # Create the plot
+                plot_obs(pp=out,
+                         obs_train=obs_train,
+                         obs_test=obs_test,
+                         obs_predict=obs_generated,
+                         name=obs_name,
+                         range=obs_range,
+                         n_epochs=n_epochs,
+                         n_jets=None)
+

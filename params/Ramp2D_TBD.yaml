@@ -1,37 +1,28 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z317"
-run_name : "TBD_simple_2048_noCondition"
-redirect_console : True
+runs_dir : "runs"
+run_name : "TBD_Toy"
+redirect_console : False
 # #########
 # # Data: #
 # #########
 load_dataset : False
-data_path : "/remote/gpu05/palacios/data/z+njet_full.h5"
-preprocess : True
-channels : [0,2,4,5,6,8,9,10,11,12,13,14,15,16, 17, 18, 19]
-prior_path: "/remote/gpu05/palacios/GenerativeJetting/runs/z213/TBD_simple_full2552"
-dim: 17
-n_jets: 3
-n_con: 0
-con_depth: 0
-#dim : 4
+n_data: 1000000
 # ##############
 # # Training:  #
 # ##############
 train: True
 log: False
-conditional: False
-data_split: [0.9, 0.00, 0.1]
+data_split: [0.6, 0.05, 0.35]
 
 optimizer: Adam
 lr : 5.e-5
-batch_size : 2048
+batch_size : 512
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 10000
+n_epochs : 1
 validate: False
 validate_every : 10
 
@@ -45,7 +36,7 @@ model: TBD
 network: "Resnet"
 n_blocks : 1
 layers_per_block : 6
-intermediate_dim : 1024
+intermediate_dim : 256
 n_head: 4
 trajectory: "linear_trajectory"
 encode_t: False
@@ -70,5 +61,5 @@ n_samples : 1000000
 # #############
 plot : True
 #plot_channels : [9, 10, 13, 14]
-plot_deltaR: True
-plot_Deta_Dphi: True
+plot_deltaR: False
+plot_Deta_Dphi: False

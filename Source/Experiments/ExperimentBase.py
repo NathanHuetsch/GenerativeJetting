@@ -67,6 +67,7 @@ class Experiment:
         self.data_split = get(self.params, "data_split", [0.55, 0.05, 0.4])
         self.runs = get(self.params, "runs", 0)
         self.total_epochs = get(self.params, "total_epochs", 0)
+        self.params['n_con'] = get(self.params,"n_con",0)
         self.con_depth = get(self.params, "con_depth", 0)
         self.prior_model = None
         self.prior_prior_model = None
