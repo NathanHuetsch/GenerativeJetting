@@ -48,6 +48,7 @@ class Toy_Experiment(Experiment):
         self.train_model()
         self.generate_samples()
         self.make_plots()
+        self.finish_up()
 
     def load_data(self):
         load_dataset = get(self.params, "load_dataset", True)
