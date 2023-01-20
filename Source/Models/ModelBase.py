@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import os
+import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
@@ -91,6 +91,8 @@ class GenerativeModel(nn.Module):
         print(f"train_model: Model has been trained for {past_epochs} epochs before.")
         print(f"train_model: Beginning training. n_epochs set to {n_epochs}")
         for e in range(n_epochs):
+            t0 = time.time()
+            
             self.epoch = past_epochs + e
             self.train()
             self.train_one_epoch()
@@ -106,6 +108,11 @@ class GenerativeModel(nn.Module):
                     else:
                         samples = self.sample_n(self.sample_every_n_samples)
                         self.plot_toy(samples=samples)
+
+            if e==0:
+                t1 = time.time()
+                dtEst= (t1-t0) * n_epochs
+                print(f"Training time estimate: {dtEst/60:.2f} min = {dtEst/60**2:.2f} h")
 
     def train_one_epoch(self):
         train_losses = np.array([])
