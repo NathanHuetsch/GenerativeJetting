@@ -93,6 +93,7 @@ class Z2_Experiment(Experiment):
             self.model.prior_mean, self.model.prior_std, self.model.prior_u, self.model.prior_s \
                 = self.prior_mean, self.prior_std, self.prior_u, self.prior_s
             self.model.prior_channels = self.prior_channels
+            self.model.prior_params = self.prior_params
         else:
             self.model.prior_mean, self.model.prior_mean, self.model.prior_u, self.model.prior_s \
                 = None, None, None, None

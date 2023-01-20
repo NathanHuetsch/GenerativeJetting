@@ -147,13 +147,9 @@ class GenerativeModel(nn.Module):
             samples = self.sample_n(n_samples, prior_samples=prior_samples, conditional=True,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
-                                                self.prior_u, self.prior_s, self.prior_channels,
-                                                keep_all=True, conditional=True,
-                                                n_jets=1)
+                                                self.prior_u, self.prior_s, self.prior_params)
             samples = undo_preprocessing(samples, self.data_mean, self.data_std,
-                                          self.data_u, self.data_s, self.params["channels"],
-                                          keep_all=True, conditional=True,
-                                          n_jets=self.n_jets)
+                                          self.data_u, self.data_s, self.params)
 
             samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
 
@@ -166,32 +162,19 @@ class GenerativeModel(nn.Module):
             priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
             samples = self.sample_n(n_samples, prior_samples=priors, conditional=True, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
-                                           self.prior_prior_u, self.prior_prior_s, self.prior_prior_channels,
-                                           keep_all=True, conditional=True,
-                                           n_jets=1)
+                                           self.prior_prior_u, self.prior_prior_s, self.prior_prior_params)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
-                                           self.prior_u, self.prior_s, self.prior_channels,
-                                           keep_all=True, conditional=True,
-                                           n_jets=2)
+                                           self.prior_u, self.prior_s, self.prior_params)
             samples = undo_preprocessing(samples, self.data_mean, self.data_std,
-                                     self.data_u, self.data_s, self.params["channels"],
-                                     keep_all=True, conditional=self.conditional,
-                                     n_jets=self.n_jets)
+                                     self.data_u, self.data_s, self.params)
 
             samples = np.concatenate([prior_prior_samples[:n_samples, :12], prior_samples[:n_samples, 12:16],
                                       samples[:,16:]], axis=1)
 
         else:
             samples = self.sample_n(n_samples, conditional=self.conditional, con_depth=self.con_depth)
-            samples = undo_preprocessing(data=samples,
-                                         events_mean=self.data_mean,
-                                         events_std=self.data_std,
-                                         u=self.data_u,
-                                         s=self.data_s,
-                                         channels=self.params["channels"],
-                                         keep_all=True,
-                                         conditional=self.conditional,
-                                         n_jets=self.n_jets)
+            samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
+                                         self.params)
 
         return samples
 

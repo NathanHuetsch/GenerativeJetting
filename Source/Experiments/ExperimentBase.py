@@ -8,7 +8,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Util.lr_scheduler import OneCycleLR
-from Source.Util.preprocessing import preprocess, undo_preprocessing
+from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
 from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get, load_params
 import time
@@ -170,7 +170,6 @@ class Experiment:
         # Read in the "channels" and "dim" parameters specifiying which channels of the data should be used
         # If "channels" is specified, "dim" will be ignored and will be inferred from channels
         # If "channels" is not specified, only "dim" 4,6 and None are valid
-        preprocess_data = get(p, "preprocess", True)
         channels = get(p, "channels", None)
         n_jets = get(p, "n_jets", 2)
         if channels is None:
@@ -179,21 +178,15 @@ class Experiment:
         else:
             print(f"preprocess_data: channels {channels} specified.")
         # Do the preprocessing
-        # Currently using already preprocessed data is not implemented
-        if not preprocess_data:
-            print("preprocess_data: preprocess set to False")
-            data = data_raw[:, channels]
-            raise ValueError("preprocess_data: preprocess set to False. Not implemented properly")
-        else:
-            data, data_mean, data_std, data_u, data_s \
-                = preprocess(data_raw, channels, conditional=conditional,
-                             n_jets=n_jets)
+        data_raw = preformat(data_raw)
 
-            print("preprocess_data: Finished preprocessing")
+        data, data_mean, data_std, data_u, data_s = preprocess(data_raw, p)
+        print("preprocess_data: Finished preprocessing")
 
         n_data = len(data)
-        data_raw = undo_preprocessing(data, data_mean, data_std, data_u, data_s, channels, keep_all=True,
-                                      conditional=conditional, n_jets=n_jets)
+
+        # Quick optional check whether preprocessing works as intended (data_raw = data_raw2?)
+        # data_raw2 = undo_preprocessing(data, data_mean, data_std, data_u, data_s, p)
 
         # Make sure the data is a torch.Tensor and move it to device
         if not isinstance(data, torch.Tensor):
