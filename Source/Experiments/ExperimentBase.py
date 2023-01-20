@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
+from Source.Models.autoregGMM import AutoRegGMM
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -225,6 +226,8 @@ class Experiment:
             model = TBD(p)
         elif model_type == "DDPM":
             model = DDPM(p)
+        elif model_type == "AutoRegGMM":
+            model = AutoRegGMM(p)
         else:
             raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD or DDPM")
 
