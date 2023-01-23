@@ -1,18 +1,20 @@
 from Source.Util.physics import EpppToPTPhiEta
 import numpy as np
 import  torch
+from Source.Util.util import get
 
 """
 Methods to perform the physics preprocessing of the 16dim Z+2jets input data
 Code based on Theos implementation but somewhat changed 
 """
-def preformat(data):
+def preformat(data, params):
     '''
     Bring data in Z_2.npy format (E, px, py, pz) into the (pT, phi, eta, mu) format that is used by the generator
     and make phi angles relative to the first phi angle (= fix coordinate system)
     :data: Events in the (E, px, py, pz) format
     :returns: Events in the (pT, phi, eta, mu) format of shape (n_events, 4*(2+n_jets))
     '''
+    conditional = get(params, "conditional", False)
     if conditional:
         events = EpppToPTPhiEta(data[:, :-1], reduce_data=False, include_masses=True)
     else:
@@ -45,8 +47,7 @@ def preprocess(data, params):
         events[:, 1::4] = np.arctanh(events[:, 1::4]/np.pi)
 
     # discard unwanted channels
-    if channels is not None:
-        events = events[:, channels]
+    events = events[:, channels]
 
     # apply standardization
     if preprocess>=2:

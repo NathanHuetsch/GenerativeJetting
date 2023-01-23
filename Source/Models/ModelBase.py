@@ -313,8 +313,8 @@ class GenerativeModel(nn.Module):
                                    idx_eta2=18,
                                    n_jets=j + self.n_jets,
                                    n_epochs=n_epochs)
-            else:
-                print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
+        else:
+            print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
 
 
     def plot_toy(self, samples = None, finished=False):

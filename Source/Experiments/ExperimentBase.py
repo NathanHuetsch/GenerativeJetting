@@ -96,7 +96,7 @@ class Experiment:
                 f"prepare_experiment: warm_start set to True, but warm_start_path {self.warm_start_path} does not exist"
             self.out_dir = self.warm_start_path
             os.chdir(self.out_dir)
-            print("prepare_experiment: Using warm_start_path as out_dir ", self.out_dir)
+            print(f"prepare_experiment: Using warm_start_path as out_dir {self.out_dir}")
 
         # If we start fresh, we read in the "runs_dir" and "run_name" parameters and set up an out_dir
         # All out_dir names get a random number added to avoid unintentionally overwriting old experiments
@@ -124,7 +124,7 @@ class Experiment:
             sys.stderr = open("stderr.txt", "w", buffering=1)
             print(f"prepare_experiment: Redirecting console output to out_dir")
 
-        print("prepare_experiment: Using out_dir ", self.out_dir)
+        print(f"prepare_experiment: Using out_dir {self.out_dir}")
         print(f"prepare_experiment: Using device {self.device}")
 
     def load_data(self):
@@ -176,10 +176,11 @@ class Experiment:
         if channels is None:
             print(f"preprocess_data: channels and dim not specified. Defaulting to {5 + 4 * n_jets} channels.")
             channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
+            p["channels"] = channels
         else:
             print(f"preprocess_data: channels {channels} specified.")
         # Do the preprocessing
-        data_raw = preformat(data_raw)
+        data_raw = preformat(data_raw, p)
 
         data, data_mean, data_std, data_u, data_s = preprocess(data_raw, p)
         print("preprocess_data: Finished preprocessing")
@@ -326,7 +327,7 @@ class Experiment:
             print(
                 f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
 
-            use_scheduler = get(self.params, "use_scheduler", "False")
+            use_scheduler = get(self.params, "use_scheduler", False)
             if use_scheduler:
                 lr_scheduler = get(self.params, "lr_scheduler", "OneCycle")
                 if lr_scheduler == "OneCycle":
