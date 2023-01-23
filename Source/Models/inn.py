@@ -35,7 +35,7 @@ class INN(GenerativeModel):
         loss = torch.mean(z ** 2) / 2 - torch.mean(jac) / z.shape[1]
         return loss
 
-    def sample_n(self, n_samples, jets=None, prior_samples=None, con_depth=0):
+    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
         self.eval()
         gauss_input = torch.randn((n_samples, self.dim)).to(self.device)
         events_predict = []

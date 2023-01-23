@@ -56,6 +56,7 @@ class GenerativeModel(nn.Module):
         self.con_depth = get(self.params,'con_depth',0)
         self.batch_size = self.params["batch_size"]
         self.istoy = get(self.params, "istoy", False)
+        self.epoch = 0
 
     def build_net(self):
         pass
@@ -90,6 +91,8 @@ class GenerativeModel(nn.Module):
         past_epochs = get(self.params, "total_epochs", 0)
         print(f"train_model: Model has been trained for {past_epochs} epochs before.")
         print(f"train_model: Beginning training. n_epochs set to {n_epochs}")
+
+        self.epoch = past_epochs
         for e in range(n_epochs):
             t0 = time.time()
             
