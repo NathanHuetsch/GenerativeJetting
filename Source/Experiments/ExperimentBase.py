@@ -18,7 +18,7 @@ import sys
 import os
 import h5py
 import pandas
-from torch.optim import Adam
+from torch.optim import Adam, AdamW
 
 
 class Experiment:
@@ -274,12 +274,17 @@ class Experiment:
                 optim = "Adam"
                 print(f"build_optimizer: optimizer not specified. Defaulting to {optim}")
 
-            if optim == "Adam":
+            if optim == "Adam" or optim == "AdamW":
                 lr = get(self.params, "lr", 0.0001)
                 betas = get(self.params, "betas", [0.9, 0.999])
                 weight_decay = get(self.params, "weight_decay", 0)
-                self.model.optimizer = \
-                    Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+                if optim == "Adam":
+                    self.model.optimizer = \
+                        Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+                elif optim == "AdamW":
+                    self.model.optimizer = \
+                        AdamW(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+                    
                 print(
                     f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
             else:
