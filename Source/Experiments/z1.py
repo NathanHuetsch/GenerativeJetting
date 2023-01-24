@@ -52,7 +52,7 @@ class Z1_Experiment(Experiment):
         if not self.load_dataset:
             self.data_raw = self.z_1
 
-        self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_raw = \
+        self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.data_raw = \
             self.preprocess_data(self.params, self.data_raw, save_in_params=True, conditional=self.conditional)
 
         print(f"preprocess_data: input shape is {self.data.shape}")
@@ -63,8 +63,8 @@ class Z1_Experiment(Experiment):
         else:
             self.model = self.build_model(self.params, save_in_params=True)
 
-        self.model.data_mean, self.model.data_std, self.model.data_u, self.model.data_s \
-            = self.data_mean, self.data_std, self.data_u, self.data_s
+        self.model.data_mean, self.model.data_std, self.model.data_u, self.model.data_s, self.model.data_bin_edges, self.model.data_bin_means \
+            = self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means
         self.model.obs_names = self.obs_names
         self.model.obs_ranges = self.obs_ranges
         self.build_optimizer()

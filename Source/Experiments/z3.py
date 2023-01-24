@@ -75,18 +75,18 @@ class Z3_Experiment(Experiment):
             self.prior_prior_data = self.prior_prior_data[self.prior_prior_data[:, -1] == 1]
             self.prior_prior_raw = self.prior_prior_raw[self.prior_prior_raw[:, -1] == 3]
 
-            self.prior_data, self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_raw = \
+            self.prior_data, self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_bin_edges, self.prior_bin_means, self.prior_raw = \
                 self.preprocess_data(self.prior_params,self.prior_raw, conditional=True)
             self.prior_data = self.prior_data[self.prior_data[:,-1]==1]
             self.prior_raw = self.prior_raw[self.prior_raw[:,-1]==3]
-            self.new_data, self.data_mean, self.data_std, self.data_u, self.data_s, self.new_raw = \
+            self.new_data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.new_raw = \
                 self.preprocess_data(self.params, self.data_raw, save_in_params=True, conditional=True)
 
             self.data = torch.concat([self.prior_prior_data[:,:-3], self.prior_data[:,:-2],self.new_data], dim=1)
             self.data_raw = np.concatenate([self.prior_prior_raw[:,:12], self.prior_raw[:,12:16], self.new_raw[:,16:]], axis=1)
 
         else:
-            self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_raw = \
+            self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.data_raw = \
                 self.preprocess_data(self.params, self.data_raw, save_in_params=True)
 
         print(f"preprocess_data: input shape is {self.data.shape}")
@@ -100,23 +100,26 @@ class Z3_Experiment(Experiment):
         if self.conditional:
             #Build first model for the first 12(9) dimensions
             self.prior_prior_model = self.build_model(self.prior_prior_params, self.prior_prior_path)
-            self.model.prior_prior_mean, self.model.prior_prior_std, self.model.prior_prior_u, self.model.prior_prior_s \
-                = self.prior_prior_mean, self.prior_prior_std, self.prior_prior_u, self.prior_prior_s
+            self.model.prior_prior_mean, self.model.prior_prior_std, self.model.prior_prior_u, self.model.prior_prior_s, self.model.prior_prior_bin_edges, self.model.prior_prior_bin_means \
+                = self.prior_prior_mean, self.prior_prior_std, self.prior_prior_u, self.prior_prior_s, self.prior_prior_bin_edges, self.prior_prior_bin_means
             self.model.prior_prior_channels = self.prior_prior_channels
 
             #Build second model for the following 4 dimensions
             self.prior_model = self.build_model(self.prior_params, self.prior_path)
-            self.model.prior_mean, self.model.prior_std, self.model.prior_u, self.model.prior_s \
-                = self.prior_mean, self.prior_std, self.prior_u, self.prior_s
+            self.model.prior_mean, self.model.prior_std, self.model.prior_u, self.model.prior_s, self.model.prior_bin_edges, self.model.prior_bin_means \
+                = self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_bin_edges, self.prior_bin_means
             self.model.prior_channels = self.prior_channels
-        else:
-            self.model.prior_mean, self.model.prior_mean, self.model.prior_u, self.model.prior_s \
-                = None, None, None, None
-            self.model.prior_prior_mean, self.model.prior_prior_mean, self.model.prior_prior_u, self.model.prior_prior_s \
-                = None, None, None, None
 
-        self.model.data_mean, self.model.data_std, self.model.data_u,self.model.data_s  \
-            = self.data_mean, self.data_std, self.data_u, self.data_s
+            self.model.prior_params = self.prior_params
+            self.model.prior_prior_params = self.prior_prior_params
+        else:
+            self.model.prior_mean, self.model.prior_mean, self.model.prior_u, self.model.prior_s, self.model.prior_bin_edges, self.model.prior_bin_means \
+                = None, None, None, None, None, None
+            self.model.prior_prior_mean, self.model.prior_prior_mean, self.model.prior_prior_u, self.model.prior_prior_s, self.model.prior_prior_bin_edges, self.model.prior_prior_bin_means \
+                = None, None, None, None, None, None
+
+        self.model.data_mean, self.model.data_std, self.model.data_u,self.model.data_s, self.model.data_bin_edges, self.model.data_bin_means  \
+            = self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means
 
         self.model.obs_names = self.obs_names
         self.model.obs_ranges = self.obs_ranges

@@ -4,11 +4,13 @@ from torch.utils.data import DataLoader
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
+from Source.Models.autoregGMM import AutoRegGMM
+from Source.Models.autoregBinned import AutoRegBinned
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Util.lr_scheduler import OneCycleLR
-from Source.Util.preprocessing import preprocess, undo_preprocessing
+from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
 from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get, load_params
 import time
@@ -17,7 +19,7 @@ import sys
 import os
 import h5py
 import pandas
-from torch.optim import Adam
+from torch.optim import Adam, AdamW
 
 
 class Experiment:
@@ -95,7 +97,7 @@ class Experiment:
                 f"prepare_experiment: warm_start set to True, but warm_start_path {self.warm_start_path} does not exist"
             self.out_dir = self.warm_start_path
             os.chdir(self.out_dir)
-            print("prepare_experiment: Using warm_start_path as out_dir ", self.out_dir)
+            print(f"prepare_experiment: Using warm_start_path as out_dir {self.out_dir}")
 
         # If we start fresh, we read in the "runs_dir" and "run_name" parameters and set up an out_dir
         # All out_dir names get a random number added to avoid unintentionally overwriting old experiments
@@ -123,7 +125,7 @@ class Experiment:
             sys.stderr = open("stderr.txt", "w", buffering=1)
             print(f"prepare_experiment: Redirecting console output to out_dir")
 
-        print("prepare_experiment: Using out_dir ", self.out_dir)
+        print(f"prepare_experiment: Using out_dir {self.out_dir}")
         print(f"prepare_experiment: Using device {self.device}")
 
     def load_data(self):
@@ -155,7 +157,7 @@ class Experiment:
             self.z_2 = data_all.z_2
             self.z_3 = data_all.z_3
 
-    def preprocess_data(self, p, data_raw, save_in_params=False, conditional=False):
+    def preprocess_data(self, p, data_raw, save_in_params=True, conditional=False):
         """
         The preprocess_data method gets the necessary parameters and preprocesses the data
         Currently preprocessing is only implemented for Z2 jet data.
@@ -170,44 +172,36 @@ class Experiment:
         # Read in the "channels" and "dim" parameters specifiying which channels of the data should be used
         # If "channels" is specified, "dim" will be ignored and will be inferred from channels
         # If "channels" is not specified, only "dim" 4,6 and None are valid
-        preprocess_data = get(p, "preprocess", True)
         channels = get(p, "channels", None)
         n_jets = get(p, "n_jets", 2)
         if channels is None:
             print(f"preprocess_data: channels and dim not specified. Defaulting to {5 + 4 * n_jets} channels.")
             channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
+            p["channels"] = channels
         else:
             print(f"preprocess_data: channels {channels} specified.")
         # Do the preprocessing
-        # Currently using already preprocessed data is not implemented
-        if not preprocess_data:
-            print("preprocess_data: preprocess set to False")
-            data = data_raw[:, channels]
-            raise ValueError("preprocess_data: preprocess set to False. Not implemented properly")
-        else:
-            data, data_mean, data_std, data_u, data_s \
-                = preprocess(data_raw, channels, conditional=conditional,
-                             n_jets=n_jets)
+        data_raw = preformat(data_raw, p)
 
-            print("preprocess_data: Finished preprocessing")
+        data, data_mean, data_std, data_u, data_s, bin_edges, bin_means = preprocess(data_raw, p)
+        print("preprocess_data: Finished preprocessing")
 
         n_data = len(data)
-        data_raw = undo_preprocessing(data, data_mean, data_std, data_u, data_s, channels, keep_all=True,
-                                      conditional=conditional, n_jets=n_jets)
+
+        # Quick optional check whether preprocessing works as intended (data_raw = data_raw2?)
+        # data_raw2 = undo_preprocessing(data, data_mean, data_std, data_u, data_s, bin_edges, bin_means, p)
 
         # Make sure the data is a torch.Tensor and move it to device
-        if not isinstance(data, torch.Tensor):
-            data = torch.from_numpy(data)
-        data = data.to(self.device).float()
+        data = data.to(self.device)
         print(f"preprocess_data: Moved data to {data.device}")
 
         if save_in_params:
             if get(p, "dim", None) is None:
                 self.params["dim"] = len(channels)
 
-            self.params["channels"] = list(channels)
+            self.params["channels"] = channels
             self.params["n_data"] = n_data
-        return data, data_mean, data_std, data_u, data_s, data_raw
+        return data, data_mean, data_std, data_u, data_s, bin_edges, bin_means, data_raw
 
     def build_model(self,p, prior_path=None, save_in_params=False):
         """
@@ -226,14 +220,10 @@ class Experiment:
         model_type = get(p, "model", None)
         if model_type is None:
             raise ValueError("build_model: model not specified")
-        if model_type == "INN":
-            model = INN(p)
-        elif model_type == "TBD":
-            model = TBD(p)
-        elif model_type == "DDPM":
-            model = DDPM(p)
-        else:
-            raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD or DDPM")
+        try:
+            model = eval(model_type)(p)
+        except NameError: # do this more general?
+            raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD, DDPM, AutoRegGMM or AutoRegBinned")
 
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -277,12 +267,17 @@ class Experiment:
                 optim = "Adam"
                 print(f"build_optimizer: optimizer not specified. Defaulting to {optim}")
 
-            if optim == "Adam":
+            if optim == "Adam" or optim == "AdamW":
                 lr = get(self.params, "lr", 0.0001)
                 betas = get(self.params, "betas", [0.9, 0.999])
                 weight_decay = get(self.params, "weight_decay", 0)
-                self.model.optimizer = \
-                    Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+                if optim == "Adam":
+                    self.model.optimizer = \
+                        Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+                elif optim == "AdamW":
+                    self.model.optimizer = \
+                        AdamW(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+
                 print(
                     f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
             else:
