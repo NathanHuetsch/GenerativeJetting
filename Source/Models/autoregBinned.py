@@ -29,7 +29,7 @@ class AutoRegBinned(GenerativeModel):
               f"intermediate_fac={intermediate_fac}, n_bins={n_bins}")
         
         params["vocab_size"] = self.n_bins
-        params["block_size"] = len(params["channels"])
+        params["block_size"] = params['dim']
         self.block_size = params["block_size"]
         super().__init__(params)
 

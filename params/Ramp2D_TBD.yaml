@@ -9,7 +9,7 @@ redirect_console : False
 # #########
 load_dataset : False
 n_data: 1000000
-toy_type: "gauss_sphere"
+toy_type: "ramp"
 obs_ranges: [-1.5,1.5]
 # ##############
 # # Training:  #
@@ -34,8 +34,11 @@ sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-model: INN
+model: AutoRegGMM
 network: "Resnet"
+n_gauss: 5
+n_per_head: 32
+intermediate_fac: 4
 n_blocks : 1
 layers_per_block : 6
 intermediate_dim : 256
