@@ -95,7 +95,6 @@ class GenerativeModel(nn.Module):
         self.epoch = past_epochs
         for e in range(n_epochs):
             t0 = time.time()
-            
             self.epoch = past_epochs + e
             self.train()
             self.train_one_epoch()
@@ -122,7 +121,7 @@ class GenerativeModel(nn.Module):
         for batch_id, x in enumerate(self.train_loader):
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(x, conditional=self.conditional)
+            loss = self.batch_loss(x)
 
             #loss_m = self.train_losses[-1000:].mean()
             #loss_s = self.train_losses[-1000:].std()
@@ -145,21 +144,21 @@ class GenerativeModel(nn.Module):
         if self.log:
             self.logger.add_scalar("train_losses_epoch", self.train_losses_epoch[-1], self.epoch)
 
-    def batch_loss(self, x, conditional=False):
+    def batch_loss(self, x):
         pass
 
-    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
+    def sample_n(self, n_samples, prior_samples=None, con_depth=0):
         pass
 
     def sample_and_undo(self, n_samples, prior_model=None, prior_prior_model=None,n_jets=2):
         if self.conditional and n_jets ==2:
-            prior_samples = prior_model.sample_n(n_samples+self.batch_size, conditional=True, con_depth=self.con_depth)
-            samples = self.sample_n(n_samples, prior_samples=prior_samples, conditional=True,
+            prior_samples = prior_model.sample_n(n_samples+self.batch_size, con_depth=self.con_depth)
+            samples = self.sample_n(n_samples, prior_samples=prior_samples,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
                                                 self.prior_u, self.prior_s, self.prior_bin_edges,
                                                self.prior_bin_means, self.prior_params)
-            samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s, 
+            samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
                                           self.data_bin_means, self.data_bin_edges, self.params)
 
             samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
@@ -171,7 +170,7 @@ class GenerativeModel(nn.Module):
                                              conditional=True, con_depth=self.con_depth)
 
             priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
-            samples = self.sample_n(n_samples, prior_samples=priors, conditional=True, con_depth=self.con_depth)
+            samples = self.sample_n(n_samples, prior_samples=priors, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
                                            self.prior_prior_u, self.prior_prior_s, self.prior_prior_bin_edges,
                                                      self.prior_prior_bin_means, self.prior_prior_params)
@@ -184,7 +183,7 @@ class GenerativeModel(nn.Module):
                                       samples[:,16:]], axis=1)
 
         else:
-            samples = self.sample_n(n_samples, conditional=self.conditional, con_depth=self.con_depth)
+            samples = self.sample_n(n_samples, con_depth=self.con_depth)
             samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
                                          self.data_bin_edges, self.data_bin_means, self.params)
 

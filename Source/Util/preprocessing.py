@@ -20,7 +20,7 @@ def preformat(data, params):
         events = EpppToPTPhiEta(data[:, :-1], reduce_data=False, include_masses=True)
     else:
         events = EpppToPTPhiEta(data, reduce_data=False, include_masses=True)
-    
+        
     events[:, 5::4] = events[:, 5::4] - events[:,1,None]
     events[:, 1::4] = (events[:, 1::4] + np.pi) % (2*np.pi)- np.pi
     return events
@@ -55,12 +55,16 @@ def preprocess(data, params):
         events_mean = events.mean(0, keepdims=True)
         events_std = events.std(0, keepdims=True)
         events = (events - events_mean) / events_std
+    else:
+        events_mean, events_std = None, None
 
     # apply whitening
     if preprocess>=3:
         u, s, vt = np.linalg.svd(events.T @ events / events.shape[0])
         events = events @ u
         events = events / np.sqrt(s)[None]
+    else:
+        u, s = None, None
 
     if get(params, "discretize", 0) != 0:
         events, bin_edges, bin_means = discretize(events, params)

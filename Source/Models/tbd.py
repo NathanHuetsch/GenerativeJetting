@@ -35,24 +35,24 @@ class TBD(GenerativeModel):
         except AttributeError:
             raise NotImplementedError(f"build_model: Network class {network} not recognised")
 
-    def batch_loss(self, x, conditional=False):
+    def batch_loss(self, x):
         """
         Calculate batch loss as described by Peter
         TODO Write section in dropbox
         """
 
-        if conditional and self.n_jets == 1:
+        if self.conditional and self.n_jets == 1:
             condition = x[:, -3:]
             x = x[:, :-3]
 
-        elif conditional and self.n_jets == 2:
+        elif self.conditional and self.n_jets == 2:
             condition_1 = x[:, :9]
             #condition_1 = prior_model(condition_1)
             condition_2 = x[:, -2:]
             condition = torch.cat([condition_1, condition_2], 1)
             x = x[:, 9:-2]
 
-        elif conditional and self.n_jets == 3:
+        elif self.conditional and self.n_jets == 3:
             condition = x[:, :13]
             #condition = prior_model(condition)
             x = x[:, 13:]
@@ -77,7 +77,7 @@ class TBD(GenerativeModel):
             loss = torch.mean(torch.abs(drift-x_t_dot))
         return loss
 
-    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
+    def sample_n(self, n_samples, prior_samples=None, con_depth=0):
         """
         Generate n_samples new samples.
         Start from Gaussian random noise and solve the reverse ODE to obtain samples
@@ -86,7 +86,7 @@ class TBD(GenerativeModel):
         batch_size = get(self.params, "batch_size", 8192)
         x_T = np.random.randn(n_samples + batch_size, self.dim)
 
-        if conditional:
+        if self.conditional:
             if self.n_jets == 1 and con_depth == 0:
                 n_c = (n_samples + batch_size) // 3
                 n_r = (n_samples + batch_size) - 2 * n_c

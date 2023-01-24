@@ -9,6 +9,8 @@ redirect_console : False
 # #########
 load_dataset : False
 n_data: 1000000
+toy_type: "gauss_sphere"
+obs_ranges: [-1.5,1.5]
 # ##############
 # # Training:  #
 # ##############
@@ -22,17 +24,17 @@ batch_size : 512
 weight_decay : 0.0
 betas : [0.9, 0.99]
 
-n_epochs : 1
+n_epochs : 2
 validate: False
 validate_every : 10
 
 sample_periodically: True
-sample_every: 500
+sample_every: 1
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-model: TBD
+model: INN
 network: "Resnet"
 n_blocks : 1
 layers_per_block : 6
@@ -60,6 +62,3 @@ n_samples : 1000000
 # # Plotting: #
 # #############
 plot : True
-#plot_channels : [9, 10, 13, 14]
-plot_deltaR: False
-plot_Deta_Dphi: False

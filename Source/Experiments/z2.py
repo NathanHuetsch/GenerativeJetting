@@ -95,7 +95,7 @@ class Z2_Experiment(Experiment):
             self.model.prior_channels = self.prior_channels
             self.model.prior_params = self.prior_params
         else:
-            self.model.prior_mean, self.model.prior_mean, self.model.prior_u, self.model.prior_s, self.model.prior_bin_edges, self.model.prior_bin_means \
+            self.model.prior_mean, self.model.prior_std, self.model.prior_u, self.model.prior_s, self.model.prior_bin_edges, self.model.prior_bin_means \
                 = None, None, None, None, None, None
 
         self.model.data_mean, self.model.data_std, self.model.data_u,self.model.data_s, self.model.data_bin_edges, self.model.data_bin_means  \

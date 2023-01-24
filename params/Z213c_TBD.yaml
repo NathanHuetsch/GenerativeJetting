@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z213"
-run_name : "TBD_simple_full"
+run_name : "TBD_simple_lrs"
 redirect_console : True
 # #########
 # # Data: #
@@ -24,10 +24,12 @@ conditional: True
 data_split: [0.6, 0.05, 0.35]
 
 optimizer: Adam
-lr : 5.e-5
+lr : 1.e-3
 batch_size : 8192
 weight_decay : 0.0
 betas : [0.9, 0.99]
+use_scheduler: True
+lr_scheduler: "CosineAnnealing"
 
 n_epochs : 10000
 validate: False

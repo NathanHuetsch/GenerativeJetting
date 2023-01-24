@@ -157,7 +157,7 @@ class Experiment:
             self.z_2 = data_all.z_2
             self.z_3 = data_all.z_3
 
-    def preprocess_data(self, p, data_raw, save_in_params=False, conditional=False):
+    def preprocess_data(self, p, data_raw, save_in_params=True, conditional=False):
         """
         The preprocess_data method gets the necessary parameters and preprocesses the data
         Currently preprocessing is only implemented for Z2 jet data.
@@ -277,7 +277,6 @@ class Experiment:
                 elif optim == "AdamW":
                     self.model.optimizer = \
                         AdamW(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
-                    
                 print(
                     f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
             else:
