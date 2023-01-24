@@ -5,6 +5,7 @@ from Source.Models.inn import INN
 from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
+from Source.Models.autoregBinned import AutoRegBinned
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -182,27 +183,25 @@ class Experiment:
         # Do the preprocessing
         data_raw = preformat(data_raw, p)
 
-        data, data_mean, data_std, data_u, data_s = preprocess(data_raw, p)
+        data, data_mean, data_std, data_u, data_s, bin_edges, bin_means = preprocess(data_raw, p)
         print("preprocess_data: Finished preprocessing")
 
         n_data = len(data)
 
         # Quick optional check whether preprocessing works as intended (data_raw = data_raw2?)
-        # data_raw2 = undo_preprocessing(data, data_mean, data_std, data_u, data_s, p)
+        # data_raw2 = undo_preprocessing(data, data_mean, data_std, data_u, data_s, bin_edges, bin_means, p)
 
         # Make sure the data is a torch.Tensor and move it to device
-        if not isinstance(data, torch.Tensor):
-            data = torch.from_numpy(data)
-        data = data.to(self.device).float()
+        data = data.to(self.device)
         print(f"preprocess_data: Moved data to {data.device}")
 
         if save_in_params:
             if get(p, "dim", None) is None:
                 self.params["dim"] = len(channels)
 
-            self.params["channels"] = list(channels)
+            self.params["channels"] = channels
             self.params["n_data"] = n_data
-        return data, data_mean, data_std, data_u, data_s, data_raw
+        return data, data_mean, data_std, data_u, data_s, bin_edges, bin_means, data_raw
 
     def build_model(self,p, prior_path=None, save_in_params=False):
         """
@@ -224,7 +223,7 @@ class Experiment:
         try:
             model = eval(model_type)(p)
         except NameError: # do this more general?
-            raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD or DDPM")
+            raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD, DDPM, AutoRegGMM or AutoRegBinned")
 
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)

@@ -157,9 +157,10 @@ class GenerativeModel(nn.Module):
             samples = self.sample_n(n_samples, prior_samples=prior_samples, conditional=True,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
-                                                self.prior_u, self.prior_s, self.prior_params)
-            samples = undo_preprocessing(samples, self.data_mean, self.data_std,
-                                          self.data_u, self.data_s, self.params)
+                                                self.prior_u, self.prior_s, self.prior_bin_edges,
+                                               self.prior_bin_means, self.prior_params)
+            samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s, 
+                                          self.data_bin_means, self.data_bin_edges, self.params)
 
             samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
 
@@ -172,11 +173,12 @@ class GenerativeModel(nn.Module):
             priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
             samples = self.sample_n(n_samples, prior_samples=priors, conditional=True, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
-                                           self.prior_prior_u, self.prior_prior_s, self.prior_prior_params)
+                                           self.prior_prior_u, self.prior_prior_s, self.prior_prior_bin_edges,
+                                                     self.prior_prior_bin_means, self.prior_prior_params)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
-                                           self.prior_u, self.prior_s, self.prior_params)
+                                           self.prior_u, self.prior_s, self.prior_bin_edges, self.prior_bin_means, self.prior_params)
             samples = undo_preprocessing(samples, self.data_mean, self.data_std,
-                                     self.data_u, self.data_s, self.params)
+                                     self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.params)
 
             samples = np.concatenate([prior_prior_samples[:n_samples, :12], prior_samples[:n_samples, 12:16],
                                       samples[:,16:]], axis=1)
@@ -184,7 +186,7 @@ class GenerativeModel(nn.Module):
         else:
             samples = self.sample_n(n_samples, conditional=self.conditional, con_depth=self.con_depth)
             samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
-                                         self.params)
+                                         self.data_bin_edges, self.data_bin_means, self.params)
 
         return samples
 

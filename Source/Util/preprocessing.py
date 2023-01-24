@@ -1,4 +1,5 @@
 from Source.Util.physics import EpppToPTPhiEta
+from Source.Util.discretize import discretize, undo_discretize
 import numpy as np
 import  torch
 from Source.Util.util import get
@@ -61,15 +62,27 @@ def preprocess(data, params):
         events = events @ u
         events = events / np.sqrt(s)[None]
 
+    if get(params, "discretize", 0) != 0:
+        events, bin_edges, bin_means = discretize(events, params)
+    else:
+        bin_edges, bin_means = [None, None]
+
     if conditional and n_jets != 3:
         condition = encode_condition(data[:, -1], n=n_jets)
         events = np.append(events, condition, axis=1)
 
+    # make data torch.Tensor of correct type
+    events = torch.from_numpy(events)
+    if get(params, "discretize", 0)==0:
+        events = events.float()
+    else:
+        events = events.long()
+
     # return preprocessed events and information needed to undo transformations
-    return events, events_mean, events_std, u, s
+    return events, events_mean, events_std, u, s, bin_edges, bin_means
 
 
-def undo_preprocessing(data, events_mean, events_std, u, s, params):
+def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means, params):
     """
     The exact inverse of preprocess
     :param data: the preprocessed data as a numpy array of shape [* , len(channels)]
@@ -90,6 +103,9 @@ def undo_preprocessing(data, events_mean, events_std, u, s, params):
         events = data[:, :-cut]
     else:
         events = data
+
+    if get(params, "discretize", 0) != 0:
+        events = undo_discretize(events, params, bin_edges, bin_means)
 
     # undo whitening
     if preprocess>=3:
