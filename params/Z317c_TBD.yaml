@@ -3,13 +3,13 @@
 # #########
 runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z317"
 run_name : "TBD_simple_full"
-redirect_console : False
+redirect_console : True
 # #########
 # # Data: #
 # #########
 load_dataset : False
 data_path : "/remote/gpu05/palacios/data/z+njet_full.h5"
-preprocess : True
+preprocess : 3
 channels : [16, 17, 18, 19]
 prior_path: "/remote/gpu05/palacios/GenerativeJetting/runs/z213/TBD_simple_full"
 dim: 4
@@ -27,13 +27,13 @@ data_split: [0.9, 0.00, 0.1]
 
 optimizer: Adam
 lr : 1.e-3
-batch_size : 2048
+batch_size : 8192
 weight_decay : 0.0
 betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 1
+n_epochs : 10000
 validate: False
 validate_every : 10
 

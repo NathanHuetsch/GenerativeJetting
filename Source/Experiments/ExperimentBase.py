@@ -436,6 +436,7 @@ class Experiment:
         plot = get(self.params, "plot", True)
         sample = get(self.params, "sample", True)
         if plot and sample:
+            print(f"make_plots: plotting {self.plot_channels}")
             self.model.plot_samples(self.samples, finished=True)
 
             print("make_plots: Finished making plots")

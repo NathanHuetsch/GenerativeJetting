@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z213"
-run_name : "TBD_simple_lrs"
+run_name : "TBD_simple_denser"
 redirect_console : True
 # #########
 # # Data: #
@@ -10,7 +10,7 @@ redirect_console : True
 load_dataset : False
 data_path : "/remote/gpu05/palacios/data/z+njet_full.h5"
 data_type: np
-preprocess : True
+preprocess : 3
 channels : [12,13,14,15]
 prior_path: "/remote/gpu05/palacios/GenerativeJetting/runs/z13/TBD_simple_full"
 n_jets: 2
@@ -44,8 +44,8 @@ sample_every_n_samples: 100000
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 6
-intermediate_dim : 256
+layers_per_block : 8
+intermediate_dim : 512
 n_head: 4
 trajectory: "linear_trajectory"
 encode_t: False
