@@ -41,7 +41,10 @@ def preprocess(data, params):
     conditional = get(params, "conditional", False)
     n_jets = get(params, "n_jets", 2)
 
-    events = data[:,:-1].copy()
+    if conditional:
+        events = data[:,:-1].copy()
+    else:
+        events = data.copy()
 
     if preprocess>=1:
         # apply log transform to pT

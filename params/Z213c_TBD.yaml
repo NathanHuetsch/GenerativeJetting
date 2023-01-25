@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z213"
-run_name : "TBD_simple_lrs"
+run_name : "TBD_simple_denser"
 redirect_console : True
 # #########
 # # Data: #
