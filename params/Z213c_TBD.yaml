@@ -44,8 +44,8 @@ sample_every_n_samples: 100000
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 6
-intermediate_dim : 256
+layers_per_block : 8
+intermediate_dim : 512
 n_head: 4
 trajectory: "linear_trajectory"
 encode_t: False

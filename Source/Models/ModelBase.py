@@ -165,10 +165,10 @@ class GenerativeModel(nn.Module):
             samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
 
         elif self.conditional and n_jets == 3:
-            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size, conditional=True,
+            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size,
                                                          con_depth=self.con_depth)
             prior_samples = prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
-                                             conditional=True, con_depth=self.con_depth)
+                                                 con_depth=self.con_depth)
 
             priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
             samples = self.sample_n(n_samples, prior_samples=priors, con_depth=self.con_depth)

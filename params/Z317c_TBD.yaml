@@ -27,7 +27,7 @@ data_split: [0.9, 0.00, 0.1]
 
 optimizer: Adam
 lr : 1.e-3
-batch_size : 2048
+batch_size : 8192
 weight_decay : 0.0
 betas : [0.9, 0.99]
 use_scheduler: True
@@ -65,7 +65,7 @@ warm_start_path : "/remote/gpu05/palacios/GenerativeJetting/runs/z13/TBD_Visuali
 # #############
 sample: True
 load_best_checkpoint: False
-n_samples : 1000000
+n_samples : 1000
 
 # #############
 # # Plotting: #
