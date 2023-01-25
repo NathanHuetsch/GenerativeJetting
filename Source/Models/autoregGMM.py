@@ -31,7 +31,7 @@ class AutoRegGMM(GenerativeModel):
               f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
         
         params["vocab_size"] = 3 * n_gauss
-        params["block_size"] = len(params["channels"])
+        params["block_size"] = params["dim"]
         self.block_size = params["block_size"]
         super().__init__(params)
 

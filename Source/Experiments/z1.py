@@ -33,9 +33,12 @@ class Z1_Experiment(Experiment):
         """
         super().__init__(params)
 
-        self.n_jets = 1
         self.con_depth = get(self.params, "con_depth", 0)
         self.channels = get(self.params, "channels", None)
+        self.n_jets = get(self.params, "n_jets", 1)
+        if self.channels is None:
+            self.channels = np.array([i for i in range(self.n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
+
         if self.conditional:
             self.n_con = 3
             self.params['n_con'] = 3
