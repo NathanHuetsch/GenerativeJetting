@@ -178,6 +178,7 @@ class Experiment:
             print(f"preprocess_data: channels and dim not specified. Defaulting to {5 + 4 * n_jets} channels.")
             channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
             p["channels"] = channels
+            print(f"preprocess_data: channels {channels}")
         else:
             print(f"preprocess_data: channels {channels} specified.")
         # Do the preprocessing
