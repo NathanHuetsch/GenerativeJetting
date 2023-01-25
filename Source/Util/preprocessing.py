@@ -138,6 +138,8 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
         events[:, 4] = np.exp(events[:, 4])
         events[:, 8::4] = np.exp(events[:, 8::4]) + 20 - 1e-2
 
+        events[:, 3::4] = np.exp(events[:,3::4])
+
     if conditional and n_jets != 3:
         cut = 4 - n_jets
         condition = decode_condition(data[:, -cut:], n=n_jets)
