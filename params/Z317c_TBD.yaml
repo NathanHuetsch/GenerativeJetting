@@ -9,7 +9,7 @@ redirect_console : False
 # #########
 load_dataset : False
 data_path : "/remote/gpu05/palacios/data/z+njet_full.h5"
-preprocess : True
+preprocess : 3
 channels : [16, 17, 18, 19]
 prior_path: "/remote/gpu05/palacios/GenerativeJetting/runs/z213/TBD_simple_full"
 dim: 4

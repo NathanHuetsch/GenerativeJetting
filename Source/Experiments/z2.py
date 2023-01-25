@@ -65,11 +65,11 @@ class Z2_Experiment(Experiment):
         if self.conditional:
             self.prior_raw = self.z_1
             self.prior_data, self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_bin_edges, self.prior.bin_means, self.prior_raw = \
-                self.preprocess_data(self.prior_params,self.prior_raw, conditional=True)
+                self.preprocess_data(self.prior_params,self.prior_raw, save_in_params=False,conditional=True)
             self.prior_data = self.prior_data[self.prior_data[:,-3]!=1]
             self.prior_raw = self.prior_raw[self.prior_raw[:,-1]!=1]
             self.new_data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.new_raw = \
-                self.preprocess_data(self.params, self.data_raw, save_in_params=True, conditional=True)
+                self.preprocess_data(self.params, self.data_raw, conditional=True)
 
             self.data = torch.concat([self.prior_data[:,:-3], self.new_data], dim=1)
             self.data_raw = np.concatenate([self.prior_raw[:,:12], self.new_raw[:,12:]], axis=1)

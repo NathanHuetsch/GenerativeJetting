@@ -9,7 +9,7 @@ redirect_console : True
 # #########
 data_path : "/remote/gpu07/huetsch/data/Z_2.npy"
 data_type: np
-preprocess : True
+preprocess : 3
 channels : [8, 9, 10, 12, 13, 14]
 #dim : 4
 # ##############

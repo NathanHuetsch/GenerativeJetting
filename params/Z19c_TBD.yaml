@@ -10,7 +10,7 @@ redirect_console : True
 load_dataset : False
 data_path : "/remote/gpu05/palacios/data/z+njet_full.h5"
 data_type: np
-preprocess : True
+preprocess : 3
 channels : [0, 2, 4, 5, 6, 8, 9, 10, 11]
 n_jets: 1
 #dim : 4

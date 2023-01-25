@@ -45,6 +45,10 @@ def preprocess(data, params):
         events[:, 4] = np.log(events[:, 4])
         events[:, 8::4] = np.log(events[:, 8::4] - 20 + 1e-2)
 
+        # apply log transform to mu
+        events[:,3::4] = np.log(events[:,3::4])
+
+        # apply artanh transform to phi
         events[:, 1::4] = np.arctanh(events[:, 1::4]/np.pi)
 
     # discard unwanted channels
