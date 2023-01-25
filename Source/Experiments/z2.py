@@ -64,7 +64,7 @@ class Z2_Experiment(Experiment):
 
         if self.conditional:
             self.prior_raw = self.z_1
-            self.prior_data, self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_bin_edges, self.prior.bin_means, self.prior_raw = \
+            self.prior_data, self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_bin_edges, self.prior_bin_means, self.prior_raw = \
                 self.preprocess_data(self.prior_params,self.prior_raw, save_in_params=False,conditional=True)
             self.prior_data = self.prior_data[self.prior_data[:,-3]!=1]
             self.prior_raw = self.prior_raw[self.prior_raw[:,-1]!=1]

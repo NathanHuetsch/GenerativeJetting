@@ -3,7 +3,7 @@
 # #########
 runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z317"
 run_name : "TBD_simple_full"
-redirect_console : False
+redirect_console : True
 # #########
 # # Data: #
 # #########
