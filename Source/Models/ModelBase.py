@@ -49,13 +49,13 @@ class GenerativeModel(nn.Module):
         self.params = params
         self.device = get(self.params, "device", get_device())
         self.dim = self.params["dim"]
-        self.net = self.build_net()
         self.conditional = get(self.params,'conditional',False)
         self.n_con = get(self.params,'n_con',0)
         self.n_jets = get(self.params,'n_jets',2)
         self.con_depth = get(self.params,'con_depth',0)
         self.batch_size = self.params["batch_size"]
         self.istoy = get(self.params, "istoy", False)
+        self.net = self.build_net()
 
     def build_net(self):
         pass

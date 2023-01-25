@@ -1,16 +1,17 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/17d"
-run_name : "TBD_Resnet_1024d_6l_09Beta"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13Top"
+run_name : "TBD_6l_1024d_15kb_05beta"
 redirect_console : True
+
 # #########
 # # Data: #
 # #########
 data_path : "/remote/gpu07/huetsch/data/z+njet_full.h5"
 data_type: np
 preprocess : True
-n_jets: 3
+n_jets: 2
 load_dataset : False
 #channels : [9, 10, 13, 14]
 #[0, 4, 8, 9, 10, 12, 13, 14]
@@ -20,14 +21,14 @@ load_dataset : False
 # ##############
 train: True
 log: True
-data_split: [0.5, 0.45, 0.05]
+data_split: [0.6, 0, 0.4]
 conditional: False
 
 optimizer: Adam
 lr : 1.e-3
-batch_size : 8192
+batch_size : 15000
 weight_decay : 0
-betas : [0.9, 0.99]
+betas : [0.5, 0.9]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 loss_type: "l2"
@@ -37,7 +38,7 @@ n_epochs : 20000
 validate: False
 validate_every : 100
 
-sample_periodically: True
+sample_periodically: False
 sample_every: 4000
 sample_every_n_samples: 1000000
 # #################

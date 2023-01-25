@@ -60,7 +60,7 @@ class DDPM(GenerativeModel):
     def mu_tilde_t(self, xT, t, noise):
         return (1./self.sqrt_alphas[t]) * (xT - noise*self.betas[t]/self.sqrt_One_minus_alphas_bar[t])
 
-    def batch_loss(self, x):
+    def batch_loss(self, x, conditional=False):
 
         t = torch.randint(low=1, high=self.timesteps, size=(x.size(0), 1), device=self.device)
         noise = torch.randn_like(x, device=self.device)
@@ -73,7 +73,7 @@ class DDPM(GenerativeModel):
         loss = F.mse_loss(model_pred, noise)
         return loss
 
-    def sample_n(self, n_samples):
+    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
         batch_size = get(self.params, "batch_size", 8192)
         events = []
         for i in range(int(n_samples / batch_size) + 1):

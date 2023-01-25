@@ -423,7 +423,7 @@ class Experiment:
             self.params["sampletime"] = sampletime
 
             print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
-            if get(self.params, "save_samples", False):
+            if get(self.params, "save_samples", True):
                 os.makedirs('samples', exist_ok=True)
                 np.save("samples/samples_final.npy", self.samples)
                 print(f"save_samples: generated samples have been saved")
