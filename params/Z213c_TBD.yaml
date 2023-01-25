@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z213"
-run_name : "TBD_simple_denser"
+run_name : "TBD_simple_encode_t"
 redirect_console : True
 # #########
 # # Data: #
@@ -44,13 +44,15 @@ sample_every_n_samples: 100000
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 8
-intermediate_dim : 512
+layers_per_block : 6
+intermediate_dim : 256
 n_head: 4
 trajectory: "linear_trajectory"
-encode_t: False
-encode_t_dim: 4
+encode_t: True
+encode_t_dim: 128
 encode_t_scale: 10
+encode_condition: True
+encode_c_dim: 128
 
 # #################
 # # Loading/saving: #
