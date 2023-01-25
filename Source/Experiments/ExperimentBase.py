@@ -377,7 +377,7 @@ class Experiment:
             t1 = time.time()
             traintime = t1 - t0
             n_epochs = get(self.params,"n_epochs",100)
-            print(f"train_model: Finished training {n_epochs} epochs after {traintime} seconds.")
+            print(f"train_model: Finished training {n_epochs} epochs after {traintime:.2f} s = {traintime/60:.2f} min = {traintime/60**2:.2f} h.")
 
             # Save the final model. Update the total amount of training epochs the model has been trained for
             torch.save(self.model.state_dict(), f"models/model_run{self.runs}.pt")
@@ -416,7 +416,7 @@ class Experiment:
             sampletime = t1 - t0
             self.params["sampletime"] = sampletime
 
-            print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+            print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime:.2f} s = {sampletime/60:.2f} min.")
             if get(self.params, "save_samples", False):
                 os.makedirs('samples', exist_ok=True)
                 np.save("samples/samples_final.npy", self.samples)
