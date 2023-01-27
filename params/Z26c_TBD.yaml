@@ -1,7 +1,7 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/test"
 run_name : "TBD_baseSetup_newLoss"
 redirect_console : True
 
@@ -34,7 +34,7 @@ lr_scheduler: "CosineAnnealing"
 loss_type: "new"
 multiple_t: False
 
-n_epochs : 20000
+n_epochs : 1
 validate: False
 validate_every : 100
 

@@ -1,0 +1,67 @@
+# #########
+# # General: #
+# #########
+runs_dir : "runs"
+run_name : "TBD_Toy"
+redirect_console : False
+# #########
+# # Data: #
+# #########
+load_dataset : False
+n_data: 1000000
+toy_type: "ramp"
+obs_ranges: [-1.5,1.5]
+# ##############
+# # Training:  #
+# ##############
+train: True
+log: False
+data_split: [0.6, 0.05, 0.35]
+
+optimizer: Adam
+lr : 5.e-5
+batch_size : 512
+weight_decay : 0.0
+betas : [0.9, 0.99]
+
+n_epochs : 2
+validate: False
+validate_every : 10
+
+sample_periodically: True
+sample_every: 1
+sample_every_n_samples: 100000
+# #################
+# # Architecture: #
+# #################
+model: AutoRegGMM
+network: "Resnet"
+n_gauss: 5
+n_per_head: 32
+intermediate_fac: 4
+n_blocks : 1
+layers_per_block : 6
+intermediate_dim : 256
+n_head: 4
+trajectory: "linear_trajectory"
+encode_t: False
+encode_t_dim: 4
+encode_t_scale: 10
+
+# #################
+# # Loading/saving: #
+# ###################
+warm_start : False
+warm_start_path : "/remote/gpu05/palacios/GenerativeJetting/runs/z13/TBD_Visualize7322/models/model_run0.pt"
+
+# #############
+# # Sampling: #
+# #############
+sample: True
+load_best_checkpoint: False
+n_samples : 1000000
+
+# #############
+# # Plotting: #
+# #############
+plot : True

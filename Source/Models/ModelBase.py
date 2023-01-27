@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import os
+import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
@@ -92,6 +92,8 @@ class GenerativeModel(nn.Module):
         print(f"train_model: Model has been trained for {past_epochs} epochs before.")
         print(f"train_model: Beginning training. n_epochs set to {n_epochs}")
         for e in range(n_epochs):
+            t0 = time.time()
+
             self.epoch = past_epochs + e
             self.train()
             self.train_one_epoch()
@@ -108,12 +110,17 @@ class GenerativeModel(nn.Module):
                         samples = self.sample_n(self.sample_every_n_samples)
                         self.plot_toy(samples=samples)
 
+            if e==0:
+                t1 = time.time()
+                dtEst= (t1-t0) * n_epochs
+                print(f"Training time estimate: {dtEst/60:.2f} min = {dtEst/60**2:.2f} h")
+
     def train_one_epoch(self):
         train_losses = np.array([])
         for batch_id, x in enumerate(self.train_loader):
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(x, conditional=self.conditional)
+            loss = self.batch_loss(x)
 
             #loss_m = self.train_losses[-1000:].mean()
             #loss_s = self.train_losses[-1000:].std()
@@ -136,63 +143,48 @@ class GenerativeModel(nn.Module):
         if self.log:
             self.logger.add_scalar("train_losses_epoch", self.train_losses_epoch[-1], self.epoch)
 
-    def batch_loss(self, x, conditional=False):
+    def batch_loss(self, x):
         pass
 
-    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
+    def sample_n(self, n_samples, prior_samples=None, con_depth=0):
         pass
 
     def sample_and_undo(self, n_samples, prior_model=None, prior_prior_model=None,n_jets=2):
         if self.conditional and n_jets ==2:
-            prior_samples = prior_model.sample_n(n_samples+self.batch_size, conditional=True, con_depth=self.con_depth)
-            samples = self.sample_n(n_samples, prior_samples=prior_samples, conditional=True,
+            prior_samples = prior_model.sample_n(n_samples+self.batch_size, con_depth=self.con_depth)
+            samples = self.sample_n(n_samples, prior_samples=prior_samples,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
-                                                self.prior_u, self.prior_s, self.prior_channels,
-                                                keep_all=True, conditional=True,
-                                                n_jets=1)
-            samples = undo_preprocessing(samples, self.data_mean, self.data_std,
-                                          self.data_u, self.data_s, self.params["channels"],
-                                          keep_all=True, conditional=True,
-                                          n_jets=self.n_jets)
+                                                self.prior_u, self.prior_s, self.prior_bin_edges,
+                                               self.prior_bin_means, self.prior_params)
+            samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
+                                          self.data_bin_means, self.data_bin_edges, self.params)
 
             samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
 
         elif self.conditional and n_jets == 3:
-            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size, conditional=True,
+            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size,
                                                          con_depth=self.con_depth)
             prior_samples = prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
-                                             conditional=True, con_depth=self.con_depth)
+                                                 con_depth=self.con_depth)
 
             priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
-            samples = self.sample_n(n_samples, prior_samples=priors, conditional=True, con_depth=self.con_depth)
+            samples = self.sample_n(n_samples, prior_samples=priors, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
-                                           self.prior_prior_u, self.prior_prior_s, self.prior_prior_channels,
-                                           keep_all=True, conditional=True,
-                                           n_jets=1)
+                                           self.prior_prior_u, self.prior_prior_s, self.prior_prior_bin_edges,
+                                                     self.prior_prior_bin_means, self.prior_prior_params)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
-                                           self.prior_u, self.prior_s, self.prior_channels,
-                                           keep_all=True, conditional=True,
-                                           n_jets=2)
+                                           self.prior_u, self.prior_s, self.prior_bin_edges, self.prior_bin_means, self.prior_params)
             samples = undo_preprocessing(samples, self.data_mean, self.data_std,
-                                     self.data_u, self.data_s, self.params["channels"],
-                                     keep_all=True, conditional=self.conditional,
-                                     n_jets=self.n_jets)
+                                     self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.params)
 
             samples = np.concatenate([prior_prior_samples[:n_samples, :12], prior_samples[:n_samples, 12:16],
                                       samples[:,16:]], axis=1)
 
         else:
-            samples = self.sample_n(n_samples, conditional=self.conditional, con_depth=self.con_depth)
-            samples = undo_preprocessing(data=samples,
-                                         events_mean=self.data_mean,
-                                         events_std=self.data_std,
-                                         u=self.data_u,
-                                         s=self.data_s,
-                                         channels=self.params["channels"],
-                                         keep_all=True,
-                                         conditional=self.conditional,
-                                         n_jets=self.n_jets)
+            samples = self.sample_n(n_samples, con_depth=self.con_depth)
+            samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
+                                         self.data_bin_edges, self.data_bin_means, self.params)
 
         return samples
 
@@ -324,8 +316,8 @@ class GenerativeModel(nn.Module):
                                    idx_eta2=18,
                                    n_jets=j + self.n_jets,
                                    n_epochs=n_epochs)
-            else:
-                print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
+        else:
+            print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
 
 
     def plot_toy(self, samples = None, finished=False):

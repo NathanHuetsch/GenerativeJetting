@@ -25,8 +25,6 @@ class Toy_Experiment(Experiment):
 
         super().__init__(params)
 
-        self.obs_names = ["x", "y"]
-        self.obs_ranges = [[0, 1], [0, 1], [0, 1]]
         self.istoy = get(self.params,"istoy", True)
         self.params['istoy'] = self.istoy
         self.n_data = get(self.params, "n_data", 1000000)
@@ -36,6 +34,9 @@ class Toy_Experiment(Experiment):
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
+        self.obs_names = ["x", "y"]
+        self.obs_range = get(self.params, "obs_ranges", [0, 1])
+        self.obs_ranges = [self.obs_range] * self.dim
         self.data_raw = self.data
         self.model = self.build_model(self.params, save_in_params=True)
 
@@ -48,6 +49,7 @@ class Toy_Experiment(Experiment):
         self.train_model()
         self.generate_samples()
         self.make_plots()
+        self.finish_up()
 
     def load_data(self):
         load_dataset = get(self.params, "load_dataset", True)
