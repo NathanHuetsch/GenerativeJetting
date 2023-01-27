@@ -13,18 +13,18 @@ class INN(GenerativeModel):
     def build_net(self):
         return build_INN(self.params).to(self.device)
 
-    def batch_loss(self, x, conditional=False):
-        if conditional and self.n_jets == 1:
+    def batch_loss(self, x):
+        if self.conditional and self.n_jets == 1:
             condition = x[:, -3:]
             x = x[:, :-3]
 
-        elif conditional and self.n_jets == 2:
+        elif self.conditional and self.n_jets == 2:
             condition_1 = x[:, :9]
             condition_2 = x[:, -2:]
             condition = torch.cat([condition_1, condition_2], 1)
             x = x[:, 9:-2]
 
-        elif conditional and self.n_jets == 3:
+        elif self.conditional and self.n_jets == 3:
             condition = x[:, :13]
             x = x[:, 13:]
 

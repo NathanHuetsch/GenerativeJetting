@@ -20,6 +20,7 @@ class Resnet(nn.Module):
         self.activation = self.param.get("activation", "SiLU")
         self.encode_t = self.param.get("encode_t", False)
         self.conditional = self.param.get("conditional", False)
+        self.embed_condition = self.param.get("embed_condition",False)
 
         # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
@@ -30,7 +31,11 @@ class Resnet(nn.Module):
                                        nn.Linear(self.encode_t_dim, self.encode_t_dim))
         else:
             self.encode_t_dim = 1
-
+        if self.embed_condition:
+            self.embed_c = nn.Sequential(nn.Linear(self.n_con,self.encode_c_dim),
+                                         nn.Linear(self.encode_c_dim,self.encode_c_dim))
+        else:
+            self.encode_c_dim = self.n_con
         # Build the Resnet blocks
         self.blocks = nn.ModuleList([
             self.make_block()
@@ -44,7 +49,7 @@ class Resnet(nn.Module):
         """
         Method to build the Resnet blocks with the defined specifications
         """
-        layers = [nn.Linear(self.dim + self.n_con + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
+        layers = [nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
         for _ in range(1, self.layers_per_block-1):
             layers.append(nn.Linear(self.intermediate_dim, self.intermediate_dim))
             if self.normalization is not None:
@@ -63,6 +68,9 @@ class Resnet(nn.Module):
             t = self.embed(t)
 
         if self.conditional:
+            if self.embed_condition:
+                condition = self.embed_c(condition)
+
             add_input = torch.cat([t, condition], 1)
         else:
             add_input = t
