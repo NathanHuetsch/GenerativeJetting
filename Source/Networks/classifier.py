@@ -22,7 +22,7 @@ class Classifier(nn.Module):
         # Build the Resnet blocks
         layers = [nn.Linear(self.dim, self.intermediate_dim)]
         if self.normalization is not None:
-            layers.append(getattr(nn, self.normalization)())
+            layers.append(getattr(nn, self.normalization)(self.intermediate_dim))
         if self.dropout is not None:
             layers.append(nn.Dropout(p=self.dropout))
         layers.append(getattr(nn, self.activation)())
@@ -30,7 +30,7 @@ class Classifier(nn.Module):
         for i in range(1, self.n_layers):
             layers.append(nn.Linear(self.intermediate_dim, self.intermediate_dim))
             if self.normalization is not None:
-                layers.append(getattr(nn, self.normalization)())
+                layers.append(getattr(nn, self.normalization)(self.intermediate_dim))
             if self.dropout is not None:
                 layers.append(nn.Dropout(p=self.dropout))
             layers.append(getattr(nn, self.activation)())

@@ -163,13 +163,14 @@ class Classifier_Experiment(Experiment):
         self.data_split = get(self.params, "data_split", 0.8)
         self.n_data_true_train = int(len(self.data_true)*self.data_split)
         self.n_data_generated_train = int(len(self.data_generated)*self.data_split)
+        self.n_data_train = min(self.n_data_true_train, self.n_data_generated_train)
         self.n_data_true_test = len(self.data_true) - self.n_data_true_train
         self.n_data_generated_test = len(self.data_generated) - self.n_data_generated_train
 
-        train_events = np.concatenate([self.data_true[:self.n_data_true_train],
-                                       self.data_generated[:self.n_data_generated_train]], axis=0)
-        train_target = np.concatenate([np.ones(self.n_data_true_train),
-                                       np.zeros(self.n_data_generated_train)], axis=0)
+        train_events = np.concatenate([self.data_true[:self.n_data_train],
+                                       self.data_generated[:self.n_data_train]], axis=0)
+        train_target = np.concatenate([np.ones(self.n_data_train),
+                                       np.zeros(self.n_data_train)], axis=0)
         train_data = np.concatenate([train_events, train_target[:, None]], axis=1)
         self.train_data = torch.from_numpy(train_data).float().to(self.device)
 
@@ -203,6 +204,7 @@ class Classifier_Experiment(Experiment):
         self.network.train()
 
         l_trainloader = len(self.train_loader)
+        print(self.network)
         print(f"train_model: Beginning training for {self.n_epochs} epochs")
         self.train_losses = np.array([])
         self.train_losses_epoch = np.array([])
@@ -227,7 +229,6 @@ class Classifier_Experiment(Experiment):
                 epoch_loss += loss.item()
             t1 = time.time()
             self.scheduler.step(epoch_loss/l_trainloader)
-            self.scheduler._last_lr
             self.logger.add_scalar("train_losses_epoch", epoch_loss/l_trainloader, e)
             self.train_losses_epoch = np.append(self.train_losses_epoch, epoch_loss/l_trainloader)
             print(f"Finished epoch {e} in {round(t1 - t0)} seconds with average loss", epoch_loss / l_trainloader)

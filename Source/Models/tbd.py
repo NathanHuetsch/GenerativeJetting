@@ -21,7 +21,7 @@ class TBD(GenerativeModel):
             raise NotImplementedError(f"build_model: Trajectory type {trajectory} not implemented")
 
         self.loss_type = get(self.params, "loss_type", "l2")
-        assert self.loss_type in ["l1", "l2"], "Unknown loss type"
+        assert self.loss_type in ["l1", "l2", "new"], "Unknown loss type"
 
         self.multiple_t = get(self.params, "multiple_t", False)
 
@@ -72,9 +72,11 @@ class TBD(GenerativeModel):
 
         drift = self.net(x_t, t, condition)
         if self.loss_type=="l2":
-            loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
+            loss = torch.mean((drift - x_t_dot) ** 2)
         elif self.loss_type=="l1":
             loss = torch.mean(torch.abs(drift-x_t_dot))
+        elif self.loss_type=="new":
+            loss = torch.mean(drift**2 - 2*drift*x_t_dot)
         return loss
 
     def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):

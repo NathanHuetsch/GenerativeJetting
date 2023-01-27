@@ -55,6 +55,7 @@ class GenerativeModel(nn.Module):
         self.con_depth = get(self.params,'con_depth',0)
         self.batch_size = self.params["batch_size"]
         self.istoy = get(self.params, "istoy", False)
+        self.epoch = get(self.params, "total_epochs", 0)
         self.net = self.build_net()
 
     def build_net(self):

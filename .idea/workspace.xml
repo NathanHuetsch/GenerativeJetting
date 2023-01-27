@@ -6,8 +6,13 @@
       <change beforePath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Experiments/classifier_experiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/classifier_experiment.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Models/ddpm.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ddpm.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/tbd.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attention_net.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/attention_net.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/classifier.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/classifier.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/params/Z26c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z26c_TBD.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/experiment.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/interactive.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/interactive.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/warm_experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/warm_experiment.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,18 +50,19 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.highlight.mappings&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.highlight.symlinks&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.show.date&quot;: &quot;false&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.show.permissions&quot;: &quot;false&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.show.size&quot;: &quot;false&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "true",
+    "WebServerToolWindowPanel.toolwindow.highlight.mappings": "true",
+    "WebServerToolWindowPanel.toolwindow.highlight.symlinks": "true",
+    "WebServerToolWindowPanel.toolwindow.show.date": "false",
+    "WebServerToolWindowPanel.toolwindow.show.permissions": "false",
+    "WebServerToolWindowPanel.toolwindow.show.size": "false",
+    "settings.editor.selected.configurable": "ssh.settings"
   }
-}</component>
+}]]></component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -76,7 +82,11 @@
       <workItem from="1674404866490" duration="1607000" />
       <workItem from="1674468822540" duration="291000" />
       <workItem from="1674486920132" duration="748000" />
-      <workItem from="1674548866955" duration="21175000" />
+      <workItem from="1674548866955" duration="24325000" />
+      <workItem from="1674652590524" duration="10789000" />
+      <workItem from="1674674598254" duration="404000" />
+      <workItem from="1674719189764" duration="13082000" />
+      <workItem from="1674802208490" duration="8528000" />
     </task>
     <servers />
   </component>

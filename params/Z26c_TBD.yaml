@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13Top"
-run_name : "TBD_6l_1024d_15kb_05beta"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d"
+run_name : "TBD_baseSetup_newLoss"
 redirect_console : True
 
 # #########
@@ -26,26 +26,26 @@ conditional: False
 
 optimizer: Adam
 lr : 1.e-3
-batch_size : 15000
+batch_size : 8192
 weight_decay : 0
-betas : [0.5, 0.9]
+betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
-loss_type: "l2"
+loss_type: "new"
 multiple_t: False
 
 n_epochs : 20000
 validate: False
 validate_every : 100
 
-sample_periodically: False
+sample_periodically: True
 sample_every: 4000
 sample_every_n_samples: 1000000
 # #################
 # # Architecture: #
 # #################
 model: TBD
-trajectory: "linear_trajectory"
+trajectory: "sine_cosine_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
@@ -53,7 +53,7 @@ encode_t_scale: 10
 
 network: "Resnet"
 n_blocks : 1
-intermediate_dim: 1024
+intermediate_dim: 512
 layers_per_block: 6
 
 n_layers: 5
