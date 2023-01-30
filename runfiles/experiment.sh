@@ -19,5 +19,5 @@ source venv/bin/activate
 cd GenerativeJetting
 
 # Run the actual python script with necessary parameters
-python run_Zn.py /remote/gpu05/palacios/GenerativeJetting/params/Z213c_TBD.yaml
+python run_Zn.py /remote/gpu05/palacios/GenerativeJetting/params/Z19c_DDPM.yaml
 

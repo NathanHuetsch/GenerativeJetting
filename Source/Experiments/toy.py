@@ -37,7 +37,7 @@ class Toy_Experiment(Experiment):
         self.obs_names = ["x", "y"]
         self.obs_range = get(self.params, "obs_ranges", [0, 1])
         self.obs_ranges = [self.obs_range] * self.dim
-        self.data_raw = self.data
+        self.data_raw = self.data.detach().cpu().numpy()
         self.model = self.build_model(self.params, save_in_params=True)
 
         self.model.obs_names = self.obs_names

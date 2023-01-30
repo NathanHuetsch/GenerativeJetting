@@ -62,29 +62,109 @@ class DDPM(GenerativeModel):
 
     def batch_loss(self, x):
 
+        if self.conditional and self.n_jets == 1:
+            condition = x[:, -3:]
+            condition = condition.float()
+            x = x[:, :-3]
+
+        elif self.conditional and self.n_jets == 2:
+            condition_1 = x[:, :9]
+            #condition_1 = prior_model(condition_1)
+            condition_2 = x[:, -2:]
+            condition = torch.cat([condition_1, condition_2], 1)
+            condition = condition.float()
+            x = x[:, 9:-2]
+
+        elif self.conditional and self.n_jets == 3:
+            condition = x[:, :13]
+            condition = condition.float()
+            #condition = prior_model(condition)
+            x = x[:, 13:]
+
+
+
+        else:
+            condition = None
+
         t = torch.randint(low=1, high=self.timesteps, size=(x.size(0), 1), device=self.device)
         noise = torch.randn_like(x, device=self.device)
+
         xT = self.xT_from_x0_and_noise(x, t, noise)
         #xT = torch.empty(size=x.size(), device=self.device)
         #for i in range(x.size(0)):
         #    xT[i] = self.xT_from_x0_and_noise(x[i], t[i], noise[i])
-
-        model_pred = self.net(xT.float(), t.float())
+        model_pred = self.net(xT.float(), t.float(), condition)
         loss = F.mse_loss(model_pred, noise)
         return loss
 
-    def sample_n(self, n_samples, prior_sample=None, con_depth=0):
+    def sample_n(self, n_samples, prior_samples=None, con_depth=0):
+        self.eval()
         batch_size = get(self.params, "batch_size", 8192)
         events = []
+
+        if self.conditional:
+            if self.n_jets == 1 and con_depth == 0:
+                n_c = (n_samples + batch_size) // 3
+                n_r = (n_samples + batch_size) - 2 * n_c
+
+                c_1 = np.array([[1, 0, 0]] * n_c)
+                c_2 = np.array([[0, 1, 0]] * n_c)
+                c_3 = np.array([[0, 0, 1]] * n_r)
+
+                condition = np.concatenate([c_1, c_2, c_3])
+                condition = torch.Tensor(condition).to(self.device)
+
+            elif self.n_jets == 1 and con_depth == 1:
+                n_c = (n_samples + batch_size) // 2
+                n_r = (n_samples + batch_size) - n_c
+
+                c_1 = np.array([[0, 1, 0]] * n_c)
+                c_2 = np.array([[0, 0, 1]] * n_r)
+
+                condition = np.concatenate([c_1, c_2])
+                condition = torch.Tensor(condition).to(self.device)
+
+            elif self.n_jets == 1 and con_depth == 2:
+                n_c = n_samples + batch_size
+
+                condition = np.array([[0, 0, 1]] * n_c)
+                condition = torch.Tensor(condition).to(self.device)
+
+            elif self.n_jets == 2:
+
+                condition_1 = prior_samples[:,:9]
+                condition_2 = prior_samples[:, -2:]
+
+                condition = np.concatenate([condition_1, condition_2], axis=1)
+                condition = torch.Tensor(condition).to(self.device)
+
+            elif self.n_jets == 3:
+                condition = prior_samples[:,:13]
+                condition = torch.Tensor(condition).to(self.device)
+
+        else:
+            condition = None
+
         for i in range(int(n_samples / batch_size) + 1):
+            if self.conditional:
+                c = condition[batch_size * i: batch_size * (i + 1)]
+            else:
+                c = None
             noise_i = torch.randn(self.timesteps, batch_size, self.dim).to(self.device)
             x = noise_i[0]
             for t in reversed(range(self.timesteps)):
                 z = noise_i[t] if t > 0 else 0
                 with torch.no_grad():
-                    model_pred = self.net(x, t*torch.ones_like(x[:, [0]])).detach()
+                    model_pred = self.net(x, t*torch.ones_like(x[:, [0]]), c).detach()
                 x = self.mu_tilde_t(x, t, model_pred) + self.sigmas[t] * z
-            events.append(x.cpu().numpy())
+
+            if self.conditional and self.n_jets == 1:
+                s = torch.concatenate([x, c], dim=1)
+            elif self.conditional and self.n_jets == 2:
+                s = torch.concatenate([x, c[:, -2:]], dim=1)
+            else:
+                s = x
+            events.append(s.cpu().numpy())
         return np.concatenate(events, axis=0)[:n_samples]
 
     def sample(self):

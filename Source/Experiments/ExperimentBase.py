@@ -301,12 +301,15 @@ class Experiment:
         n_data = get(self.params, "n_data", 1000000)
         # Read in the "data_split" parameter, specifying which parts of the data to use for training, validation and test
 
+        cut1 = int(n_data * self.data_split[0])
+        cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
+        self.model.data_train = self.data_raw[:cut1]
+        self.model.data_test = self.data_raw[cut2:]
+
         if train:
             # Read in the "batch_size" parameter and calculate the cuts between traindata, valdata and testdata
             # Define the loaders
 
-            cut1 = int(n_data * self.data_split[0])
-            cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
 
             self.model.train_loader = \
                 DataLoader(dataset=self.data[:cut1],
@@ -318,9 +321,6 @@ class Experiment:
                            shuffle=True)
 
             self.sample_periodically = get(self.params, "sample_periodically", False)
-            if self.sample_periodically:
-                self.model.data_train = self.data_raw[:cut1]
-                self.model.data_test = self.data_raw[cut2:]
             print(
                 f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
 
