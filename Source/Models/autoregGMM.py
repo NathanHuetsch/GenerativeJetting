@@ -61,7 +61,7 @@ class AutoRegGMM(GenerativeModel):
         loss = -gmm.log_prob(targets).mean()
 
         if self.bayesian:
-            loss += self.net.KL()
+            loss += self.net.KL() / len(self.train_loader.dataset)
         
         return loss
     
