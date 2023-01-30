@@ -2,8 +2,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from matplotlib.backends.backend_pdf import PdfPages
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, observable_histogram
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
 from Source.Util.util import get_device, save_params, get, load_params
 from Source.Experiments.ExperimentBase import Experiment
@@ -22,7 +23,7 @@ warnings.filterwarnings("ignore")
 
 class Classifier_Experiment(Experiment):
     def __init__(self, params):
-        super().__init__(params)
+        #super().__init__(params)
         self.params = params
         self.device = get(self.params, "device", get_device())
 
@@ -71,16 +72,35 @@ class Classifier_Experiment(Experiment):
         except Exception:
             raise ValueError(f"load_data_true: Cannot load data from {data_path}")
 
-        samples_path = get(self.params, "samples_path", None)
-        if samples_path is None:
-            samples_path = os.path.join(self.experiment_dir, "samples/run0.npy")
-        assert os.path.exists(samples_path), f"load_data_generated: data_path {samples_path} does not exist"
+        generate_samples = get(self.params, "generate_samples", False)
+        if not generate_samples:
+            print(f"load_data_generated: generate_samples set to False. Trying to load existing samples")
+            samples_path = get(self.params, "samples_path", None)
+            if samples_path is None:
+                samples_path = os.path.join(self.experiment_dir, "samples/run0.npy")
+            assert os.path.exists(samples_path), f"load_data_generated: data_path {samples_path} does not exist"
 
-        try:
-            self.data_generated_raw = np.load(samples_path)
-            print(f"load_data_generated: Loaded data with shape {self.data_generated_raw.shape} from ", samples_path)
-        except Exception:
-            raise ValueError(f"load_data_generated: Cannot load data from {samples_path}")
+            try:
+                self.data_generated_raw = np.load(samples_path)
+                mask = np.where(self.data_generated_raw > 10 ** 10)[0]
+                self.data_generated_raw = np.delete(self.data_generated_raw, mask, axis=0)
+                print(f"load_data_generated: Loaded data with shape {self.data_generated_raw.shape} from ", samples_path)
+            except Exception:
+                raise ValueError(f"load_data_generated: Cannot load data from {samples_path}")
+        else:
+            print(f"load_data_generated: generate_samples set to True. Trying to generate new samples")
+            model_path = get(self.params, "model_path", None)
+            if model_path is None:
+                model_path = os.path.join(self.experiment_dir, "models/model.pt")
+            assert os.path.exists(model_path), f"load_data_generated: model_path {model_path} does not exist"
+            try:
+                model = self.build_model(self.experiment_params, prior_path=self.experiment_dir)
+            except Exception:
+                raise ValueError(f"load_data_generated: Cannot load model from {model_path}")
+
+            n_samples = get(self.params, "n_samples", 1000000)
+            self.data_generated_raw = model.sample_and_undo(n_samples)
+
 
     def preprocess_data(self):
 
@@ -95,20 +115,23 @@ class Classifier_Experiment(Experiment):
         self.params["dim"] = self.dim
         self.params["channels"] = self.channels
 
+
         self.data_true, self.data_mean, self.data_std, self.data_u, self.data_s \
             = preprocess(self.data_true_raw, self.channels)
         self.data_true_raw = undo_preprocessing(self.data_true, self.data_mean, self.data_std,
                                                 self.data_u, self.data_s, self.channels, keep_all=True)
 
-        self.data_generated, a, b, c, d \
-            = preprocess(self.data_generated_raw, self.channels, prepre=False)
-        self.data_generated_raw = undo_preprocessing(self.data_generated, self.data_mean, self.data_std,
-                                                     self.data_u, self.data_s, self.channels, keep_all=True)
+        #self.data_generated, a, b, c, d \
+        #    = preprocess(self.data_generated_raw, self.channels)
+        #self.data_generated_raw = undo_preprocessing(self.data_generated, self.data_mean, self.data_std,
+        #                                             self.data_u, self.data_s, self.channels, keep_all=True)
 
 
         if not self.preprocess:
             self.data_true = self.data_true_raw[:, self.channels]
             self.data_generated = self.data_generated_raw[:, self.channels]
+
+
 
         self.add_dR = get(self.params, "add_dR", False)
         if self.add_dR:
@@ -131,7 +154,7 @@ class Classifier_Experiment(Experiment):
         print(f"prepare_training: Built network {network}")
 
         lr = get(self.params, "lr", 0.0001)
-        betas = get(self.params, "betas", [0.9, 0.999])
+        betas = get(self.params, "betas", [0.9, 0.99])
         weight_decay = get(self.params, "weight_decay", 0)
         self.optimizer = \
             Adam(self.network.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
@@ -140,13 +163,14 @@ class Classifier_Experiment(Experiment):
         self.data_split = get(self.params, "data_split", 0.8)
         self.n_data_true_train = int(len(self.data_true)*self.data_split)
         self.n_data_generated_train = int(len(self.data_generated)*self.data_split)
+        self.n_data_train = min(self.n_data_true_train, self.n_data_generated_train)
         self.n_data_true_test = len(self.data_true) - self.n_data_true_train
         self.n_data_generated_test = len(self.data_generated) - self.n_data_generated_train
 
-        train_events = np.concatenate([self.data_true[:self.n_data_true_train],
-                                       self.data_generated[:self.n_data_generated_train]], axis=0)
-        train_target = np.concatenate([np.ones(self.n_data_true_train),
-                                       np.zeros(self.n_data_generated_train)], axis=0)
+        train_events = np.concatenate([self.data_true[:self.n_data_train],
+                                       self.data_generated[:self.n_data_train]], axis=0)
+        train_target = np.concatenate([np.ones(self.n_data_train),
+                                       np.zeros(self.n_data_train)], axis=0)
         train_data = np.concatenate([train_events, train_target[:, None]], axis=1)
         self.train_data = torch.from_numpy(train_data).float().to(self.device)
 
@@ -168,23 +192,28 @@ class Classifier_Experiment(Experiment):
                        shuffle=True)
         print(f"prepare_training: Built dataloaders")
 
+        self.scheduler = ReduceLROnPlateau(self.optimizer, verbose=True, factor=0.7)
     def train_model(self):
 
         log_dir = os.path.join(self.params["out_dir"], "logs")
         self.logger = SummaryWriter(log_dir)
         print(f"train_model: Logging to log_dir {log_dir}")
 
-        n_epochs = get(self.params, "n_epochs", 100)
+        self.n_epochs = get(self.params, "n_epochs", 100)
         T0 = time.time()
         self.network.train()
 
         l_trainloader = len(self.train_loader)
-        print(f"train_model: Beginning training for {n_epochs} epochs")
-        for e in range(n_epochs):
-            train_losses = np.array([])
+        print(self.network)
+        print(f"train_model: Beginning training for {self.n_epochs} epochs")
+        self.train_losses = np.array([])
+        self.train_losses_epoch = np.array([])
+        for e in range(self.n_epochs):
+
             t0 = time.time()
             epoch_loss = 0
             for i, batch in enumerate(self.train_loader):
+
                 self.optimizer.zero_grad()
 
                 data = batch[:, :-1]
@@ -194,19 +223,21 @@ class Classifier_Experiment(Experiment):
                 loss = F.binary_cross_entropy(prediction, target.unsqueeze(1))
                 loss.backward()
                 self.optimizer.step()
-                train_losses = np.append(train_losses, loss.item())
+                self.train_losses = np.append(self.train_losses, loss.item())
 
-                self.logger.add_scalar("train_losses", train_losses[-1], e*l_trainloader + i)
+                self.logger.add_scalar("train_losses", self.train_losses[-1], e*l_trainloader + i)
                 epoch_loss += loss.item()
             t1 = time.time()
+            self.scheduler.step(epoch_loss/l_trainloader)
             self.logger.add_scalar("train_losses_epoch", epoch_loss/l_trainloader, e)
+            self.train_losses_epoch = np.append(self.train_losses_epoch, epoch_loss/l_trainloader)
             print(f"Finished epoch {e} in {round(t1 - t0)} seconds with average loss", epoch_loss / l_trainloader)
 
         T1 = time.time()
         traintime = round(T1-T0)
         self.params["traintime"] = traintime
         torch.save(self.network.state_dict(), "classifier.pt")
-        print(f"train_model: Finished training for {n_epochs} epochs after {traintime} seconds.")
+        print(f"train_model: Finished training for {self.n_epochs} epochs after {traintime} seconds.")
 
     def predict(self):
         self.true_predictions = np.zeros(len(self.data_true))
@@ -298,6 +329,21 @@ class Classifier_Experiment(Experiment):
     def make_plots(self):
         os.makedirs("plots", exist_ok=True)
         print("make_plots: Drawing ClassifierPrediction plots")
+
+        plt.scatter(np.arange(len(self.train_losses)), self.train_losses)
+        plt.xlabel("Training iteration")
+        plt.ylabel("Loss")
+        plt.title("Training Loss")
+        plt.savefig("plots/loss")
+        plt.close()
+
+        plt.scatter(np.arange(len(self.train_losses_epoch)), self.train_losses_epoch)
+        plt.xlabel("Training epoch")
+        plt.ylabel("Average Loss")
+        plt.title("Training Loss Epochs")
+        plt.savefig("plots/loss_epoch")
+        plt.close()
+
         with PdfPages(f"plots/LogClassifierPredictions") as out:
             plt.hist(self.true_test_predictions, range=[0, 1], bins=100, density=True)
             plt.yscale("log")
@@ -533,7 +579,7 @@ class Classifier_Experiment(Experiment):
                          obs_test=obs_test,
                          obs_predict=obs_generated,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
             if self.add_dR:
                 obs_train = self.data_train_raw[:cut, -1]
                 obs_test = self.data_true_raw[cut:, -1]
@@ -547,24 +593,29 @@ class Classifier_Experiment(Experiment):
                          obs_test=obs_test,
                          obs_predict=obs_generated,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
 
         with PdfPages(f"plots/1d_histograms_preprocessed") as out:
             # Loop over the plot_channels
-            for i, channel in enumerate(range(6)):
-                obs_train = self.data_train[:cut, channel]
-                obs_test = self.data_true[cut:, channel]
-                obs_generated = self.data_generated[:, channel]
+            for i in range(self.dim):
+                obs_train = self.data_train[:cut, i]
+                obs_test = self.data_true[cut:, i]
+                obs_generated = self.data_generated[:, i]
                 # Get the name and the range of the observable
-                obs_name = self.obs_names[channel]
-                obs_range = [-3, 3]
+                try:
+                    channel = self.channels[i]
+                    obs_name = self.obs_names[channel]
+                    obs_range = self.obs_ranges[channel]
+                except IndexError:
+                    obs_name = "dR"
+                    obs_range = [0, 8]
                 # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,
                          obs_test=obs_test,
                          obs_predict=obs_generated,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
 
 
         with PdfPages(f"plots/1d_histograms_reweighted") as out:
@@ -583,11 +634,11 @@ class Classifier_Experiment(Experiment):
                          obs_predict=obs_generated,
                          weights=weights,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
             if self.add_dR:
                 obs_train = self.data_train_raw[:cut, -1]
                 obs_test = self.data_true_raw[cut:, -1]
-                obs_generated = self.data_generated_raw[:, channel]
+                obs_generated = self.data_generated_raw[:, -1]
                 obs_name = "dR"
                 obs_range = [0,8]
                 plot_obs(pp=out,
@@ -596,7 +647,7 @@ class Classifier_Experiment(Experiment):
                          obs_predict=obs_generated,
                          weights=weights,
                          name=obs_name,
-                         range=obs_range)
+                         range=obs_range, n_epochs=self.n_epochs)
 
 
     def finish_up(self):

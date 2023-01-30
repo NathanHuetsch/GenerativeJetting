@@ -6,6 +6,7 @@ from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
+from Source.Util.physics import get_M_ll
 from matplotlib.backends.backend_pdf import PdfPages
 
 
@@ -49,14 +50,14 @@ class GenerativeModel(nn.Module):
         self.params = params
         self.device = get(self.params, "device", get_device())
         self.dim = self.params["dim"]
-        self.net = self.build_net()
         self.conditional = get(self.params,'conditional',False)
         self.n_con = get(self.params,'n_con',0)
         self.n_jets = get(self.params,'n_jets',2)
         self.con_depth = get(self.params,'con_depth',0)
         self.batch_size = self.params["batch_size"]
         self.istoy = get(self.params, "istoy", False)
-        self.epoch = 0
+        self.epoch = get(self.params, "total_epochs", 0)
+        self.net = self.build_net()
 
     def build_net(self):
         pass
@@ -91,8 +92,6 @@ class GenerativeModel(nn.Module):
         past_epochs = get(self.params, "total_epochs", 0)
         print(f"train_model: Model has been trained for {past_epochs} epochs before.")
         print(f"train_model: Beginning training. n_epochs set to {n_epochs}")
-
-        self.epoch = past_epochs
         for e in range(n_epochs):
             t0 = time.time()
 
@@ -321,6 +320,24 @@ class GenerativeModel(nn.Module):
         else:
             print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
 
+        if get(self.params, "plot_Mll", False):
+            for j,_ in enumerate(plot_train):
+                obs_name = "M_{\mu \mu}"
+                obs_range = [70,120]
+                bin_num = 40
+                data_train = get_M_ll(plot_train[j])
+                data_test = get_M_ll(plot_test[j])
+                data_generated = get_M_ll(plot_samples[j])
+                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}") as out:
+                    plot_obs(pp=out,
+                             obs_train=data_train,
+                             obs_test=data_test,
+                             obs_predict=data_generated,
+                             name=obs_name,
+                             n_epochs=n_epochs,
+                             range=obs_range,
+                             num_bins=bin_num,
+                             n_jets=j+self.n_jets)
 
     def plot_toy(self, samples = None, finished=False):
         os.makedirs(f"plots", exist_ok=True)

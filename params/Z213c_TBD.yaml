@@ -48,7 +48,7 @@ layers_per_block : 6
 intermediate_dim : 256
 n_head: 4
 trajectory: "linear_trajectory"
-encode_t: True
+encode_t: False
 encode_t_dim: 128
 encode_t_scale: 10
 encode_condition: True

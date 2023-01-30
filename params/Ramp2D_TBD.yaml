@@ -2,7 +2,7 @@
 # # General: #
 # #########
 runs_dir : "runs"
-run_name : "TBD_Toy"
+run_name : "DDPM_Toy"
 redirect_console : False
 # #########
 # # Data: #
@@ -10,7 +10,7 @@ redirect_console : False
 load_dataset : False
 n_data: 1000000
 toy_type: "ramp"
-obs_ranges: [-1.5,1.5]
+obs_ranges: [0,1]
 # ##############
 # # Training:  #
 # ##############
@@ -34,7 +34,7 @@ sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-model: AutoRegGMM
+model: DDPM
 network: "Resnet"
 n_gauss: 5
 n_per_head: 32
