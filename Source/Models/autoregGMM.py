@@ -15,6 +15,7 @@ class AutoRegGMM(GenerativeModel):
     """
 
     def __init__(self, params):
+        self.bayesian = get(params, "bayesian", 0)
         n_blocks = get(params, "n_blocks", None)
         assert n_blocks is not None, "build_model: n_blocks not specified"
         n_head = get(params, "n_head", None)
@@ -28,9 +29,7 @@ class AutoRegGMM(GenerativeModel):
         self.n_gauss = n_gauss
         assert n_gauss is not None, "build_model: n_gauss not specified"
         print(f"Build model AutoRegGMM with n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
-              f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
-
-        self.bayesian = get(params, "bayesian", 0)
+              f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss} with bayesian={self.bayesian}")
         
         params["vocab_size"] = 3 * n_gauss
         params["block_size"] = params["dim"]
