@@ -282,31 +282,6 @@ class Experiment:
                     f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
             else:
                 raise ValueError(f"build_optimizer: optimizer {optim} not implemented")
-
-            # build learning rate scheduler
-            use_scheduler = get(self.params, "use_scheduler", False)
-            if use_scheduler:
-                lr_scheduler = get(self.params, "lr_scheduler", "OneCycle")
-                if lr_scheduler == "OneCycle":
-                    lr = get(self.params, "lr", 0.0001)
-                    n_epochs = get(self.params, "n_epochs", 100)
-                    self.model.scheduler = OneCycleLR(
-                        self.model.optimizer,
-                        lr * 10,
-                        epochs=n_epochs,
-                        steps_per_epoch=len(self.model.train_loader))
-                    print("build_dataloaders: Using one-cycle lr scheduler")
-                elif lr_scheduler == "CosineAnnealing":
-                    n_epochs = get(self.params, "n_epochs", 100)
-                    self.model.scheduler = CosineAnnealingLR(
-                        self.model.optimizer,
-                        n_epochs*len(self.model.train_loader)
-                    )
-                    print("build_dataloaders: Using CosineAnnealing lr scheduler")
-                else:
-                    print(f"build_dataloaders: lr_scheduler {lr_scheduler} not recognised. Not using it")
-                    self.params["use_scheduler"]=False
-
         else:
             self.model.optimizer = None
             print("build_optimizer: train set to False. Not building optimizer")
@@ -348,6 +323,30 @@ class Experiment:
                 self.model.data_test = self.data_raw[cut2:]
             print(
                 f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
+
+            # build learning rate scheduler
+            use_scheduler = get(self.params, "use_scheduler", False)
+            if use_scheduler:
+                lr_scheduler = get(self.params, "lr_scheduler", "OneCycle")
+                if lr_scheduler == "OneCycle":
+                    lr = get(self.params, "lr", 0.0001)
+                    n_epochs = get(self.params, "n_epochs", 100)
+                    self.model.scheduler = OneCycleLR(
+                        self.model.optimizer,
+                        lr * 10,
+                        epochs=n_epochs,
+                        steps_per_epoch=len(self.model.train_loader))
+                    print("build_dataloaders: Using one-cycle lr scheduler")
+                elif lr_scheduler == "CosineAnnealing":
+                    n_epochs = get(self.params, "n_epochs", 100)
+                    self.model.scheduler = CosineAnnealingLR(
+                        self.model.optimizer,
+                        n_epochs*len(self.model.train_loader)
+                    )
+                    print("build_dataloaders: Using CosineAnnealing lr scheduler")
+                else:
+                    print(f"build_dataloaders: lr_scheduler {lr_scheduler} not recognised. Not using it")
+                    self.params["use_scheduler"]=False
         else:
             print("build_dataloaders: train set to False. Not building dataloaders")
 

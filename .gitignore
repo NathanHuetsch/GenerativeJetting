@@ -1,5 +1,6 @@
 /venv/
 /runs/
 /.idea
-/params
-/runfiles
+/params/
+/runfiles/
+*__pycache__*
