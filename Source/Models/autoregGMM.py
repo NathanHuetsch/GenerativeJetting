@@ -29,6 +29,8 @@ class AutoRegGMM(GenerativeModel):
         assert n_gauss is not None, "build_model: n_gauss not specified"
         print(f"Build model AutoRegGMM with n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
               f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
+
+        self.bayesian = get(params, "bayesian", 0)
         
         params["vocab_size"] = 3 * n_gauss
         params["block_size"] = params["dim"]
@@ -58,6 +60,9 @@ class AutoRegGMM(GenerativeModel):
         comp = D.Normal(mu, sigma)
         gmm = D.MixtureSameFamily(mix, comp)
         loss = -gmm.log_prob(targets).mean()
+
+        if self.bayesian:
+            loss += self.net.KL()
         
         return loss
     
