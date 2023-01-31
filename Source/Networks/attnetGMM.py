@@ -127,14 +127,14 @@ class attnetGMM(nn.Module):
 
         self.transformer = nn.ModuleDict(dict(
             wte = VBLinear(1, self.intermediate_dim, self.prior_prec) \
-                if self.bayesian>=1 else nn.Linear(1, self.intermediate_dim), 
+                if self.bayesian>=3 else nn.Linear(1, self.intermediate_dim), 
             wpe = nn.Embedding(self.block_size, self.intermediate_dim),
             drop = nn.Dropout(self.embd_pdrop),
             h = nn.ModuleList([TransformerBlock(params) for _ in range(self.n_blocks)]),
             ln_f = nn.LayerNorm(self.intermediate_dim),
         ))
         self.lm_head = VBLinear(self.intermediate_dim, self.vocab_size) \
-                       if self.bayesian>=1 else nn.Linear(self.intermediate_dim, self.vocab_size)
+                       if self.bayesian>=3 else nn.Linear(self.intermediate_dim, self.vocab_size)
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
@@ -177,7 +177,7 @@ class attnetGMM(nn.Module):
 
     def KL(self):
         assert self.bayesian!=0
-        kl =  self.transformer.wte.KL() + self.lm_head.KL() if self.bayesian>=1 else 0.
+        kl =  self.transformer.wte.KL() + self.lm_head.KL() if self.bayesian>=3 else 0.
         for i in range(self.n_blocks):
             kl += self.transformer.h[i].KL()
         return kl
