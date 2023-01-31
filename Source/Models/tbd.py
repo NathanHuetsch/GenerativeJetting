@@ -70,11 +70,12 @@ class TBD(GenerativeModel):
             x_1 = torch.randn_like(x)
             x_t, x_t_dot = self.trajectory(x, x_1, t)
 
+        self.net.kl = 0
         drift = self.net(x_t, t, condition)
         if self.loss_type=="l2":
-            loss = 0.5 * torch.mean((drift - x_t_dot) ** 2)
+            loss = 0.5 * torch.mean((drift - x_t_dot) ** 2) + self.net.kl / len(self.data_train)
         elif self.loss_type=="l1":
-            loss = torch.mean(torch.abs(drift-x_t_dot))
+            loss = torch.mean(torch.abs(drift-x_t_dot)) + self.net.kl / len(self.data_train)
         return loss
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):

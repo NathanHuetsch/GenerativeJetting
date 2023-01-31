@@ -93,8 +93,10 @@ class DDPM(GenerativeModel):
         #xT = torch.empty(size=x.size(), device=self.device)
         #for i in range(x.size(0)):
         #    xT[i] = self.xT_from_x0_and_noise(x[i], t[i], noise[i])
+        self.net.kl = 0
         model_pred = self.net(xT.float(), t.float(), condition)
-        loss = F.mse_loss(model_pred, noise)
+        loss = F.mse_loss(model_pred, noise) + self.net.kl / len(self.data_train)
+
         return loss
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):

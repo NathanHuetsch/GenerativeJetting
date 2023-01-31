@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from Source.Networks.vblinear import VBLinear
 
 
 class Resnet(nn.Module):
@@ -21,6 +22,9 @@ class Resnet(nn.Module):
         self.encode_t = self.param.get("encode_t", False)
         self.conditional = self.param.get("conditional", False)
         self.embed_condition = self.param.get("embed_condition",False)
+        self.bayesian = self.param.get("bayesian", False)
+        self.kl = 0
+        self.bayesian_layers = []
 
         # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
@@ -41,24 +45,52 @@ class Resnet(nn.Module):
         self.blocks = nn.ModuleList([
             self.make_block()
             for _ in range(self.n_blocks)])
-        # Initialize the weights in the last layer of each block as 0
-        for block in self.blocks:
-            block[-1].weight.data *= 0
-            block[-1].bias.data *= 0
+
+        if self.bayesian:
+            for block in self.blocks:
+                block[-1].mu_w.data *= 0
+                block[-1].bias.data *= 0
+                block[-1].logsig2_w.data *= 10**(-5)
+        else:
+            # Initialize the weights in the last layer of each block as 0
+            for block in self.blocks:
+                block[-1].weight.data *= 0
+                block[-1].bias.data *= 0
 
     def make_block(self):
         """
         Method to build the Resnet blocks with the defined specifications
         """
-        layers = [nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
-        for _ in range(1, self.layers_per_block-1):
-            layers.append(nn.Linear(self.intermediate_dim, self.intermediate_dim))
-            if self.normalization is not None:
-                layers.append(getattr(nn, self.normalization)())
-            if self.dropout is not None:
-                layers.append(nn.Dropout(p=self.dropout))
-            layers.append(getattr(nn, self.activation)())
-        layers.append(nn.Linear(self.intermediate_dim, self.dim))
+        if self.bayesian:
+            bays_layer = VBLinear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim)
+            layers = [bays_layer, nn.SiLU()]
+            self.bayesian_layers.append(bays_layer)
+
+            for _ in range(1, self.layers_per_block - 1):
+                bays_layer = VBLinear(self.intermediate_dim, self.intermediate_dim)
+                layers.append(bays_layer)
+                self.bayesian_layers.append(bays_layer)
+                if self.normalization is not None:
+                    layers.append(getattr(nn, self.normalization)())
+                if self.dropout is not None:
+                    layers.append(nn.Dropout(p=self.dropout))
+                layers.append(getattr(nn, self.activation)())
+            bays_layer = VBLinear(self.intermediate_dim, self.dim)
+            layers.append(bays_layer)
+            self.bayesian_layers.append(bays_layer)
+
+        else:
+            layers = [nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
+
+            for _ in range(1, self.layers_per_block-1):
+                layers.append(nn.Linear(self.intermediate_dim, self.intermediate_dim))
+                if self.normalization is not None:
+                    layers.append(getattr(nn, self.normalization)())
+                if self.dropout is not None:
+                    layers.append(nn.Dropout(p=self.dropout))
+                layers.append(getattr(nn, self.activation)())
+            layers.append(nn.Linear(self.intermediate_dim, self.dim))
+
         return nn.Sequential(*layers)
 
     def forward(self, x, t, condition=None):
@@ -78,6 +110,10 @@ class Resnet(nn.Module):
         for block in self.blocks[:-1]:
             x = x + block(torch.cat([x, add_input], 1))
         x = self.blocks[-1](torch.cat([x, add_input], 1))
+
+        for bay_layer in self.bayesian_layers:
+            self.kl += bay_layer.KL()
+
         return x
 
 
