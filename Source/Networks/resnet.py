@@ -32,8 +32,9 @@ class Resnet(nn.Module):
         else:
             self.encode_t_dim = 1
         if self.embed_condition:
-            self.embed_c = nn.Sequential(nn.Linear(self.n_con,self.encode_c_dim),
+            self.embed_c = nn.Sequential(nn.Linear(self.n_con+self.encode_t_dim,self.encode_c_dim),
                                          nn.Linear(self.encode_c_dim,self.encode_c_dim))
+            self.encode_t_dim = 0
         else:
             self.encode_c_dim = self.n_con
         # Build the Resnet blocks
@@ -68,10 +69,9 @@ class Resnet(nn.Module):
             t = self.embed(t)
 
         if self.conditional:
-            if self.embed_condition:
-                condition = self.embed_c(condition)
-
             add_input = torch.cat([t, condition], 1)
+            if self.embed_condition:
+                add_input = self.embed_c(add_input)
         else:
             add_input = t
 

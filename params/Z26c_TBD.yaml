@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/test"
-run_name : "TBD_baseSetup_newLoss"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13dDDPM"
+run_name : "AttentionNet_CosAnnealing_4b_4h_64d_noDrop"
 redirect_console : True
 
 # #########
@@ -10,7 +10,7 @@ redirect_console : True
 # #########
 data_path : "/remote/gpu07/huetsch/data/z+njet_full.h5"
 data_type: np
-preprocess : True
+preprocess : 3
 n_jets: 2
 load_dataset : False
 #channels : [9, 10, 13, 14]
@@ -31,30 +31,31 @@ weight_decay : 0
 betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
-loss_type: "new"
+loss_type: "l2"
 multiple_t: False
 
-n_epochs : 1
+n_epochs : 10000
 validate: False
 validate_every : 100
 
 sample_periodically: True
 sample_every: 4000
-sample_every_n_samples: 1000000
+sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-model: TBD
+model: DDPM
 trajectory: "sine_cosine_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
 
 
-network: "Resnet"
-n_blocks : 1
-intermediate_dim: 512
-layers_per_block: 6
+network: "AttentionNet"
+n_blocks : 4
+intermediate_dim: 64
+layers_per_block: 4
+resid_pdrop: 0
 
 n_layers: 5
 n_head: 4

@@ -275,3 +275,13 @@ def apply_scale(events, format, downscale=True, upscale=None, reduce_data=False)
             else:
                 events[:,0::dim] = np.tanh(events[:,0::dim]) * np.pi
         return events, upscale
+
+def get_M_ll(events, masses=0.1):
+    events[:,1] = np.random.uniform(0, 2 * np.pi, size=(events.shape[0],))
+    events[:,5::4] = events[:, 5::4] + events[:,1,None]
+
+    events_Eppp = PTPhiEtaToEppp(events,masses=masses,dim=4)
+
+    p1p2 = events_Eppp[:, 0] * events_Eppp[:, 4] - (events_Eppp[:, 1] * events_Eppp[:, 5] + events_Eppp[:, 2] *
+                                                    events_Eppp[:, 6] + events_Eppp[:, 3] * events_Eppp[:, 7])
+    return np.sqrt(2*masses**2+2*p1p2)

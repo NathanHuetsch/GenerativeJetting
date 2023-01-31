@@ -1,9 +1,10 @@
 # #########
 # # General: #
 # #########
-runs_dir : "runs"
-run_name : "TBD_Toy"
-redirect_console : False
+runs_dir : "runs/Toy"
+run_name : "DDPM_4l_64d_1e4LR_1000e_OneCycle_2048b"
+redirect_console : True
+istoy: True
 # #########
 # # Data: #
 # #########
@@ -19,29 +20,28 @@ log: False
 data_split: [0.6, 0.05, 0.35]
 
 optimizer: Adam
-lr : 5.e-5
-batch_size : 512
+lr : 1.e-4
+batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
+use_scheduler: True
+lr_scheduler: "OneCycle"
 
-n_epochs : 2
+n_epochs : 1000
 validate: False
 validate_every : 10
 
-sample_periodically: True
-sample_every: 1
+sample_periodically: False
+sample_every: 100
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-model: AutoRegGMM
+model: DDPM
 network: "Resnet"
-n_gauss: 5
-n_per_head: 32
-intermediate_fac: 4
 n_blocks : 1
-layers_per_block : 6
-intermediate_dim : 256
+layers_per_block : 4
+intermediate_dim : 64
 n_head: 4
 trajectory: "linear_trajectory"
 encode_t: False
