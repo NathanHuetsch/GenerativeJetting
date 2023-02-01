@@ -5,7 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, get_R, get_xsum
 from Source.Util.physics import get_M_ll
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -355,7 +355,7 @@ class GenerativeModel(nn.Module):
                 obs_generated = samples[:,i]
                 # Get the name and the range of the observable
                 obs_name = self.obs_names[i]
-                obs_range = self.obs_ranges[i]
+                obs_range = None if self.obs_ranges==None else self.obs_ranges[i]
                 # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,
@@ -365,4 +365,24 @@ class GenerativeModel(nn.Module):
                          range=obs_range,
                          n_epochs=n_epochs,
                          n_jets=None)
+        
+        if get(self.params, "toy_type", "ramp") == "gauss_sphere":
+            obs_name = "R"
+            out = f"{path}/R_epoch_{n_epochs}.pdf"
+            obs_train = get_R(self.data_train)
+            obs_test = get_R(self.data_test)
+            obs_generated = get_R(samples)
+            obs_range = [0,2]
+            plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
+                     name=obs_name, range=obs_range)
 
+        if get(self.params, "toy_type", "ramp") == "camel":
+            n_dim = get(self.params, "n_dim", 2)
+            obs_name = "\sum_{i=1}"+f"^{n_dim} x_i"
+            out = f"{path}/xsum_epoch_{n_epochs}.pdf"
+            obs_train = get_xsum(self.data_train)
+            obs_test = get_xsum(self.data_test)
+            obs_generated = get_xsum(samples)
+            obs_range = [-3*n_dim**.5, 3*n_dim**.5]
+            plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
+                     name=obs_name, range=obs_range)

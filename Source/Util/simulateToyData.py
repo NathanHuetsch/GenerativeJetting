@@ -86,7 +86,3 @@ class ToySimulator:
             expr = expr * np.sin(phi[:, i])
         samples[:, -1] = expr
         return samples
-
-    def get_R(self):
-        '''Calculate radius of samples following a hypersphere distribution'''
-        return np.sum(self.n_data ** 2, axis=1) ** .5
