@@ -25,6 +25,7 @@ class Resnet(nn.Module):
         self.bayesian = self.param.get("bayesian", False)
         self.kl = 0
         self.bayesian_layers = []
+        self.prior_prec = self.param.get("prior_prec", 1.0)
 
         # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
@@ -50,7 +51,7 @@ class Resnet(nn.Module):
             for block in self.blocks:
                 block[-1].mu_w.data *= 0
                 block[-1].bias.data *= 0
-                block[-1].logsig2_w.data *= 10**(-5)
+                #block[-1].logsig2_w.data *= 10**(-5)
         else:
             # Initialize the weights in the last layer of each block as 0
             for block in self.blocks:
@@ -62,12 +63,13 @@ class Resnet(nn.Module):
         Method to build the Resnet blocks with the defined specifications
         """
         if self.bayesian:
-            bays_layer = VBLinear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim)
+            bays_layer = VBLinear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim,
+                                  prior_prec=self.prior_prec)
             layers = [bays_layer, nn.SiLU()]
             self.bayesian_layers.append(bays_layer)
 
             for _ in range(1, self.layers_per_block - 1):
-                bays_layer = VBLinear(self.intermediate_dim, self.intermediate_dim)
+                bays_layer = VBLinear(self.intermediate_dim, self.intermediate_dim,prior_prec=self.prior_prec)
                 layers.append(bays_layer)
                 self.bayesian_layers.append(bays_layer)
                 if self.normalization is not None:
@@ -75,7 +77,7 @@ class Resnet(nn.Module):
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
-            bays_layer = VBLinear(self.intermediate_dim, self.dim)
+            bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec)
             layers.append(bays_layer)
             self.bayesian_layers.append(bays_layer)
 

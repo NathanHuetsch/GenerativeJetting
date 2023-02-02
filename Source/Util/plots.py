@@ -21,98 +21,149 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
-LABEL_XGEN = "Gen."
-LABEL_XTRAIN = "Train"
-LABEL_TRUTH = "True"
+def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, unit=None, weight_samples=None,
+                             save_dict=None, predict_weights=None, n_epochs=None, n_jets=None):
+        '''
+        Up-to-date plotting function from Theo (binn branch of precision-enthusiasts repo)
+        slightly modified (removed save_dict option and renamed parameters to match our earlier version)
+        Note that one cannot specify the range, we let it be chosen by matplotlib
+        :pp: name of file where the plot should be stored
+        :obs_train: training data
+        :obs_test: test data
+        :obs_predict: predicted data
+        :bins: Bins to be used for the histogram. Can be either a number (then bins are created equidistantly)
+                or an array of the bin edges, as taken by np.histogram(..., bins=bins)
+        :range: Range to be used for the histogram. Optional parameter, if not specified then the range is chosen from the data
+        :name: Name of the variable to be histogrammed (goes into xlabel)
+        :unit: Unit of the variable to be histogrammed (goes into xlabel)
+        :weight_samples: Integer that specifies how many different choices of weights have been used (for Bayesian models)
+                If weight_samples!=None, assume that obs_predict has the form [dataset1, dataset2, ...]
+        :predict_weights: Weights of the predicted events (for e.g. discriminator reweighting)
+        '''
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
 
-def plot_obs(pp, obs_train, obs_test, obs_predict, name,n_epochs, range=[0, 100], num_bins=60,FONTSIZE=14, weights=None, n_jets=2):
-        fig1, axs = plt.subplots(3, 1, sharex=True, gridspec_kw={'height_ratios' : [4, 1, 1], 'hspace' : 0.00})
+            y_t,  bins = np.histogram(obs_test, bins=bins, range=range) #generate bin array if needed
+            y_tr, _ = np.histogram(obs_train, bins=bins)
+            if weight_samples is None:
+                y_g,  _ = np.histogram(obs_predict, bins=bins, weights=predict_weights)
+                hists = [y_t, y_g, y_tr]
+                hist_errors = [np.sqrt(y_t), np.sqrt(y_g), np.sqrt(y_tr)]
+            else:
+                obs_predict = obs_predict.reshape(weight_samples,
+                        len(obs_predict)//weight_samples)
+                hist_weights = (None if predict_weights is None
+                                else predict_weights.reshape(obs_predict.shape))
+                hists_g = np.array([np.histogram(obs_predict[i,:], bins=bins,
+                                                 weights=hist_weights[i,:])[0]
+                                    for i in range(weight_samples)])
+                hists = [y_t, np.mean(hists_g, axis=0), y_tr]
+                hist_errors = [np.sqrt(y_t), np.std(hists_g, axis=0), np.sqrt(y_tr)]
+            integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
+            scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
-        y_t, x_t = np.histogram(obs_test, bins=num_bins, range=range, density=True)
-        if weights is not None:
-            y_g, x_g = np.histogram(obs_predict, bins=num_bins, range=range, density=True, weights=weights)
-        else:
-            y_g, x_g = np.histogram(obs_predict, bins=num_bins, range=range, density=True)
-        y_tr, x_tr = np.histogram(obs_train, bins=num_bins, range=range, density=True)
-        y_tr, y_g, y_t = y_tr/np.sum(y_tr), y_g/np.sum(y_g), y_t/np.sum(y_t)
+            FONTSIZE = 14
+            labels = ["True", "Model", "Train"]
+            colors = ["#e41a1c", "#3b528b", "#1a8507"]
+            dup_last = lambda a: np.append(a, a[-1])
 
-        if n_jets is not None:
-            fig1.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
-        else:
-            fig1.suptitle(f"After training for {n_epochs + 1} epochs")
-        #Histogram
-        axs[0].step(x_t[:num_bins], y_t, label=LABEL_TRUTH, color=truthcolor, linewidth=1.0, where='mid')
-        axs[0].step(x_g[:num_bins], y_g,label=LABEL_XGEN, color=netcolor, linewidth=1.0, where='mid')
-        axs[0].step(x_tr[:num_bins], y_tr,label=LABEL_XTRAIN, color=traincolor, linewidth=1.0, where='mid')
+            if weight_samples is None:
+                fig1, axs = plt.subplots(3, 1, sharex=True,
+                        gridspec_kw={"height_ratios" : [4, 1, 1], "hspace" : 0.00})
+            else:
+                fig1, axs = plt.subplots(5, 1, sharex=True,
+                        gridspec_kw={"height_ratios" : [4, 1, 1, 1, 1], "hspace" : 0.00})
+            if n_epochs is not None:
+                if n_jets is not None:
+                     fig1.suptitle(f"After training for {n_epochs+1} epochs for {n_jets} jets")
+                else:
+                     fig1.suptitle(f"After training for {n_epochs+1} epochs")
 
-        axs[0].legend(loc='upper right', frameon=False)
-        axs[0].set_ylabel(r'Normalized', fontsize = FONTSIZE)
-        if "p_{T" in name:
-            axs[0].set_yscale('log')
-        y_rel = y_g/y_t
-        y_rel[np.isnan(y_rel)==True] = 1
-        y_rel[y_rel==np.inf] = 1
+            for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
+                                                     labels, colors):
 
-        w_gs, w_ts = 1/len(obs_predict), 1/len(obs_test)
-        y_g_abs, y_t_abs = y_g/w_gs, y_t/w_ts
-        diff_stat =  100 * w_gs/w_ts * np.sqrt(y_g_abs * (y_g_abs + y_t_abs)/((y_t_abs+1e-5)**3))
-        diff_stat[np.isnan(diff_stat)==True] = 1
-        diff_stat[diff_stat==np.inf] = 1
 
-        #Ratio Panel
-        axs[1].step(x_t[:num_bins], y_rel, linewidth=1.0, where='mid', color=netcolor)
-        axs[1].step(x_t[:num_bins], y_rel + diff_stat/100, color=netcolor, alpha=0.5, label='$+- stat$', linewidth=0.5, where='mid')
-        axs[1].step(x_t[:num_bins], y_rel - diff_stat/100, color=netcolor, alpha=0.5, linewidth=0.5, where='mid')
-        axs[1].fill_between(x_t[:num_bins], y_rel - diff_stat/100, y_rel + diff_stat/100, facecolor=netcolor, alpha = 0.3, step = 'mid')
-        axs[1].set_ylabel(r'$\frac{\mathrm{Model}}{\mathrm{True}}$', fontsize = FONTSIZE)
-        axs[1].set_yticks([0.95,1,1.05])
-        axs[1].set_ylim([0.9,1.1])
-        axs[1].axhline(y=1, c='black', ls='--', lw=0.7)
-        axs[1].axhline(y=1.2, c='black', ls='dotted', lw=0.5)
-        axs[1].axhline(y=0.8, c='black', ls='dotted', lw=0.5)
-        plt.xlabel(r'${%s}$' % name, fontsize = FONTSIZE)
+                axs[0].step(bins, dup_last(y) * scale, label=label, color=color,
+                        linewidth=1.0, where="post")
+                axs[0].step(bins, dup_last(y + y_err) * scale, color=color,
+                        alpha=0.5, linewidth=0.5, where="post")
+                axs[0].step(bins, dup_last(y - y_err) * scale, color=color,
+                        alpha=0.5, linewidth=0.5, where="post")
+                axs[0].fill_between(bins, dup_last(y - y_err) * scale,
+                        dup_last(y + y_err) * scale, facecolor=color,
+                        alpha=0.3, step="post")
 
-        #Relative Error
-        axs[2].set_ylabel(r'$\delta [\%]$', fontsize = FONTSIZE)
-        y_diff = np.fabs((y_rel - 1)) * 100
+                if label == "True": continue
 
-        markers, caps, bars = axs[2].errorbar(x_g[:num_bins], y_diff, yerr=diff_stat, ecolor=netcolor, color=netcolor, elinewidth=0.5, linewidth=0,  fmt='.', capsize=2)
+                ratio = (y * scale) / (hists[0] * scales[0])
+                ratio_err = np.sqrt((y_err / y)**2 + (hist_errors[0] / hists[0])**2)
+                ratio_isnan = np.isnan(ratio)
+                ratio[ratio_isnan] = 1.
+                ratio_err[ratio_isnan] = 0.
 
-        [cap.set_alpha(0.5) for cap in caps]
-        [bar.set_alpha(0.5) for bar in bars]
+                axs[1].step(bins, dup_last(ratio), linewidth=1.0, where="post", color=color)
+                axs[1].step(bins, dup_last(ratio + ratio_err), color=color, alpha=0.5,
+                        linewidth=0.5, where="post")
+                axs[1].step(bins, dup_last(ratio - ratio_err), color=color, alpha=0.5,
+                        linewidth=0.5, where="post")
+                axs[1].fill_between(bins, dup_last(ratio - ratio_err),
+                        dup_last(ratio + ratio_err), facecolor=color, alpha=0.3, step="post")
 
-        axs[2].set_ylim((0.05,20))
-        axs[2].set_yscale('log')
-        axs[2].set_yticks([0.1, 1.0, 10.0])
-        axs[2].set_yticklabels([r'$0.1$', r'$1.0$', "$10.0$"])
-        axs[2].set_yticks([0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 2., 3., 4., 5., 6., 7., 8., 9.], minor=True)
+                delta = np.fabs(ratio - 1) * 100
+                delta_err = ratio_err * 100
 
-        axs[2].axhline(y=1.0,linewidth=0.5, linestyle='--', color='grey')
-        axs[2].axhspan(0, 1.0, facecolor='#cccccc', alpha=0.3)
+                markers, caps, bars = axs[2].errorbar((bins[:-1] + bins[1:])/2, delta,
+                        yerr=delta_err, ecolor=color, color=color, elinewidth=0.5,
+                        linewidth=0, fmt=".", capsize=2)
+                [cap.set_alpha(0.5) for cap in caps]
+                [bar.set_alpha(0.5) for bar in bars]
 
-        #Lower panels train data
-        y_rel = y_tr/y_t
-        y_rel[np.isnan(y_rel)==True] = 1
-        y_rel[y_rel==np.inf] = 1
+            if weight_samples is not None:
+                mu = hists[1] * scales[1]
+                sigma = hist_errors[1] * scales[1]
+                train = hists [0] * scales[0]
+                axs[3].step(bins, dup_last(sigma /mu) , label=label, color="#3b528b",
+                        linewidth=1.0, where="post")
+                axs[4].step(bins, dup_last(np.abs(train - mu )/mu) , label=label,
+                        color="#3b528b", linewidth=1.0, where="post")
 
-        w_trs, w_ts = 1/len(obs_train), 1/len(obs_test)
-        y_tr_abs, y_t_abs = y_tr/w_trs, y_t/w_ts
-        diff_stat =  100 * w_trs/w_ts * np.sqrt(y_tr_abs * (y_tr_abs + y_t_abs)/((y_t_abs+1e-8)**3))
+            axs[0].legend(loc="upper right", frameon=False)
+            axs[0].set_ylabel("normalized", fontsize = FONTSIZE)
+            if "p_{T" in name:
+                axs[0].set_yscale("log")
 
-        axs[1].step(x_t[:num_bins], y_rel, linewidth=1.0, where='mid', color=traincolor)
-        axs[1].step(x_t[:num_bins], y_rel + diff_stat/100, color=traincolor, alpha=0.5, label='$+- stat$', linewidth=0.5, where='mid')
-        axs[1].step(x_t[:num_bins], y_rel - diff_stat/100, color=traincolor, alpha=0.5, linewidth=0.5, where='mid')
-        axs[1].fill_between(x_t[:num_bins], y_rel - diff_stat/100, y_rel + diff_stat/100, facecolor=traincolor, alpha = 0.3, step = 'mid')
+            axs[1].set_ylabel(r"$\frac{\mathrm{True}}{\mathrm{Model}}$",
+                    fontsize = FONTSIZE)
+            axs[1].set_yticks([0.95,1,1.05])
+            axs[1].set_ylim([0.9,1.1])
+            axs[1].axhline(y=1, c="black", ls="--", lw=0.7)
+            axs[1].axhline(y=1.2, c="black", ls="dotted", lw=0.5)
+            axs[1].axhline(y=0.8, c="black", ls="dotted", lw=0.5)
+            plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
+                    fontsize = FONTSIZE)
 
-        y_diff = np.fabs((y_rel - 1)) * 100
+            axs[2].set_ylim((0.05,20))
+            axs[2].set_yscale("log")
+            axs[2].set_yticks([0.1, 1.0, 10.0])
+            axs[2].set_yticklabels([r"$0.1$", r"$1.0$", "$10.0$"])
+            axs[2].set_yticks([0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                               2., 3., 4., 5., 6., 7., 8., 9.], minor=True)
 
-        markers, caps, bars = axs[2].errorbar(x_tr[:num_bins], y_diff, yerr=diff_stat, ecolor=traincolor, color=traincolor, elinewidth=0.5, linewidth=0,  fmt='.', capsize=2)
+            axs[2].axhline(y=1.0,linewidth=0.5, linestyle="--", color="grey")
+            axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
+            axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
 
-        [cap.set_alpha(0.5) for cap in caps]
-        [bar.set_alpha(0.5) for bar in bars]
+            if weight_samples is not None:
+                axs[3].set_yscale("log")
+                axs[3].set_ylabel(r"$\frac{\sigma_{\mathrm{INN}}}{\mu_{\mathrm{INN}}}$",
+                        fontsize = 10)
 
-        plt.savefig(pp, bbox_inches='tight', format='pdf', pad_inches=0.05)
-        plt.close()
+                axs[4].set_yscale("log")
+                axs[4].set_ylabel(r"$\frac{\mu_{\mathrm{INN}}-\mu_{\mathrm{True}}}" +
+                                  r"{\mu_{\mathrm{INN}}}$", fontsize = 10)
+
+            plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
+            plt.close()
 
 
 def delta_phi(y, idx1, idx2):
@@ -170,3 +221,10 @@ def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1
     fig.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
     plt.savefig(pp, format="pdf")
     plt.close()
+
+def get_R(data):
+        '''Calculate radius of samples following a hypersphere distribution'''
+        return np.sum(data ** 2, axis=1) ** .5
+def get_xsum(data):
+        '''Calculate radius of samples following a hypersphere distribution'''
+        return np.sum(data, axis=1)
