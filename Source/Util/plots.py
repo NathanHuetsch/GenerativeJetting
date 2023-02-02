@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import warnings
 
 """
 Methods to do make 1d and 2d histograms of the train vs test vs generated data distributions.
@@ -10,12 +11,6 @@ plot_obs makes a 1d histogram with error extraplots and stuff
 plot_deta_dphi makes a 2d heatmap of DeltaEta vs DeltaPhi
 (Currently this one assumes a 16dim input and has the Eta and Phi channels hardcoded)
 """
-
-#Constants
-
-netcolor = '#3b528b'
-truthcolor = '#e41a1c'
-traincolor = '#1a8507'
 
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')

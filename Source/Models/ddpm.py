@@ -40,7 +40,8 @@ class DDPM(GenerativeModel):
             raise ValueError(f'unknown sigma mode {self.sigma_mode}')
 
         self.to(self.device)
-
+        self.regular_loss = []
+        self.kl_loss = []
     def build_net(self):
         """
         Build the network
@@ -96,6 +97,12 @@ class DDPM(GenerativeModel):
         self.net.kl = 0
         model_pred = self.net(xT.float(), t.float(), condition)
         loss = F.mse_loss(model_pred, noise) + self.net.kl / len(self.data_train)
+
+        self.regular_loss.append(F.mse_loss(model_pred, noise).detach().numpy())
+        try:
+            self.kl_loss.append((self.net.kl / len(self.data_train)).detach().numpy())
+        except:
+            pass
 
         return loss
 

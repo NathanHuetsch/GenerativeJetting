@@ -28,6 +28,7 @@ class Toy_Experiment(Experiment):
         self.istoy = get(self.params,"istoy", True)
         self.params['istoy'] = self.istoy
         self.n_data = get(self.params, "n_data", 1000000)
+        self.iterations = get(self.params, "iterations", 1)
         if get(params, "toy_type", "ramp")=="ramp":
             self.n_dim = get(params, "n_flat", 1)+get(params, "n_lin", 1)+get(params, "n_quad", 0)
         else:
@@ -94,22 +95,26 @@ class Toy_Experiment(Experiment):
 
         # Read in the "sample" parameter. If it is set to True, perform the sampling, otherwise skip it.
         sample = get(self.params, "sample", True)
-        if sample:
-            # Read in the "n_samples" parameter specifying how many samples to generate
-            # Call the model.sample_n_parallel(n_samples) method to perform the sampling
-            n_samples = get(self.params, "n_samples", 1000000)
-            print(f"generate_samples: Starting generation of {n_samples} samples")
-            t0 = time.time()
-            self.samples = self.model.sample_n(n_samples)
-            t1 = time.time()
-            sampletime = t1 - t0
-            self.params["sampletime"] = sampletime
+        samples = []
 
-            print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
-            if get(self.params, "save_samples", False):
-                os.makedirs('samples', exist_ok=True)
-                np.save("samples/samples_final.npy", self.samples)
-                print(f"save_samples: generated samples have been saved")
+        if sample:
+            for i in range(0, self.iterations):
+                # Read in the "n_samples" parameter specifying how many samples to generate
+                # Call the model.sample_n_parallel(n_samples) method to perform the sampling
+                n_samples = get(self.params, "n_samples", 1000000)
+                print(f"generate_samples: Starting generation of {n_samples} samples")
+                t0 = time.time()
+                self.samples = self.model.sample_n(n_samples)
+                t1 = time.time()
+                sampletime = t1 - t0
+                self.params["sampletime"] = sampletime
+                samples.append(sample)
+
+                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+                if get(self.params, "save_samples", False):
+                    os.makedirs('samples', exist_ok=True)
+                    np.save(f"samples/samples_final_{i}.npy", self.samples)
+                    print(f"save_samples: generated samples have been saved")
         else:
             print("generate_samples: sample set to False")
 
@@ -122,3 +127,6 @@ class Toy_Experiment(Experiment):
             print("make_plots: Finished making plots")
         else:
             print("make_plots: plot set to False")
+
+        if self.iterations > 1:
+            pass
