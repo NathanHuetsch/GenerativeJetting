@@ -70,14 +70,14 @@ class ToySimulator:
         n_dim = get(self.params, "n_dim", 2)
         mu = get(self.params, "mu", 1.)
         sigma = get(self.params, "sigma", .1)
-        half = get(self.params,"half", False)
+        half = get(self.params, "half", False)
 
         samples = np.zeros((self.n_data, n_dim))
 
         R = np.abs(sigma * np.random.randn(self.n_data) + mu)
         phi = np.random.rand(self.n_data, n_dim - 1)
-        phi[:, 0] *= np.pi if half else 2 * np.pi
-        phi[:, 1:] *= np.pi
+        phi[:, -1] *= 2*np.pi if not half else np.pi
+        phi[:, :-1] *= np.pi
 
         # recursively build the coordinate transformation from (R, phi0, phi1...) to (x0, x1, x2...)
         expr = R
