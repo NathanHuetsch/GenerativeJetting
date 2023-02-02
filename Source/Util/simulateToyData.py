@@ -80,6 +80,8 @@ class ToySimulator:
         phi[:, :-1] *= np.pi
 
         # recursively build the coordinate transformation from (R, phi0, phi1...) to (x0, x1, x2...)
+        # TBD: There is something going wrong here, because the final results are not invariant when
+        # interchanging the dimensions... suspect that we somehow miss the Jacobian
         expr = R
         for i in range(n_dim - 1):
             samples[:, i] = expr * np.cos(phi[:, i])

@@ -355,7 +355,7 @@ class GenerativeModel(nn.Module):
                 obs_generated = samples[:,i]
                 # Get the name and the range of the observable
                 obs_name = self.obs_names[i]
-                obs_range = None if self.obs_ranges==None else self.obs_ranges[i]
+                obs_range = self.obs_ranges[i]
                 # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,
@@ -383,6 +383,6 @@ class GenerativeModel(nn.Module):
             obs_train = get_xsum(self.data_train)
             obs_test = get_xsum(self.data_test)
             obs_generated = get_xsum(samples)
-            obs_range = [-3*n_dim**.5, 3*n_dim**.5]
+            obs_range = [-2*n_dim, 2*n_dim]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
                      name=obs_name, range=obs_range)

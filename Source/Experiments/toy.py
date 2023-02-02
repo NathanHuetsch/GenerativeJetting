@@ -27,19 +27,18 @@ class Toy_Experiment(Experiment):
 
         self.istoy = get(self.params,"istoy", True)
         self.params['istoy'] = self.istoy
-        self.n_data = get(self.params, "n_data", 1000000)
-        if get(params, "toy_type", "ramp")=="ramp":
-            self.n_dim = get(params, "n_flat", 1)+get(params, "n_lin", 1)+get(params, "n_quad", 0)
-        else:
-            self.n_dim = get(params, "n_dim", 2)
-        
+        self.n_data = get(self.params, "n_data", 1000000)       
 
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
+        if get(self.params, "toy_type", "ramp")=="ramp":
+            self.n_dim = get(self.params, "n_flat", 1)+get(self.params, "n_lin", 1)+get(self.params, "n_quad", 0)
+            self.obs_ranges = [[-.5, 1.5]] * self.dim
+        else:
+            self.n_dim = get(self.params, "n_dim", 2)
+            self.obs_ranges = [[-1.5, 1.5]] * self.dim
         self.obs_names = [f"x_{i}" for i in range(self.n_dim)]
-        #self.obs_range = get(self.params, "obs_ranges", [0, 1])
-        self.obs_ranges = None #[self.obs_range] * self.dim
         self.data_raw = self.data.detach().cpu().numpy()
         self.model = self.build_model(self.params, save_in_params=True)
 
