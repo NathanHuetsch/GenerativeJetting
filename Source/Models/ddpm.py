@@ -40,8 +40,6 @@ class DDPM(GenerativeModel):
             raise ValueError(f'unknown sigma mode {self.sigma_mode}')
 
         self.to(self.device)
-        self.regular_loss = []
-        self.kl_loss = []
     def build_net(self):
         """
         Build the network

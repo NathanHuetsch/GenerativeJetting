@@ -59,8 +59,8 @@ class GenerativeModel(nn.Module):
         self.epoch = get(self.params, "total_epochs", 0)
         self.net = self.build_net()
         self.iterations = get(self.params,"iterations", 1)
-        self.regular_loss = None
-        self.kl_loss = None
+        self.regular_loss = []
+        self.kl_loss = []
 
     def build_net(self):
         pass
