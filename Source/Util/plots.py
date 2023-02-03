@@ -16,7 +16,7 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
-def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, unit=None, weight_samples=None,
+def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, unit=None, weight_samples=1,
                              save_dict=None, predict_weights=None, n_epochs=None, n_jets=None):
         '''
         Up-to-date plotting function from Theo (binn branch of precision-enthusiasts repo)
@@ -40,7 +40,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
 
             y_t,  bins = np.histogram(obs_test, bins=bins, range=range) #generate bin array if needed
             y_tr, _ = np.histogram(obs_train, bins=bins)
-            if weight_samples is None:
+            if weight_samples == 1:
                 y_g,  _ = np.histogram(obs_predict, bins=bins, weights=predict_weights)
                 hists = [y_t, y_g, y_tr]
                 hist_errors = [np.sqrt(y_t), np.sqrt(y_g), np.sqrt(y_tr)]
@@ -62,7 +62,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             colors = ["#e41a1c", "#3b528b", "#1a8507"]
             dup_last = lambda a: np.append(a, a[-1])
 
-            if weight_samples is None:
+            if weight_samples == 1:
                 fig1, axs = plt.subplots(3, 1, sharex=True,
                         gridspec_kw={"height_ratios" : [4, 1, 1], "hspace" : 0.00})
             else:
@@ -90,7 +90,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
 
                 if label == "True": continue
 
-                ratio = (y * scale) / (hists[0] * scales[0])
+                ratio = (y * scale)/ (hists[0] * scales[0])
                 ratio_err = np.sqrt((y_err / y)**2 + (hist_errors[0] / hists[0])**2)
                 ratio_isnan = np.isnan(ratio)
                 ratio[ratio_isnan] = 1.
@@ -113,7 +113,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
                 [cap.set_alpha(0.5) for cap in caps]
                 [bar.set_alpha(0.5) for bar in bars]
 
-            if weight_samples is not None:
+            if weight_samples > 1:
                 mu = hists[1] * scales[1]
                 sigma = hist_errors[1] * scales[1]
                 train = hists [0] * scales[0]
@@ -127,7 +127,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             if "p_{T" in name:
                 axs[0].set_yscale("log")
 
-            axs[1].set_ylabel(r"$\frac{\mathrm{True}}{\mathrm{Model}}$",
+            axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{True}}$",
                     fontsize = FONTSIZE)
             axs[1].set_yticks([0.95,1,1.05])
             axs[1].set_ylim([0.9,1.1])
@@ -148,7 +148,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
             axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
 
-            if weight_samples is not None:
+            if weight_samples > 1:
                 axs[3].set_yscale("log")
                 axs[3].set_ylabel(r"$\frac{\sigma_{\mathrm{INN}}}{\mu_{\mathrm{INN}}}$",
                         fontsize = 10)
@@ -223,3 +223,19 @@ def get_R(data):
 def get_xsum(data):
         '''Calculate radius of samples following a hypersphere distribution'''
         return np.sum(data, axis=1)
+
+def plot_loss(pp,total, regular, kl):
+    y = range(1, len(total) + 1)
+    fig, axes = plt.subplots()
+    axes.plot(y, total, label='total_loss')
+    if not regular and not kl:
+        axes.plot(y, regular, label="regular loss")
+        axes.plot(y, kl, label="kl loss")
+
+    axes.set_yscale("log")
+    axes.set_xlabel("Number of Iterations", fontsize=14)
+    axes.set_ylabel("Loss", fontsize=14)
+    axes.legend(fontsize=14)
+    fig.savefig(pp, format="pdf")
+    plt.close()
+

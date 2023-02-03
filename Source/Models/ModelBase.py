@@ -5,7 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, get_R, get_xsum
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, get_R, get_xsum, plot_loss
 from Source.Util.physics import get_M_ll
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -58,6 +58,9 @@ class GenerativeModel(nn.Module):
         self.istoy = get(self.params, "istoy", False)
         self.epoch = get(self.params, "total_epochs", 0)
         self.net = self.build_net()
+        self.iterations = get(self.params,"iterations", 1)
+        self.regular_loss = None
+        self.kl_loss = None
 
     def build_net(self):
         pass
@@ -336,7 +339,6 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              range=obs_range,
-                             num_bins=bin_num,
                              n_jets=j+self.n_jets)
 
     def plot_toy(self, samples = None, finished=False):
@@ -365,7 +367,8 @@ class GenerativeModel(nn.Module):
                          name=obs_name,
                          range=obs_range,
                          n_epochs=n_epochs,
-                         n_jets=None)
+                         n_jets=None,
+                         weight_samples=self.iterations)
 
         if get(self.params, "toy_type", "ramp") == "gauss_sphere":
             obs_name = "R"
@@ -375,7 +378,7 @@ class GenerativeModel(nn.Module):
             obs_generated = get_R(samples)
             obs_range = [0,2]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
-                     name=obs_name, range=obs_range)
+                     name=obs_name, range=obs_range, weight_samples=self.iterations)
 
         if get(self.params, "toy_type", "ramp") == "camel":
             n_dim = get(self.params, "n_dim", 2)
@@ -386,4 +389,10 @@ class GenerativeModel(nn.Module):
             obs_generated = get_xsum(samples)
             obs_range = [-3*n_dim**.5, 3*n_dim**.5]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
-                     name=obs_name, range=obs_range)
+                     name=obs_name, range=obs_range, weight_samples=self.iterations)
+
+        if get(self.params,"plot_loss", False):
+            out = f"{path}/loss_epoch_{n_epochs}.pdf"
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
+
+
