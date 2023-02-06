@@ -215,10 +215,3 @@ def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1
     fig.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
     plt.savefig(pp, format="pdf")
     plt.close()
-
-def get_R(data):
-        '''Calculate radius of samples following a hypersphere distribution'''
-        return np.sum(data ** 2, axis=1) ** .5
-def get_xsum(data):
-        '''Calculate radius of samples following a hypersphere distribution'''
-        return np.sum(data, axis=1)

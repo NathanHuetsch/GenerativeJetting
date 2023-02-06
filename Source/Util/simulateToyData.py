@@ -72,19 +72,49 @@ class ToySimulator:
         sigma = get(self.params, "sigma", .1)
         half = get(self.params, "half", False)
 
-        samples = np.zeros((self.n_data, n_dim))
-
         R = np.abs(sigma * np.random.randn(self.n_data) + mu)
         phi = np.random.rand(self.n_data, n_dim - 1)
         phi[:, -1] *= 2*np.pi if not half else np.pi
         phi[:, :-1] *= np.pi
 
+        samples = self.getCartesian(R, phi)
+        return samples
+
+    @staticmethod
+    def getCartesian(R, phi):
         # recursively build the coordinate transformation from (R, phi0, phi1...) to (x0, x1, x2...)
-        # TBD: There is something going wrong here, because the final results are not invariant when
-        # interchanging the dimensions... suspect that we somehow miss the Jacobian
+        n_data = np.shape(R)[0]
+        n_dim = np.shape(phi)[1] + 1
+        samples = np.zeros((n_data, n_dim))
         expr = R
         for i in range(n_dim - 1):
             samples[:, i] = expr * np.cos(phi[:, i])
             expr = expr * np.sin(phi[:, i])
         samples[:, -1] = expr
         return samples
+
+    @staticmethod
+    def getSpherical(samples):
+        n_dim = np.shape(samples)[1]
+        R = ToySimulator.get_R(samples)
+        phi = np.zeros_like(samples[:,:-1])
+
+        # calculate angles
+        for i in range(0,n_dim-1):
+            print(np.shape(samples[:,i:]))
+            phi[:,i] = np.arccos(samples[:,i] / ToySimulator.get_R(samples[:,i:]))
+        phi[:,-1] = 2*np.arctan2( samples[:,-1], samples[:,-2] + ToySimulator.get_R(samples[:,-2:]))
+
+        # rescale angles to be positive
+        phi = (phi + 2*np.pi) % (2*np.pi)
+
+        return R, phi
+
+    @staticmethod
+    def get_R(data):
+        '''Calculate radius of samples following a hypersphere distribution'''
+        return np.sum(data ** 2, axis=1) ** .5
+    @staticmethod
+    def get_xsum(data):
+        '''Calculate radius of samples following a hypersphere distribution'''
+        return np.sum(data, axis=1)
