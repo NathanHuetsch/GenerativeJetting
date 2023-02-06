@@ -5,7 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_loss
 from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
@@ -59,6 +59,9 @@ class GenerativeModel(nn.Module):
         self.istoy = get(self.params, "istoy", False)
         self.epoch = get(self.params, "total_epochs", 0)
         self.net = self.build_net()
+        self.iterations = get(self.params,"iterations", 1)
+        self.regular_loss = []
+        self.kl_loss = []
 
     def build_net(self):
         pass
@@ -336,7 +339,6 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              range=obs_range,
-                             num_bins=bin_num,
                              n_jets=j+self.n_jets)
 
     def plot_toy(self, samples = None, finished=False):
@@ -356,7 +358,7 @@ class GenerativeModel(nn.Module):
                 obs_generated = samples[:,i]
                 # Get the name and the range of the observable
                 obs_name = self.obs_names[i]
-                obs_range = self.obs_ranges[i]
+                obs_range = None if self.obs_ranges==None else self.obs_ranges[i]
                 # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,
@@ -365,8 +367,9 @@ class GenerativeModel(nn.Module):
                          name=obs_name,
                          range=obs_range,
                          n_epochs=n_epochs,
-                         n_jets=None)
-        
+                         n_jets=None,
+                         weight_samples=self.iterations)
+
         if get(self.params, "toy_type", "ramp") == "gauss_sphere":
             obs_name = "R"
             out = f"{path}/R_epoch_{n_epochs}.pdf"
@@ -375,7 +378,7 @@ class GenerativeModel(nn.Module):
             obs_generated = ToySimulator.get_R(samples)
             obs_range = [0,2]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
-                     name=obs_name, range=obs_range)
+                     name=obs_name, range=obs_range, weight_samples=self.iterations)
 
         if get(self.params, "toy_type", "ramp") == "camel":
             n_dim = get(self.params, "n_dim", 2)
@@ -387,3 +390,9 @@ class GenerativeModel(nn.Module):
             obs_range = [-2*n_dim, 2*n_dim]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
                      name=obs_name, range=obs_range)
+
+        if get(self.params,"plot_loss", False):
+            out = f"{path}/loss_epoch_{n_epochs}.pdf"
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
+
+

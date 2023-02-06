@@ -31,11 +31,9 @@ class CausalSelfAttention(nn.Module):
         self.block_size = params["block_size"]
         self.attn_pdrop = params.get("attn_pdrop", 0.1)
         self.resid_pdrop = params.get("resid_pdrop", 0.1)
-        
         self.bayesian = params.get("bayesian", 0)
         self.prior_prec = params.get("prior_prec", 1.)
 
-        
         self.c_attn = VBLinear(self.intermediate_dim, 3 * self.intermediate_dim, prior_prec = self.prior_prec) \
                       if self.bayesian>=2 else nn.Linear(self.intermediate_dim, 3 * self.intermediate_dim)
         self.c_proj = VBLinear(self.intermediate_dim, self.intermediate_dim, prior_prec = self.prior_prec) \
@@ -83,7 +81,7 @@ class TransformerBlock(nn.Module):
 
         self.bayesian = params.get("bayesian", 0)
         self.prior_prec = params.get("prior_prec", 1.)
-        
+
         self.ln_1 = nn.LayerNorm(self.intermediate_dim)
         self.attn = CausalSelfAttention(params)
         self.ln_2 = nn.LayerNorm(self.intermediate_dim)
@@ -106,7 +104,6 @@ class TransformerBlock(nn.Module):
 
     def KL(self):
         return self.attn.KL() + self.mlp.c_fc.KL() + self.mlp.c_proj.KL() if self.bayesian>=1 else 0.
-    
 class attnetGMM(nn.Module):
     """Autoregressive transformer model, following the GPT architecture"""
 

@@ -324,7 +324,6 @@ class Experiment:
             print(
                 f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
 
-            # build learning rate scheduler
             use_scheduler = get(self.params, "use_scheduler", False)
             if use_scheduler:
                 lr_scheduler = get(self.params, "lr_scheduler", "OneCycle")

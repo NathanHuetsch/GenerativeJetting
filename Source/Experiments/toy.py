@@ -27,11 +27,16 @@ class Toy_Experiment(Experiment):
 
         self.istoy = get(self.params,"istoy", True)
         self.params['istoy'] = self.istoy
-        self.n_data = get(self.params, "n_data", 1000000)       
+        self.n_data = get(self.params, "n_data", 1000000)
+        self.iterations = get(self.params, "iterations", 1)
+        self.bayesian = get(self.params, "bayesian",False)
+
+        self.samples = []
 
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
+
         if get(self.params, "toy_type", "ramp")=="ramp":
             self.n_dim = get(self.params, "n_flat", 1)+get(self.params, "n_lin", 1)+get(self.params, "n_quad", 0)
             self.obs_ranges = [[-.5, 1.5]] * self.dim
@@ -48,9 +53,18 @@ class Toy_Experiment(Experiment):
 
         self.build_optimizer()
         self.build_dataloaders()
-        self.train_model()
-        self.generate_samples()
-        self.make_plots()
+        if self.iterations > 1 and not self.bayesian:
+            for i in range(self.iterations):
+                self.train_model()
+                self.generate_samples()
+                self.make_plots()
+                self.runs += 1
+
+        else:
+            self.train_model()
+            self.generate_samples()
+            self.make_plots()
+
         self.finish_up()
 
     def load_data(self):
@@ -92,30 +106,45 @@ class Toy_Experiment(Experiment):
 
         # Read in the "sample" parameter. If it is set to True, perform the sampling, otherwise skip it.
         sample = get(self.params, "sample", True)
-        if sample:
-            # Read in the "n_samples" parameter specifying how many samples to generate
-            # Call the model.sample_n_parallel(n_samples) method to perform the sampling
-            n_samples = get(self.params, "n_samples", 1000000)
-            print(f"generate_samples: Starting generation of {n_samples} samples")
-            t0 = time.time()
-            self.samples = self.model.sample_n(n_samples)
-            t1 = time.time()
-            sampletime = t1 - t0
-            self.params["sampletime"] = sampletime
 
-            print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
-            if get(self.params, "save_samples", False):
-                os.makedirs('samples', exist_ok=True)
-                np.save("samples/samples_final.npy", self.samples)
-                print(f"save_samples: generated samples have been saved")
+        if self.bayesian:
+            iterations = self.iterations
+        else:
+            iterations = 1
+
+        if sample:
+            for i in range(0, iterations):
+                # Read in the "n_samples" parameter specifying how many samples to generate
+                # Call the model.sample_n_parallel(n_samples) method to perform the sampling
+                n_samples = get(self.params, "n_samples", 1000000)
+                print(f"generate_samples: Starting generation of {n_samples} samples")
+                t0 = time.time()
+                self.sample = self.model.sample_n(n_samples)
+                t1 = time.time()
+                sampletime = t1 - t0
+                self.params["sampletime"] = sampletime
+                self.samples.append(self.sample)
+
+                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+                if get(self.params, "save_samples", False):
+                    os.makedirs('samples', exist_ok=True)
+                    np.save(f"samples/samples_final_{i}.npy", self.samples)
+                    print(f"save_samples: generated samples have been saved")
         else:
             print("generate_samples: sample set to False")
 
     def make_plots(self):
         plot = get(self.params, "plot", True)
         sample = get(self.params, "sample", True)
+
+        if self.iterations>1:
+            to_plot = self.samples
+        else:
+            to_plot = self.sample
+
+
         if plot and sample:
-            self.model.plot_toy(self.samples, finished=True)
+            self.model.plot_toy(to_plot, finished=True)
 
             print("make_plots: Finished making plots")
         else:
