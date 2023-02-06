@@ -5,7 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_loss
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss
 from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
@@ -224,7 +224,7 @@ class GenerativeModel(nn.Module):
             plot_test.append(self.data_test)
             plot_samples.append(samples)
 
-        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
             for j, _ in enumerate(plot_train):
                 # Loop over the plot_channels
                 for i, channel in enumerate(self.params["plot_channels"]):
@@ -248,7 +248,7 @@ class GenerativeModel(nn.Module):
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
             if get(self.params,"plot_deltaR", True):
                 obs_name = "\Delta R_{j_1 j_2}"
-                with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}") as out:
+                with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}.pdf") as out:
                     for j, _ in enumerate(plot_train):
                         obs_train = delta_r(plot_train[j])
                         obs_test = delta_r(plot_test[j])
@@ -351,15 +351,13 @@ class GenerativeModel(nn.Module):
             path = "plots"
 
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
-        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
             for i in range(0, self.dim):
                 obs_train = self.data_train[:,i]
                 obs_test = self.data_test[:,i]
                 obs_generated = samples[:,i]
-                # Get the name and the range of the observable
                 obs_name = self.obs_names[i]
                 obs_range = None if self.obs_ranges==None else self.obs_ranges[i]
-                # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,
                          obs_test=obs_test,
@@ -371,14 +369,24 @@ class GenerativeModel(nn.Module):
                          weight_samples=self.iterations)
 
         if get(self.params, "toy_type", "ramp") == "gauss_sphere":
-            obs_name = "R"
-            out = f"{path}/R_epoch_{n_epochs}.pdf"
-            obs_train = ToySimulator.get_R(self.data_train)
-            obs_test = ToySimulator.get_R(self.data_test)
-            obs_generated = ToySimulator.get_R(samples)
-            obs_range = [0,2]
-            plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
+            with PdfPages(f"{path}/spherical_{n_epochs}.pdf") as out:
+                R_train, phi_train = ToySimulator.getSpherical(self.data_train)
+                R_test, phi_test = ToySimulator.getSpherical(self.data_test)
+                R_gen, phi_gen = ToySimulator.getSpherical(samples)
+                
+                obs_name = "R"
+                obs_range = [0,2]
+                plot_obs(pp=out, obs_train=R_train, obs_test=R_test, obs_predict=R_gen,
                      name=obs_name, range=obs_range, weight_samples=self.iterations)
+
+                for i in range(self.dim-1):
+                    obs_name=f"\phi_{i}"
+                    obs_range = [0, 2*np.pi] if i==self.dim-2 else [0, np.pi]
+                    obs_train = phi_train[:,i]
+                    obs_test = phi_test[:,i]
+                    obs_gen = phi_gen[:,i]
+                    plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_gen,
+                         name=obs_name, range=obs_range, weight_samples=self.iterations)
 
         if get(self.params, "toy_type", "ramp") == "camel":
             n_dim = get(self.params, "n_dim", 2)
@@ -391,8 +399,11 @@ class GenerativeModel(nn.Module):
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
                      name=obs_name, range=obs_range)
 
+        if self.dim == 2 and get(self.params,"plot_Deta_Dphi", True):
+            out = f"{path}/hist2d_{n_epochs}.pdf"
+            plot_obs_2d(pp=out, data_train=self.data_train, data_test=self.data_test, data_generated=samples,
+                        obs_ranges=self.obs_ranges, obs_names=self.obs_names, n_epochs=n_epochs)
+
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
             plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
-
-

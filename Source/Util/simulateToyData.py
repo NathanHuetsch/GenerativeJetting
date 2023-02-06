@@ -101,7 +101,6 @@ class ToySimulator:
 
         # calculate angles
         for i in range(0,n_dim-1):
-            print(np.shape(samples[:,i:]))
             phi[:,i] = np.arccos(samples[:,i] / ToySimulator.get_R(samples[:,i:]))
         phi[:,-1] = 2*np.arctan2( samples[:,-1], samples[:,-2] + ToySimulator.get_R(samples[:,-2:]))
 

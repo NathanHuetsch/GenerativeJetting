@@ -160,9 +160,6 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
             plt.close()
 
-            plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
-            plt.close()
-
 def delta_phi(y, idx1, idx2):
     # return y[:,idx1] - y[:,idx2]
     dphi = np.abs(y[:,idx1] - y[:,idx2])
@@ -218,6 +215,31 @@ def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1
     fig.suptitle(f"After training for {n_epochs + 1} epochs for {n_jets} jets")
     plt.savefig(pp, format="pdf")
     plt.close()
+
+def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges, obs_names, bins=100):
+        fig = plt.figure(figsize=(12,6))
+
+        fig.add_subplot(1, 3, 1)
+        plt.hist2d(data_train[:,0], data_train[:,1], bins=100, range=obs_ranges, rasterized=True)
+        plt.xlabel(r"${%s}$" % obs_names[0])
+        plt.ylabel(r"${%s}$" % obs_names[1])
+        plt.title("train")
+        
+        fig.add_subplot(1, 3, 2)
+        plt.hist2d(data_test[:,0], data_test[:,1], bins=100, range=obs_ranges, rasterized=True)
+        plt.xlabel(r"${%s}$" % obs_names[0])
+        plt.ylabel(r"${%s}$" % obs_names[1])
+        plt.title("test")
+
+        fig.add_subplot(1, 3, 3)
+        plt.hist2d(data_generated[:,0], data_generated[:,1], bins=100, range=obs_ranges, rasterized=True)
+        plt.xlabel(r"${%s}$" % obs_names[0])
+        plt.ylabel(r"${%s}$" % obs_names[1])
+        plt.title("generated")
+
+        plt.suptitle(f"After training for {n_epochs+1} epochs")
+        plt.savefig(pp, format="pdf")
+        plt.close()
 
 def plot_loss(pp,total, regular, kl):
     y = range(1, len(total) + 1)
