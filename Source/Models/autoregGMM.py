@@ -26,6 +26,8 @@ class AutoRegGMM(GenerativeModel):
         assert intermediate_fac is not None, "build_model: intermediate_fac not specified"
         params["intermediate_dim"] = n_head * n_per_head
         n_gauss = get(params, "n_gauss", None)
+        self.l2_lambda = get(params, "l2_lambda", 0.)
+        self.l2_p = get(params, "l2_p", 2)
         self.n_gauss = n_gauss
         assert n_gauss is not None, "build_model: n_gauss not specified"
         print(f"Build model AutoRegGMM with n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
@@ -60,10 +62,16 @@ class AutoRegGMM(GenerativeModel):
         gmm = D.MixtureSameFamily(mix, comp)
         loss = -gmm.log_prob(targets).mean()
 
+        loss -= self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))
+
         if self.bayesian:
             loss += self.net.KL() / len(self.train_loader.dataset)
 
-        return loss
+        if getMore:
+            logLikelihood = torch.sum(gmm.log_prob(targets), dim=-1)
+            return loss, torch.exp(logLikelihood), mu, sigma, weights
+        else:
+            return loss
     
     def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
         """
