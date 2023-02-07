@@ -43,7 +43,7 @@ class Toy_Experiment(Experiment):
         else:
             self.n_dim = get(self.params, "n_dim", 2)
             self.obs_ranges = [[-1.5, 1.5]] * self.dim
-        self.obs_names = [f"x_{i}" for i in range(self.n_dim)]
+        self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
         self.data_raw = self.data.detach().cpu().numpy()
         self.model = self.build_model(self.params, save_in_params=True)
 

@@ -45,7 +45,7 @@ class AutoRegGMM(GenerativeModel):
         """Build the network"""
         return Source.Networks.attnetGMM(self.params).to(self.device)
     
-    def batch_loss(self, x, conditional=False):
+    def batch_loss(self, x, conditional=False, getMore=False):
         """
         Loss function for autoregressive model
         TBD: Implement conditional
@@ -66,8 +66,12 @@ class AutoRegGMM(GenerativeModel):
 
         if self.bayesian:
             loss += self.net.KL() / len(self.train_loader.dataset)
-        
-        return loss
+
+        if getMore:
+            logLikelihood = torch.sum(gmm.log_prob(targets), dim=-1)
+            return loss, torch.exp(logLikelihood), mu, sigma, weights
+        else:
+            return loss
     
     def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
         """
