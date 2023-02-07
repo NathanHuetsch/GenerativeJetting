@@ -373,7 +373,6 @@ class GenerativeModel(nn.Module):
                 R_train, phi_train = ToySimulator.getSpherical(self.data_train)
                 R_test, phi_test = ToySimulator.getSpherical(self.data_test)
                 R_gen, phi_gen = ToySimulator.getSpherical(samples)
-                
                 obs_name = "R"
                 obs_range = [0,2]
                 plot_obs(pp=out, obs_train=R_train, obs_test=R_test, obs_predict=R_gen,

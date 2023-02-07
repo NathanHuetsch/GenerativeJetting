@@ -224,7 +224,6 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
         plt.xlabel(r"${%s}$" % obs_names[0])
         plt.ylabel(r"${%s}$" % obs_names[1])
         plt.title("train")
-        
         fig.add_subplot(1, 3, 2)
         plt.hist2d(data_test[:,0], data_test[:,1], bins=100, range=obs_ranges, rasterized=True)
         plt.xlabel(r"${%s}$" % obs_names[0])
