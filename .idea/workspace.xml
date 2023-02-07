@@ -2,12 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/run_toy.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/Networks/vblinear.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Experiments/toy.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/toy.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/autoregGMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/autoregGMM.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/ddpm.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ddpm.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/tbd.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attnetGMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/attnetGMM.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Networks/resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/resnet.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Util/physics.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/physics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/plots.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/plots.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/params/Z26c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z26c_TBD.yaml" afterDir="false" />
     </list>
@@ -47,20 +52,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "true",
-    "WebServerToolWindowPanel.toolwindow.highlight.mappings": "true",
-    "WebServerToolWindowPanel.toolwindow.highlight.symlinks": "true",
-    "WebServerToolWindowPanel.toolwindow.show.date": "false",
-    "WebServerToolWindowPanel.toolwindow.show.permissions": "false",
-    "WebServerToolWindowPanel.toolwindow.show.size": "false",
-    "last_opened_file_path": "/Users/huetsch/Desktop/GenerativeJetting/runfiles",
-    "settings.editor.selected.configurable": "ssh.settings"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.highlight.mappings&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.highlight.symlinks&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.show.date&quot;: &quot;false&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.show.permissions&quot;: &quot;false&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.show.size&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting/runfiles&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ssh.settings&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/runfiles" />
@@ -93,7 +98,18 @@
       <workItem from="1674893126624" duration="1433000" />
       <workItem from="1674905059375" duration="240000" />
       <workItem from="1675011352906" duration="11859000" />
-      <workItem from="1675150423009" duration="5722000" />
+      <workItem from="1675150423009" duration="10265000" />
+      <workItem from="1675242622009" duration="8462000" />
+      <workItem from="1675323096048" duration="13770000" />
+      <workItem from="1675414418436" duration="849000" />
+      <workItem from="1675416614291" duration="673000" />
+      <workItem from="1675421161630" duration="23000" />
+      <workItem from="1675434367741" duration="256000" />
+      <workItem from="1675437378278" duration="656000" />
+      <workItem from="1675672850049" duration="2744000" />
+      <workItem from="1675749705839" duration="3037000" />
+      <workItem from="1675753194909" duration="2199000" />
+      <workItem from="1675757743866" duration="300000" />
     </task>
     <servers />
   </component>

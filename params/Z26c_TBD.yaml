@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13dDDPM"
-run_name : "AttentionNet_CosAnnealing_4b_4h_64d_noDrop"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/LRScheduler"
+run_name : "CosineAnnealing_Start1e3_Finish1e5"
 redirect_console : True
 
 # #########
@@ -13,7 +13,7 @@ data_type: np
 preprocess : 3
 n_jets: 2
 load_dataset : False
-#channels : [9, 10, 13, 14]
+channels : [9, 10, 13, 14]
 #[0, 4, 8, 9, 10, 12, 13, 14]
 #dim : 4
 # ##############
@@ -31,30 +31,31 @@ weight_decay : 0
 betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
+eta_min: 1.e-5
 loss_type: "l2"
 multiple_t: False
 
-n_epochs : 10000
+n_epochs : 2000
 validate: False
 validate_every : 100
 
 sample_periodically: True
 sample_every: 4000
-sample_every_n_samples: 100000
+sample_every_n_samples: 1000000
 # #################
 # # Architecture: #
 # #################
-model: DDPM
-trajectory: "sine_cosine_trajectory"
+model: TBD
+trajectory: "linear_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
 
 
-network: "AttentionNet"
-n_blocks : 4
-intermediate_dim: 64
-layers_per_block: 4
+network: "Resnet"
+n_blocks : 1
+intermediate_dim: 10
+layers_per_block: 2
 resid_pdrop: 0
 
 n_layers: 5

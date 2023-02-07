@@ -5,7 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, get_R, get_xsum, plot_loss
 from Source.Util.physics import get_M_ll
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -58,6 +58,9 @@ class GenerativeModel(nn.Module):
         self.istoy = get(self.params, "istoy", False)
         self.epoch = get(self.params, "total_epochs", 0)
         self.net = self.build_net()
+        self.iterations = get(self.params,"iterations", 1)
+        self.regular_loss = []
+        self.kl_loss = []
 
     def build_net(self):
         pass
@@ -135,6 +138,9 @@ class GenerativeModel(nn.Module):
 
                 if self.use_scheduler:
                     self.scheduler.step()
+                    if self.log:
+                        self.logger.add_scalar("learning_rate", self.scheduler.get_last_lr()[0],
+                                               self.epoch * self.n_trainbatches + batch_id)
 
             else:
                 print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}")
@@ -143,6 +149,9 @@ class GenerativeModel(nn.Module):
         self.train_losses = np.concatenate([self.train_losses, train_losses], axis=0)
         if self.log:
             self.logger.add_scalar("train_losses_epoch", self.train_losses_epoch[-1], self.epoch)
+            if self.use_scheduler:
+                self.logger.add_scalar("learning_rate_epoch", self.scheduler.get_last_lr()[0],
+                                       self.epoch)
 
     def batch_loss(self, x):
         pass
@@ -221,7 +230,7 @@ class GenerativeModel(nn.Module):
             plot_test.append(self.data_test)
             plot_samples.append(samples)
 
-        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
             for j, _ in enumerate(plot_train):
                 # Loop over the plot_channels
                 for i, channel in enumerate(self.params["plot_channels"]):
@@ -245,7 +254,7 @@ class GenerativeModel(nn.Module):
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
             if get(self.params,"plot_deltaR", True):
                 obs_name = "\Delta R_{j_1 j_2}"
-                with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}") as out:
+                with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}.pdf") as out:
                     for j, _ in enumerate(plot_train):
                         obs_train = delta_r(plot_train[j])
                         obs_test = delta_r(plot_test[j])
@@ -328,7 +337,7 @@ class GenerativeModel(nn.Module):
                 data_train = get_M_ll(plot_train[j])
                 data_test = get_M_ll(plot_test[j])
                 data_generated = get_M_ll(plot_samples[j])
-                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}") as out:
+                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
                     plot_obs(pp=out,
                              obs_train=data_train,
                              obs_test=data_test,
@@ -336,7 +345,6 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              range=obs_range,
-                             num_bins=bin_num,
                              n_jets=j+self.n_jets)
 
     def plot_toy(self, samples = None, finished=False):
@@ -349,14 +357,14 @@ class GenerativeModel(nn.Module):
             path = "plots"
 
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
-        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
             for i in range(0, self.dim):
                 obs_train = self.data_train[:,i]
                 obs_test = self.data_test[:,i]
                 obs_generated = samples[:,i]
                 # Get the name and the range of the observable
                 obs_name = self.obs_names[i]
-                obs_range = self.obs_ranges[i]
+                obs_range = None if self.obs_ranges==None else self.obs_ranges[i]
                 # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,
@@ -365,5 +373,32 @@ class GenerativeModel(nn.Module):
                          name=obs_name,
                          range=obs_range,
                          n_epochs=n_epochs,
-                         n_jets=None)
+                         n_jets=None,
+                         weight_samples=self.iterations)
+
+        if get(self.params, "toy_type", "ramp") == "gauss_sphere":
+            obs_name = "R"
+            out = f"{path}/R_epoch_{n_epochs}.pdf"
+            obs_train = get_R(self.data_train)
+            obs_test = get_R(self.data_test)
+            obs_generated = get_R(samples)
+            obs_range = [0,2]
+            plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
+                     name=obs_name, range=obs_range, weight_samples=self.iterations)
+
+        if get(self.params, "toy_type", "ramp") == "camel":
+            n_dim = get(self.params, "n_dim", 2)
+            obs_name = "\sum_{i=1}"+f"^{n_dim} x_i"
+            out = f"{path}/xsum_epoch_{n_epochs}.pdf"
+            obs_train = get_xsum(self.data_train)
+            obs_test = get_xsum(self.data_test)
+            obs_generated = get_xsum(samples)
+            obs_range = [-3*n_dim**.5, 3*n_dim**.5]
+            plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
+                     name=obs_name, range=obs_range, weight_samples=self.iterations)
+
+        if get(self.params,"plot_loss", False):
+            out = f"{path}/loss_epoch_{n_epochs}.pdf"
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
+
 

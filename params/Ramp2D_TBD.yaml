@@ -1,47 +1,48 @@
 # #########
 # # General: #
 # #########
-runs_dir : "runs/Toy"
-run_name : "DDPM_4l_64d_1e4LR_1000e_OneCycle_2048b"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/NoBayesian"
+run_name : "DenseNet_4l_40d_linear_CosAnn_1e2_lesslessData"
 redirect_console : True
 istoy: True
+bayesian: True
 # #########
-# # Data: #
+# # Data: #qs
 # #########
 load_dataset : False
 n_data: 1000000
 toy_type: "ramp"
-obs_ranges: [-1.5,1.5]
+obs_ranges: [-2,2]
 # ##############
 # # Training:  #
 # ##############
 train: True
-log: False
-data_split: [0.6, 0.05, 0.35]
+log: True
+data_split: [0.006, 0.05, 0.35]
 
 optimizer: Adam
-lr : 1.e-4
+lr : 1.e-2
 batch_size : 2048
 weight_decay : 0.0
 betas : [0.9, 0.99]
 use_scheduler: True
-lr_scheduler: "OneCycle"
+lr_scheduler: "CosineAnnealing"
 
-n_epochs : 1000
+n_epochs : 10000
 validate: False
 validate_every : 10
 
-sample_periodically: False
-sample_every: 100
+sample_periodically: True
+sample_every: 2000
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-model: DDPM
+model: TBD
 network: "Resnet"
 n_blocks : 1
 layers_per_block : 4
-intermediate_dim : 64
+intermediate_dim : 40
 n_head: 4
 trajectory: "linear_trajectory"
 encode_t: False
