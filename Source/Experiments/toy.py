@@ -30,6 +30,9 @@ class Toy_Experiment(Experiment):
         self.n_data = get(self.params, "n_data", 1000000)
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian",False)
+        self.params['bayesian'] = self.bayesian
+        self.prior_prec = get(self.params, "prior_prec", 1.0)
+        self.params['prior_prec'] = self.prior_prec
 
         self.samples = []
 
@@ -46,6 +49,7 @@ class Toy_Experiment(Experiment):
         self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
         self.data_raw = self.data.detach().cpu().numpy()
         self.model = self.build_model(self.params, save_in_params=True)
+        print(f"build_model: Building Bayesian model is set to {self.bayesian}")
 
         self.model.obs_names = self.obs_names
         self.model.obs_ranges = self.obs_ranges

@@ -115,6 +115,10 @@ class GenerativeModel(nn.Module):
                         samples = self.sample_n(self.sample_every_n_samples)
                         self.plot_toy(samples=samples)
 
+            if get(self.params,"save_periodically",False):
+                if (self.epoch + 1) % get(self.params,"save_every",10) == 0:
+                    torch.save(self.state_dict(), f"models/model_epoch_{e+1}.pt")
+
             if e==0:
                 t1 = time.time()
                 dtEst= (t1-t0) * n_epochs

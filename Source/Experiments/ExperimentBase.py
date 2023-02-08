@@ -233,9 +233,10 @@ class Experiment:
 
         # If "warm_start", load the model parameters from the specified directory.
         # It is expected that they are found under warm_start_dir/models/checkpoint
+        model_name = get(p, "model_name", "model_run0")
         if prior_path is not None:
             try:
-                state_dict = torch.load(prior_path + "/models/model_run0.pt", map_location=self.device)
+                state_dict = torch.load(prior_path + f"/models/{model_name}.pt", map_location=self.device)
             except FileNotFoundError:
                 raise ValueError(f"build_model: cannot load model for prior_path")
 

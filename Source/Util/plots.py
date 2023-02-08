@@ -246,7 +246,7 @@ def plot_loss(pp,total, regular, kl):
     y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
-    if not regular and not kl:
+    if regular and kl:
         axes.plot(y, regular, label="regular loss")
         axes.plot(y, kl, label="kl loss")
 

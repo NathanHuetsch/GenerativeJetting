@@ -96,9 +96,9 @@ class DDPM(GenerativeModel):
         model_pred = self.net(xT.float(), t.float(), condition)
         loss = F.mse_loss(model_pred, noise) + self.net.kl / len(self.data_train)
 
-        self.regular_loss.append(F.mse_loss(model_pred, noise).detach().numpy())
+        self.regular_loss.append(F.mse_loss(model_pred, noise).detach().cpu().numpy())
         try:
-            self.kl_loss.append((self.net.kl / len(self.data_train)).detach().numpy())
+            self.kl_loss.append((self.net.kl / len(self.data_train)).detach().cpu().numpy())
         except:
             pass
 
@@ -106,7 +106,7 @@ class DDPM(GenerativeModel):
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):
         self.eval()
-        batch_size = get(self.params, "batch_size", 8192)
+        batch_size = get(self.params, "batch_size_sample", 8192)
         events = []
 
         if self.conditional:
