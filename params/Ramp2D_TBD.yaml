@@ -1,11 +1,11 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/NoBayesian"
-run_name : "DenseNet_4l_40d_linear_CosAnn_1e2_lesslessData"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/NoBayesian/lr"
+run_name : "Split01_1000e_1e2"
 redirect_console : True
 istoy: True
-bayesian: True
+bayesian: False
 # #########
 # # Data: #qs
 # #########
@@ -18,7 +18,7 @@ obs_ranges: [-2,2]
 # ##############
 train: True
 log: True
-data_split: [0.006, 0.05, 0.35]
+data_split: [0.1, 0, 0.5]
 
 optimizer: Adam
 lr : 1.e-2
@@ -28,12 +28,12 @@ betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 10000
+n_epochs : 1000
 validate: False
 validate_every : 10
 
 sample_periodically: True
-sample_every: 2000
+sample_every: 20
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #

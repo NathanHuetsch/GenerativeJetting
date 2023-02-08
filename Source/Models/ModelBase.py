@@ -5,8 +5,9 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, get_R, get_xsum, plot_loss
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss
 from Source.Util.physics import get_M_ll
+from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
 
 
@@ -377,25 +378,40 @@ class GenerativeModel(nn.Module):
                          weight_samples=self.iterations)
 
         if get(self.params, "toy_type", "ramp") == "gauss_sphere":
-            obs_name = "R"
-            out = f"{path}/R_epoch_{n_epochs}.pdf"
-            obs_train = get_R(self.data_train)
-            obs_test = get_R(self.data_test)
-            obs_generated = get_R(samples)
-            obs_range = [0,2]
-            plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
+            with PdfPages(f"{path}/spherical_{n_epochs}.pdf") as out:
+                R_train, phi_train = ToySimulator.getSpherical(self.data_train)
+                R_test, phi_test = ToySimulator.getSpherical(self.data_test)
+                R_gen, phi_gen = ToySimulator.getSpherical(samples)
+
+                obs_name = "R"
+                obs_range = [0,2]
+                plot_obs(pp=out, obs_train=R_train, obs_test=R_test, obs_predict=R_gen,
                      name=obs_name, range=obs_range, weight_samples=self.iterations)
+
+                for i in range(self.dim-1):
+                    obs_name=f"\phi_{i}"
+                    obs_range = [0, 2*np.pi] if i==self.dim-2 else [0, np.pi]
+                    obs_train = phi_train[:,i]
+                    obs_test = phi_test[:,i]
+                    obs_gen = phi_gen[:,i]
+                    plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_gen,
+                         name=obs_name, range=obs_range, weight_samples=self.iterations)
 
         if get(self.params, "toy_type", "ramp") == "camel":
             n_dim = get(self.params, "n_dim", 2)
             obs_name = "\sum_{i=1}"+f"^{n_dim} x_i"
             out = f"{path}/xsum_epoch_{n_epochs}.pdf"
-            obs_train = get_xsum(self.data_train)
-            obs_test = get_xsum(self.data_test)
-            obs_generated = get_xsum(samples)
-            obs_range = [-3*n_dim**.5, 3*n_dim**.5]
+            obs_train = ToySimulator.get_xsum(self.data_train)
+            obs_test = ToySimulator.get_xsum(self.data_test)
+            obs_generated = ToySimulator.get_xsum(samples)
+            obs_range = [-2*n_dim, 2*n_dim]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
-                     name=obs_name, range=obs_range, weight_samples=self.iterations)
+                     name=obs_name, range=obs_range)
+
+        if self.dim == 2 and get(self.params,"plot_Deta_Dphi", True):
+            out = f"{path}/hist2d_{n_epochs}.pdf"
+            plot_obs_2d(pp=out, data_train=self.data_train, data_test=self.data_test, data_generated=samples,
+                        obs_ranges=self.obs_ranges, obs_names=self.obs_names, n_epochs=n_epochs)
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"

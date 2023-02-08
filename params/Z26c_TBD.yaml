@@ -35,7 +35,7 @@ eta_min: 1.e-5
 loss_type: "l2"
 multiple_t: False
 
-n_epochs : 2000
+n_epochs : 20000
 validate: False
 validate_every : 100
 
@@ -54,8 +54,8 @@ encode_t_scale: 10
 
 network: "Resnet"
 n_blocks : 1
-intermediate_dim: 10
-layers_per_block: 2
+intermediate_dim: 1024
+layers_per_block: 8
 resid_pdrop: 0
 
 n_layers: 5

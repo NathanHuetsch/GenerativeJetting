@@ -217,12 +217,30 @@ def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1
     plt.savefig(pp, format="pdf")
     plt.close()
 
-def get_R(data):
-        '''Calculate radius of samples following a hypersphere distribution'''
-        return np.sum(data ** 2, axis=1) ** .5
-def get_xsum(data):
-        '''Calculate radius of samples following a hypersphere distribution'''
-        return np.sum(data, axis=1)
+def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges, obs_names, bins=100):
+        fig = plt.figure(figsize=(12,6))
+
+        fig.add_subplot(1, 3, 1)
+        plt.hist2d(data_train[:,0], data_train[:,1], bins=100, range=obs_ranges, rasterized=True)
+        plt.xlabel(r"${%s}$" % obs_names[0])
+        plt.ylabel(r"${%s}$" % obs_names[1])
+        plt.title("train")
+
+        fig.add_subplot(1, 3, 2)
+        plt.hist2d(data_test[:,0], data_test[:,1], bins=100, range=obs_ranges, rasterized=True)
+        plt.xlabel(r"${%s}$" % obs_names[0])
+        plt.ylabel(r"${%s}$" % obs_names[1])
+        plt.title("test")
+
+        fig.add_subplot(1, 3, 3)
+        plt.hist2d(data_generated[:,0], data_generated[:,1], bins=100, range=obs_ranges, rasterized=True)
+        plt.xlabel(r"${%s}$" % obs_names[0])
+        plt.ylabel(r"${%s}$" % obs_names[1])
+        plt.title("generated")
+
+        plt.suptitle(f"After training for {n_epochs+1} epochs")
+        plt.savefig(pp, format="pdf")
+        plt.close()
 
 def plot_loss(pp,total, regular, kl):
     y = range(1, len(total) + 1)
