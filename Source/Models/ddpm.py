@@ -61,6 +61,8 @@ class DDPM(GenerativeModel):
 
     def batch_loss(self, x):
 
+        self.net.map = False
+
         if self.conditional and self.n_jets == 1:
             condition = x[:, -3:]
             condition = condition.float()
@@ -105,6 +107,7 @@ class DDPM(GenerativeModel):
         return loss
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):
+        self.net.map = get(self.params,"fix_mu", False)
         self.eval()
         batch_size = get(self.params, "batch_size_sample", 8192)
         events = []

@@ -26,6 +26,7 @@ class Resnet(nn.Module):
         self.kl = 0
         self.bayesian_layers = []
         self.prior_prec = self.param.get("prior_prec", 1.0)
+        self.map = False
 
         # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
@@ -64,12 +65,13 @@ class Resnet(nn.Module):
         """
         if self.bayesian:
             bays_layer = VBLinear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim,
-                                  prior_prec=self.prior_prec)
+                                  prior_prec=self.prior_prec,_map=self.map)
             layers = [bays_layer, nn.SiLU()]
             self.bayesian_layers.append(bays_layer)
 
             for _ in range(1, self.layers_per_block - 1):
-                bays_layer = VBLinear(self.intermediate_dim, self.intermediate_dim,prior_prec=self.prior_prec)
+                bays_layer = VBLinear(self.intermediate_dim, self.intermediate_dim,prior_prec=self.prior_prec,
+                                      _map=self.map)
                 layers.append(bays_layer)
                 self.bayesian_layers.append(bays_layer)
                 if self.normalization is not None:
@@ -77,7 +79,7 @@ class Resnet(nn.Module):
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
-            bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec)
+            bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec,_map=self.map)
             layers.append(bays_layer)
             self.bayesian_layers.append(bays_layer)
 
