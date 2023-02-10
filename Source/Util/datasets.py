@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-#import hdf5plugin
+import hdf5plugin
 import h5py
 
 

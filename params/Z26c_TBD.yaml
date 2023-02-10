@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/LRScheduler"
-run_name : "CosineAnnealing_Start1e3_Finish1e5"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d_TBD_Resnet_800l8d"
+run_name : "CosineAnnealing_Start1e3_1e-6LR"
 redirect_console : True
 
 # #########
@@ -13,7 +13,7 @@ data_type: np
 preprocess : 3
 n_jets: 2
 load_dataset : False
-channels : [9, 10, 13, 14]
+#channels : [9, 10, 13, 14]
 #[0, 4, 8, 9, 10, 12, 13, 14]
 #dim : 4
 # ##############
@@ -31,7 +31,7 @@ weight_decay : 0
 betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
-eta_min: 1.e-5
+eta_min: 1.e-6
 loss_type: "l2"
 multiple_t: False
 
@@ -54,7 +54,7 @@ encode_t_scale: 10
 
 network: "Resnet"
 n_blocks : 1
-intermediate_dim: 1024
+intermediate_dim: 800
 layers_per_block: 8
 resid_pdrop: 0
 

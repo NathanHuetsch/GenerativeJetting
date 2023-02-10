@@ -78,7 +78,7 @@ class TBD(GenerativeModel):
             loss = torch.mean(torch.abs(drift-x_t_dot)) + self.net.kl / len(self.data_train)
         return loss
 
-    def sample_n(self, n_samples, prior_samples=None, con_depth=0):
+    def sample_n(self, n_samples, prior_samples=None, con_depth=0, t=1):
         """
         Generate n_samples new samples.
         Start from Gaussian random noise and solve the reverse ODE to obtain samples
@@ -144,7 +144,7 @@ class TBD(GenerativeModel):
                     c = condition[batch_size * i: batch_size * (i + 1)].flatten()
                 else:
                     c = None
-                sol = solve_ivp(f, (1, 0), x_T[batch_size * i: batch_size * (i + 1)].flatten(), args=[c])
+                sol = solve_ivp(f, (t, 0), x_T[batch_size * i: batch_size * (i + 1)].flatten(), args=[c])
 
                 if self.conditional:
                     c = condition[batch_size * i: batch_size * (i + 1)]
