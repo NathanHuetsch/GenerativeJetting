@@ -62,6 +62,7 @@ class GenerativeModel(nn.Module):
         self.iterations = get(self.params,"iterations", 1)
         self.regular_loss = []
         self.kl_loss = []
+        self.runs = get(self.params, "runs", 0)
 
     def build_net(self):
         pass
@@ -144,6 +145,9 @@ class GenerativeModel(nn.Module):
 
                 if self.use_scheduler:
                     self.scheduler.step()
+                    if self.log:
+                        self.logger.add_scalar("learning_rate", self.scheduler.get_last_lr()[0],
+                                               self.epoch * self.n_trainbatches + batch_id)
 
             else:
                 print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}")
@@ -152,6 +156,9 @@ class GenerativeModel(nn.Module):
         self.train_losses = np.concatenate([self.train_losses, train_losses], axis=0)
         if self.log:
             self.logger.add_scalar("train_losses_epoch", self.train_losses_epoch[-1], self.epoch)
+            if self.use_scheduler:
+                self.logger.add_scalar("learning_rate_epoch", self.scheduler.get_last_lr()[0],
+                                       self.epoch)
 
     def batch_loss(self, x):
         pass
@@ -230,7 +237,7 @@ class GenerativeModel(nn.Module):
             plot_test.append(self.data_test)
             plot_samples.append(samples)
 
-        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
             for j, _ in enumerate(plot_train):
                 # Loop over the plot_channels
                 for i, channel in enumerate(self.params["plot_channels"]):
@@ -254,7 +261,7 @@ class GenerativeModel(nn.Module):
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
             if get(self.params,"plot_deltaR", True):
                 obs_name = "\Delta R_{j_1 j_2}"
-                with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}") as out:
+                with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}.pdf") as out:
                     for j, _ in enumerate(plot_train):
                         obs_train = delta_r(plot_train[j])
                         obs_test = delta_r(plot_test[j])
@@ -337,7 +344,7 @@ class GenerativeModel(nn.Module):
                 data_train = get_M_ll(plot_train[j])
                 data_test = get_M_ll(plot_test[j])
                 data_generated = get_M_ll(plot_samples[j])
-                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}") as out:
+                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
                     plot_obs(pp=out,
                              obs_train=data_train,
                              obs_test=data_test,
@@ -350,8 +357,7 @@ class GenerativeModel(nn.Module):
     def plot_toy(self, samples = None, finished=False):
         os.makedirs(f"plots", exist_ok=True)
         if finished:
-            runs = get(self.params, "runs", 0)
-            path = f"plots/run{runs}"
+            path = f"plots/run{self.runs}"
             os.makedirs(path, exist_ok=True)
             iterations = self.iterations
         else:
@@ -359,7 +365,7 @@ class GenerativeModel(nn.Module):
             iterations = 1
 
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
-        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}") as out:
+        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
             for i in range(0, self.dim):
                 obs_train = self.data_train[:,i]
                 obs_test = self.data_test[:,i]
