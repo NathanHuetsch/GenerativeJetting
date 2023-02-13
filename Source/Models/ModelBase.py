@@ -62,6 +62,7 @@ class GenerativeModel(nn.Module):
         self.iterations = get(self.params,"iterations", 1)
         self.regular_loss = []
         self.kl_loss = []
+        self.regularizeGMM_loss = []
         self.runs = get(self.params, "runs", 0)
 
     def build_net(self):
@@ -389,7 +390,6 @@ class GenerativeModel(nn.Module):
                 R_train, phi_train = ToySimulator.getSpherical(self.data_train)
                 R_test, phi_test = ToySimulator.getSpherical(self.data_test)
                 R_gen, phi_gen = ToySimulator.getSpherical(samples)
-
                 obs_name = "R"
                 obs_range = [0,2]
                 plot_obs(pp=out, obs_train=R_train, obs_test=R_test, obs_predict=R_gen,
@@ -422,6 +422,4 @@ class GenerativeModel(nn.Module):
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
-
-
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss)

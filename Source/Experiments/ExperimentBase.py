@@ -279,12 +279,10 @@ class Experiment:
                 elif optim == "AdamW":
                     self.model.optimizer = \
                         AdamW(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
-
                 print(
                     f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
             else:
                 raise ValueError(f"build_optimizer: optimizer {optim} not implemented")
-
         else:
             self.model.optimizer = None
             print("build_optimizer: train set to False. Not building optimizer")
