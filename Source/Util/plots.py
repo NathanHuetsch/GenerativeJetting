@@ -123,7 +123,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
                         color="#3b528b", linewidth=1.0, where="post")
 
             axs[0].legend(loc="upper right", frameon=False)
-            axs[0].set_ylabel("normalized", fontsize = FONTSIZE)
+            axs[0].set_ylabel("Normalized", fontsize = FONTSIZE)
             if "p_{T" in name:
                 axs[0].set_yscale("log")
 
@@ -246,7 +246,7 @@ def plot_loss(pp,total, regular, kl):
     y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
-    if not regular and not kl:
+    if regular and kl:
         axes.plot(y, regular, label="regular loss")
         axes.plot(y, kl, label="kl loss")
 

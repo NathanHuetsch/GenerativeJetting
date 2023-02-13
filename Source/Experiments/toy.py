@@ -30,8 +30,8 @@ class Toy_Experiment(Experiment):
         self.n_data = get(self.params, "n_data", 1000000)
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian",False)
+        self.prior_prec = get(self.params, "prior_prec", 1.0)
 
-        self.samples = []
 
     def full_run(self):
         self.prepare_experiment()
@@ -45,22 +45,39 @@ class Toy_Experiment(Experiment):
             self.obs_ranges = [[-1.5, 1.5]] * self.dim
         self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
         self.data_raw = self.data.detach().cpu().numpy()
-        self.model = self.build_model(self.params, save_in_params=True)
 
-        self.model.obs_names = self.obs_names
-        self.model.obs_ranges = self.obs_ranges
-        self.model.data = self.data
-
-        self.build_optimizer()
-        self.build_dataloaders()
         if self.iterations > 1 and not self.bayesian:
+            det_samples = []
             for i in range(self.iterations):
+                self.total_epochs = 0
+                self.model = self.build_model(self.params, save_in_params=False)
+                print(f"build_model: Building Bayesian model is set to {self.bayesian}")
+
+                self.model.obs_names = self.obs_names
+                self.model.obs_ranges = self.obs_ranges
+                self.model.data = self.data
+
+                self.build_optimizer()
+                self.build_dataloaders()
+
                 self.train_model()
                 self.generate_samples()
-                self.make_plots()
+                det_samples.append(self.samples)
                 self.runs += 1
+                self.model.runs += 1
 
+            self.samples = np.concatenate(det_samples)
+            self.make_plots()
         else:
+            self.model = self.build_model(self.params, save_in_params=True)
+            print(f"build_model: Building Bayesian model is set to {self.bayesian}")
+            self.model.obs_names = self.obs_names
+            self.model.obs_ranges = self.obs_ranges
+            self.model.data = self.data
+
+            self.build_optimizer()
+            self.build_dataloaders()
+
             self.train_model()
             self.generate_samples()
             self.make_plots()
@@ -111,25 +128,27 @@ class Toy_Experiment(Experiment):
             iterations = self.iterations
         else:
             iterations = 1
-
         if sample:
+            bay_samples = []
             for i in range(0, iterations):
                 # Read in the "n_samples" parameter specifying how many samples to generate
                 # Call the model.sample_n_parallel(n_samples) method to perform the sampling
                 n_samples = get(self.params, "n_samples", 1000000)
                 print(f"generate_samples: Starting generation of {n_samples} samples")
                 t0 = time.time()
-                self.sample = self.model.sample_n(n_samples)
+                sample = self.model.sample_n(n_samples)
                 t1 = time.time()
                 sampletime = t1 - t0
                 self.params["sampletime"] = sampletime
-                self.samples.append(self.sample)
+                bay_samples.append(sample)
 
                 print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
                     np.save(f"samples/samples_final_{i}.npy", self.samples)
                     print(f"save_samples: generated samples have been saved")
+
+            self.samples = np.concatenate(bay_samples)
         else:
             print("generate_samples: sample set to False")
 
@@ -137,14 +156,8 @@ class Toy_Experiment(Experiment):
         plot = get(self.params, "plot", True)
         sample = get(self.params, "sample", True)
 
-        if self.iterations>1:
-            to_plot = self.samples
-        else:
-            to_plot = self.sample
-
-
         if plot and sample:
-            self.model.plot_toy(to_plot, finished=True)
+            self.model.plot_toy(self.samples, finished=True)
 
             print("make_plots: Finished making plots")
         else:
