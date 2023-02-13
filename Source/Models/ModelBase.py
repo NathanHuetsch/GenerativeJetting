@@ -62,6 +62,7 @@ class GenerativeModel(nn.Module):
         self.iterations = get(self.params,"iterations", 1)
         self.regular_loss = []
         self.kl_loss = []
+        self.runs = get(self.params, "runs", 0)
 
     def build_net(self):
         pass
@@ -114,6 +115,11 @@ class GenerativeModel(nn.Module):
                         samples = self.sample_n(self.sample_every_n_samples)
                         self.plot_toy(samples=samples)
 
+            if get(self.params,"save_periodically",False):
+                if (self.epoch + 1) % get(self.params,"save_every",10) == 0 or self.epoch==0:
+                    torch.save(self.state_dict(), f"models/model_epoch_{e+1}.pt")
+
+
             if e==0:
                 t1 = time.time()
                 dtEst= (t1-t0) * n_epochs
@@ -138,6 +144,9 @@ class GenerativeModel(nn.Module):
 
                 if self.use_scheduler:
                     self.scheduler.step()
+                    if self.log:
+                        self.logger.add_scalar("learning_rate", self.scheduler.get_last_lr()[0],
+                                               self.epoch * self.n_trainbatches + batch_id)
 
             else:
                 print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}")
@@ -146,6 +155,9 @@ class GenerativeModel(nn.Module):
         self.train_losses = np.concatenate([self.train_losses, train_losses], axis=0)
         if self.log:
             self.logger.add_scalar("train_losses_epoch", self.train_losses_epoch[-1], self.epoch)
+            if self.use_scheduler:
+                self.logger.add_scalar("learning_rate_epoch", self.scheduler.get_last_lr()[0],
+                                       self.epoch)
 
     def batch_loss(self, x):
         pass
@@ -331,7 +343,7 @@ class GenerativeModel(nn.Module):
                 data_train = get_M_ll(plot_train[j])
                 data_test = get_M_ll(plot_test[j])
                 data_generated = get_M_ll(plot_samples[j])
-                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}") as out:
+                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
                     plot_obs(pp=out,
                              obs_train=data_train,
                              obs_test=data_test,
@@ -344,11 +356,12 @@ class GenerativeModel(nn.Module):
     def plot_toy(self, samples = None, finished=False):
         os.makedirs(f"plots", exist_ok=True)
         if finished:
-            runs = get(self.params, "runs", 0)
-            path = f"plots/run{runs}"
+            path = f"plots/run{self.runs}"
             os.makedirs(path, exist_ok=True)
+            iterations = self.iterations
         else:
             path = "plots"
+            iterations = 1
 
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
         with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
@@ -366,7 +379,7 @@ class GenerativeModel(nn.Module):
                          range=obs_range,
                          n_epochs=n_epochs,
                          n_jets=None,
-                         weight_samples=self.iterations)
+                         weight_samples=iterations)
 
         if get(self.params, "toy_type", "ramp") == "gauss_sphere":
             with PdfPages(f"{path}/spherical_{n_epochs}.pdf") as out:
@@ -376,7 +389,7 @@ class GenerativeModel(nn.Module):
                 obs_name = "R"
                 obs_range = [0,2]
                 plot_obs(pp=out, obs_train=R_train, obs_test=R_test, obs_predict=R_gen,
-                     name=obs_name, range=obs_range, weight_samples=self.iterations)
+                     name=obs_name, range=obs_range, weight_samples=iterations)
 
                 for i in range(self.dim-1):
                     obs_name=f"\phi_{i}"
@@ -385,7 +398,7 @@ class GenerativeModel(nn.Module):
                     obs_test = phi_test[:,i]
                     obs_gen = phi_gen[:,i]
                     plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_gen,
-                         name=obs_name, range=obs_range, weight_samples=self.iterations)
+                         name=obs_name, range=obs_range, weight_samples=iterations)
 
         if get(self.params, "toy_type", "ramp") == "camel":
             n_dim = get(self.params, "n_dim", 2)

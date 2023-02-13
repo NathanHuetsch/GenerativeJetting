@@ -23,9 +23,9 @@ class Resnet(nn.Module):
         self.conditional = self.param.get("conditional", False)
         self.embed_condition = self.param.get("embed_condition",False)
         self.bayesian = self.param.get("bayesian", False)
-        self.kl = 0
         self.bayesian_layers = []
         self.prior_prec = self.param.get("prior_prec", 1.0)
+        self.map = False
 
         # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
@@ -47,7 +47,7 @@ class Resnet(nn.Module):
             self.make_block()
             for _ in range(self.n_blocks)])
 
-        if self.bayesian:
+        if self.bayesian > 1:
             for block in self.blocks:
                 block[-1].mu_w.data *= 0
                 block[-1].bias.data *= 0
@@ -77,9 +77,12 @@ class Resnet(nn.Module):
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
-            bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec)
-            layers.append(bays_layer)
-            self.bayesian_layers.append(bays_layer)
+            if self.bayesian > 1:
+                bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec)
+                layers.append(bays_layer)
+                self.bayesian_layers.append(bays_layer)
+            else:
+                layers.append(nn.Linear(self.intermediate_dim, self.dim))
 
         else:
             layers = [nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
@@ -99,6 +102,7 @@ class Resnet(nn.Module):
         """
         forward method of our Resnet
         """
+        self.kl = 0
         if self.encode_t:
             t = self.embed(t)
 
@@ -108,6 +112,9 @@ class Resnet(nn.Module):
                 add_input = self.embed_c(add_input)
         else:
             add_input = t
+
+        for bay_layer in self.bayesian_layers:
+            bay_layer.map = self.map
 
         for block in self.blocks[:-1]:
             x = x + block(torch.cat([x, add_input], 1))

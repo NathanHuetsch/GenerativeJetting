@@ -61,6 +61,8 @@ class DDPM(GenerativeModel):
 
     def batch_loss(self, x):
 
+        self.net.map = False
+
         if self.conditional and self.n_jets == 1:
             condition = x[:, -3:]
             condition = condition.float()
@@ -92,21 +94,21 @@ class DDPM(GenerativeModel):
         #xT = torch.empty(size=x.size(), device=self.device)
         #for i in range(x.size(0)):
         #    xT[i] = self.xT_from_x0_and_noise(x[i], t[i], noise[i])
-        self.net.kl = 0
         model_pred = self.net(xT.float(), t.float(), condition)
         loss = F.mse_loss(model_pred, noise) + self.net.kl / len(self.data_train)
 
-        self.regular_loss.append(F.mse_loss(model_pred, noise).detach().numpy())
+        self.regular_loss.append(F.mse_loss(model_pred, noise).detach().cpu().numpy())
         try:
-            self.kl_loss.append((self.net.kl / len(self.data_train)).detach().numpy())
+            self.kl_loss.append((self.net.kl / len(self.data_train)).detach().cpu().numpy())
         except:
             pass
 
         return loss
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):
+        self.net.map = get(self.params,"fix_mu", False)
         self.eval()
-        batch_size = get(self.params, "batch_size", 8192)
+        batch_size = get(self.params, "batch_size_sample", 8192)
         events = []
 
         if self.conditional:

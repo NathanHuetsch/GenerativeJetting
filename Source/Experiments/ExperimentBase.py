@@ -233,9 +233,10 @@ class Experiment:
 
         # If "warm_start", load the model parameters from the specified directory.
         # It is expected that they are found under warm_start_dir/models/checkpoint
+        model_name = get(p, "model_name", "model_run0")
         if prior_path is not None:
             try:
-                state_dict = torch.load(prior_path + "/models/model_run0.pt", map_location=self.device)
+                state_dict = torch.load(prior_path + f"/models/{model_name}.pt", map_location=self.device)
             except FileNotFoundError:
                 raise ValueError(f"build_model: cannot load model for prior_path")
 
@@ -338,11 +339,13 @@ class Experiment:
                     print("build_dataloaders: Using one-cycle lr scheduler")
                 elif lr_scheduler == "CosineAnnealing":
                     n_epochs = get(self.params, "n_epochs", 100)
+                    eta_min = get(self.params, "eta_min", 0)
                     self.model.scheduler = CosineAnnealingLR(
-                        self.model.optimizer,
-                        n_epochs*len(self.model.train_loader)
+                        optimizer=self.model.optimizer,
+                        T_max=n_epochs*len(self.model.train_loader),
+                        eta_min=eta_min
                     )
-                    print("build_dataloaders: Using CosineAnnealing lr scheduler")
+                    print(f"build_dataloaders: Using CosineAnnealing lr scheduler with eta_min {eta_min}")
                 else:
                     print(f"build_dataloaders: lr_scheduler {lr_scheduler} not recognised. Not using it")
                     self.params["use_scheduler"]=False
