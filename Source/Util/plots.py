@@ -240,13 +240,15 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
         plt.savefig(pp, format="pdf")
         plt.close()
 
-def plot_loss(pp,total, regular, kl):
+def plot_loss(pp,total, regular, kl, regularizeGMM):
     y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
     if regular and kl:
         axes.plot(y, regular, label="regular loss")
         axes.plot(y, kl, label="kl loss")
+    if regularizeGMM:
+        axes.plot(y, regularizeGMM, label="GMM regularization")
 
     axes.set_yscale("log")
     axes.set_xlabel("Number of Iterations", fontsize=14)

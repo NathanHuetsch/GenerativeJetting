@@ -62,6 +62,7 @@ class GenerativeModel(nn.Module):
         self.iterations = get(self.params,"iterations", 1)
         self.regular_loss = []
         self.kl_loss = []
+        self.regularizeGMM_loss = []
         self.runs = get(self.params, "runs", 0)
 
     def build_net(self):
@@ -418,4 +419,4 @@ class GenerativeModel(nn.Module):
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss)
