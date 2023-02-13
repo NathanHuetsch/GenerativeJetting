@@ -64,13 +64,12 @@ class Resnet(nn.Module):
         """
         if self.bayesian:
             bays_layer = VBLinear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim,
-                                  prior_prec=self.prior_prec,_map=self.map)
+                                  prior_prec=self.prior_prec)
             layers = [bays_layer, nn.SiLU()]
             self.bayesian_layers.append(bays_layer)
 
             for _ in range(1, self.layers_per_block - 1):
-                bays_layer = VBLinear(self.intermediate_dim, self.intermediate_dim,prior_prec=self.prior_prec,
-                                      _map=self.map)
+                bays_layer = VBLinear(self.intermediate_dim, self.intermediate_dim,prior_prec=self.prior_prec)
                 layers.append(bays_layer)
                 self.bayesian_layers.append(bays_layer)
                 if self.normalization is not None:
@@ -79,7 +78,7 @@ class Resnet(nn.Module):
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
             if self.bayesian > 1:
-                bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec,_map=self.map)
+                bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec)
                 layers.append(bays_layer)
                 self.bayesian_layers.append(bays_layer)
             else:
@@ -113,6 +112,9 @@ class Resnet(nn.Module):
                 add_input = self.embed_c(add_input)
         else:
             add_input = t
+
+        for bay_layer in self.bayesian_layers:
+            bay_layer.map = self.map
 
         for block in self.blocks[:-1]:
             x = x + block(torch.cat([x, add_input], 1))
