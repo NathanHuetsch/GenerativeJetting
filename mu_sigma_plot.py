@@ -25,21 +25,21 @@ for j in range(50,10001,50):
         try:
             mu = ex.model.net.blocks[0][i].mu_w.data.cpu()
             sig= ex.model.net.blocks[0][i].logsig2_w.data.cpu()
-            axes.scatter(mu,np.e**sig, label=f"{i+1}. layer", s=1)
+            axes.scatter(mu,np.sqrt(np.e**sig), label=f"{i+1}. layer", s=1, alpha=0.5)
         except:
             pass
 
 
     axes.set_xlabel("$\mu_\Theta$",fontsize=14)
-    axes.set_ylabel("$\sigma_\Theta^2$",fontsize=14)
-    axes.set_xlim(-2.5,2.5)
-    axes.set_ylim(-0.001,0.0102)
+    axes.set_ylabel("$\sigma_\Theta$",fontsize=14)
+    #axes.set_xlim(-2.5,2.5)
+    #axes.set_ylim(-0.001,0.0113)
     axes.legend(fontsize=12, frameon=False,loc="lower left")
     axes.tick_params(axis='both', which='major', labelsize=14)
     axes.set_title(f"Network with {par['model_parameters']} parameters", fontsize=14)
 
     fig.tight_layout(pad=3.0)
-    fig.savefig(f"/remote/gpu05/palacios/Plots/mu_sigma_simple/mu_sigma_epoch_{j}.png", dpi=300)
+    fig.savefig(f"/remote/gpu05/palacios/Plots/mu_sigma_simple_001/mu_sigma_epoch_{j}.png", dpi=300)
 
 
 
