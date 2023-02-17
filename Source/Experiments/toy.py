@@ -82,6 +82,7 @@ class Toy_Experiment(Experiment):
             self.generate_samples()
             self.make_plots()
 
+        self.make_video()
         self.finish_up()
 
     def load_data(self):
@@ -134,7 +135,7 @@ class Toy_Experiment(Experiment):
                 # Read in the "n_samples" parameter specifying how many samples to generate
                 # Call the model.sample_n_parallel(n_samples) method to perform the sampling
                 n_samples = get(self.params, "n_samples", 1000000)
-                print(f"generate_samples: Starting generation of {n_samples} samples")
+                print(f"generate_samples: {i}.Starting generation of {n_samples} samples")
                 t0 = time.time()
                 sample = self.model.sample_n(n_samples)
                 t1 = time.time()
@@ -142,7 +143,7 @@ class Toy_Experiment(Experiment):
                 self.params["sampletime"] = sampletime
                 bay_samples.append(sample)
 
-                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+                print(f"generate_samples: {i}.Finished generation of {n_samples} samples after {sampletime} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
                     np.save(f"samples/samples_final_{i}.npy", self.samples)
@@ -162,3 +163,21 @@ class Toy_Experiment(Experiment):
             print("make_plots: Finished making plots")
         else:
             print("make_plots: plot set to False")
+
+    def make_video(self):
+        video = get(self.params, "video", False)
+
+        if video:
+            n_samples = get(self.params, "n_samples", 1000000)
+            print(f"make_video: Starting generation of video frame samples")
+            t0 = time.time()
+            sample = self.model.sample_n_evolution(n_samples)
+            t1 = time.time()
+            videosampletime = t1 - t0
+            self.params["videosampletime"] = videosampletime
+            print(f"make_video: Drawing videos")
+            t0 = time.time()
+            self.model.toy_video(sample)
+            t1 = time.time()
+            videotime = t1 - t0
+            self.params["videotime"] = videotime

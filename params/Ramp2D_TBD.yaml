@@ -1,11 +1,11 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/NoBayesian/lr"
-run_name : "Split01_1000e_1e2"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/Bayesian/BatchSize"
+run_name : "50000Batch"
 redirect_console : True
 istoy: True
-bayesian: True
+bayesian: 2
 # #########
 # # Data: #qs
 # #########
@@ -28,12 +28,12 @@ betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 100
+n_epochs : 200
 validate: False
 validate_every : 10
 
 sample_periodically: True
-sample_every: 20
+sample_every: 40
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #

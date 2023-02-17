@@ -40,6 +40,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
 
             y_t,  bins = np.histogram(obs_test, bins=bins, range=range) #generate bin array if needed
             y_tr, _ = np.histogram(obs_train, bins=bins)
+
             if weight_samples == 1:
                 y_g,  _ = np.histogram(obs_predict, bins=bins, weights=predict_weights)
                 hists = [y_t, y_g, y_tr]
@@ -76,7 +77,6 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
 
             for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                      labels, colors):
-
 
                 axs[0].step(bins, dup_last(y) * scale, label=label, color=color,
                         linewidth=1.0, where="post")
@@ -157,9 +157,11 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
                 axs[4].set_ylabel(r"$\frac{\mu_{\mathrm{INN}}-\mu_{\mathrm{True}}}" +
                                   r"{\mu_{\mathrm{INN}}}$", fontsize = 10)
 
-            plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
+            if type(pp) == str:
+                plt.savefig(pp, bbox_inches="tight", pad_inches=0.05)
+            else:
+                plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
             plt.close()
-
 
 def delta_phi(y, idx1, idx2):
     # return y[:,idx1] - y[:,idx2]
@@ -225,7 +227,6 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
         plt.xlabel(r"${%s}$" % obs_names[0])
         plt.ylabel(r"${%s}$" % obs_names[1])
         plt.title("train")
-
         fig.add_subplot(1, 3, 2)
         plt.hist2d(data_test[:,0], data_test[:,1], bins=100, range=obs_ranges, rasterized=True)
         plt.xlabel(r"${%s}$" % obs_names[0])
@@ -242,13 +243,15 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
         plt.savefig(pp, format="pdf")
         plt.close()
 
-def plot_loss(pp,total, regular, kl):
+def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False):
     y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
     if regular and kl:
         axes.plot(y, regular, label="regular loss")
         axes.plot(y, kl, label="kl loss")
+    if regularizeGMM:
+        axes.plot(y, regularizeGMM, label="GMM regularization")
 
     axes.set_yscale("log")
     axes.set_xlabel("Number of Iterations", fontsize=14)
@@ -256,4 +259,3 @@ def plot_loss(pp,total, regular, kl):
     axes.legend(fontsize=14)
     fig.savefig(pp, format="pdf")
     plt.close()
-
