@@ -83,6 +83,10 @@ class TBD(GenerativeModel):
         Generate n_samples new samples.
         Start from Gaussian random noise and solve the reverse ODE to obtain samples
         """
+        if self.net.bayesian:
+            self.net.map = get(self.params,"fix_mu", False)
+            for bay_layer in self.net.bayesian_layers:
+                bay_layer.random = None
         self.eval()
         batch_size = get(self.params, "batch_size", 8192)
         x_T = np.random.randn(n_samples + batch_size, self.dim)

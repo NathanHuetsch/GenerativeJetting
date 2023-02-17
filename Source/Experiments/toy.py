@@ -136,7 +136,7 @@ class Toy_Experiment(Experiment):
                 # Read in the "n_samples" parameter specifying how many samples to generate
                 # Call the model.sample_n_parallel(n_samples) method to perform the sampling
                 n_samples = get(self.params, "n_samples", 1000000)
-                print(f"generate_samples: Starting generation of {n_samples} samples")
+                print(f"generate_samples: {i}.Starting generation of {n_samples} samples")
                 t0 = time.time()
                 sample = self.model.sample_n(n_samples)
                 t1 = time.time()
@@ -144,7 +144,7 @@ class Toy_Experiment(Experiment):
                 self.params["sampletime"] = sampletime
                 bay_samples.append(sample)
 
-                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+                print(f"generate_samples: {i}.Finished generation of {n_samples} samples after {sampletime} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
                     np.save(f"samples/samples_final_{i}.npy", self.samples)

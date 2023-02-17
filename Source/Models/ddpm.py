@@ -106,7 +106,11 @@ class DDPM(GenerativeModel):
         return loss
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):
-        self.net.map = get(self.params,"fix_mu", False)
+        if self.net.bayesian:
+            self.net.map = get(self.params,"fix_mu", False)
+            for bay_layer in self.net.bayesian_layers:
+                bay_layer.random = None
+
         self.eval()
         batch_size = get(self.params, "batch_size_sample", 8192)
         events = []

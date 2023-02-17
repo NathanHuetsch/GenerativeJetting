@@ -240,7 +240,7 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
         plt.savefig(pp, format="pdf")
         plt.close()
 
-def plot_loss(pp,total, regular, kl, regularizeGMM):
+def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False):
     y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
