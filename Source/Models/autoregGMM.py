@@ -143,7 +143,7 @@ class AutoRegGMM(GenerativeModel):
         probsindiv = np.zeros((n_samples, self.block_size, self.n_gauss, prec))     # pdfs of individual gaussians
         xs = np.zeros((self.block_size, prec))                                      # x-values of the pdfs
         
-        idx = self.n_jets * torch.ones(self.batch_size_sampling, 1, dtype=torch.int, device=self.device).float()
+        idx = self.n_jets * torch.ones(self.batch_size_sample, 1, dtype=torch.int, device=self.device).float()
         for idim in range(self.block_size):
             mu, sigma, weights = self.net(idx)
 

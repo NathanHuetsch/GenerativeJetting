@@ -124,7 +124,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
 
             axs[0].legend(loc="upper right", frameon=False)
             axs[0].set_ylabel("Normalized", fontsize = FONTSIZE)
-            if "p_{T" in name:
+            if "p_{T" in name or "mu" in name:
                 axs[0].set_yscale("log")
 
             axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{True}}$",
