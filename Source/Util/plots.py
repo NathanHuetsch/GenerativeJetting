@@ -244,6 +244,7 @@ def plot_binned_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, wei
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
+
     FONTSIZE =12
     obs_predict = obs_predict.reshape(weight_samples,
                                       len(obs_predict) // weight_samples)
@@ -275,6 +276,7 @@ def plot_binned_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, wei
 
     #axs[0].set_yscale("log")
     axs[0].set_ylabel(r"Absolute Uncertainty", fontsize=FONTSIZE)
+    axs[1].set_ylim(0,1)
 
     axs[0].legend(loc="upper right", frameon=False)
     axs[1].legend(loc="upper right", frameon=False)
