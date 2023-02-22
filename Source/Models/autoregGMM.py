@@ -104,12 +104,12 @@ class AutoRegGMM(GenerativeModel):
             
         self.eval()
 
-        n_batches = int(n_samples / self.batch_size)+1
+        n_batches = int(n_samples / self.batch_size_sample)+1
         sample= np.zeros((0, self.block_size), dtype="int")
         for i in range(n_batches):
             t0=time.time()
 
-            idx = self.n_jets * torch.ones(self.batch_size, 1, dtype=torch.int, device=self.device).float()            
+            idx = self.n_jets * torch.ones(self.batch_size_sample, 1, dtype=torch.int, device=self.device).float()            
             for iBlock in range(self.block_size):
                 mu, sigma, weights = self.net(idx)
                 
@@ -134,7 +134,7 @@ class AutoRegGMM(GenerativeModel):
         Variant of sample_n that returns not only the samples, but also the generate Gaussian
         mixture pdf (probstotal) and the pdfs of all individual gaussians (probsindiv)
         '''
-        assert n_samples <= self.batch_size, "sample_n_bonus: Specified n_samples > batch_size. " \
+        assert n_samples <= self.batch_size_sample, "sample_n_bonus: Specified n_samples > batch_size. " \
                "This is probably not intended, as this function should be used for visualization only."
         
         self.eval()
@@ -143,7 +143,7 @@ class AutoRegGMM(GenerativeModel):
         probsindiv = np.zeros((n_samples, self.block_size, self.n_gauss, prec))     # pdfs of individual gaussians
         xs = np.zeros((self.block_size, prec))                                      # x-values of the pdfs
         
-        idx = self.n_jets * torch.ones(self.batch_size, 1, dtype=torch.int, device=self.device).float()
+        idx = self.n_jets * torch.ones(self.batch_size_sampling, 1, dtype=torch.int, device=self.device).float()
         for idim in range(self.block_size):
             mu, sigma, weights = self.net(idx)
 
@@ -155,7 +155,7 @@ class AutoRegGMM(GenerativeModel):
             idx = torch.cat((idx, idx_next), dim=1)
 
             # generate total pdf (using torch.distributions)
-            probs = torch.zeros(self.batch_size, prec, dtype=torch.float, device=self.device)
+            probs = torch.zeros(self.batch_size_sample, prec, dtype=torch.float, device=self.device)
             vals = torch.linspace(torch.min(idx_next), torch.max(idx_next), prec)
             for ix in range(prec):
                 x=vals[ix]
