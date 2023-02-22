@@ -24,6 +24,7 @@ class Resnet(nn.Module):
         self.embed_condition = self.param.get("embed_condition",False)
         self.bayesian = self.param.get("bayesian", False)
         self.bayesian_layers = []
+        self.deter_layers = []
         self.prior_prec = self.param.get("prior_prec", 1.0)
         self.map = False
 
@@ -85,16 +86,23 @@ class Resnet(nn.Module):
                 layers.append(nn.Linear(self.intermediate_dim, self.dim))
 
         else:
-            layers = [nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim), nn.SiLU()]
+            linear = nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim)
+            self.deter_layers.append(linear)
+            layers = [linear, nn.SiLU()]
 
             for _ in range(1, self.layers_per_block-1):
-                layers.append(nn.Linear(self.intermediate_dim, self.intermediate_dim))
+                linear = nn.Linear(self.intermediate_dim, self.intermediate_dim)
+                layers.append(linear)
+                self.deter_layers.append(linear)
                 if self.normalization is not None:
                     layers.append(getattr(nn, self.normalization)())
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
-            layers.append(nn.Linear(self.intermediate_dim, self.dim))
+
+            linear = nn.Linear(self.intermediate_dim, self.dim)
+            layers.append(linear)
+            self.deter_layers.append(linear)
 
         return nn.Sequential(*layers)
 
@@ -122,6 +130,9 @@ class Resnet(nn.Module):
 
         for bay_layer in self.bayesian_layers:
             self.kl += bay_layer.KL()
+
+        for deter_layer in self.deter_layers:
+            self.kl += (deter_layer.weight.pow(2)/self.prior_prec**2).sum()
 
         return x
 

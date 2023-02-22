@@ -101,7 +101,6 @@ class AutoRegGMM(GenerativeModel):
         if self.net.bayesian >= 3:
             self.net.transformer.wte.random = None
             self.net.lm_head.random = None
-            
         self.eval()
 
         n_batches = int(n_samples / self.batch_size_sample)+1

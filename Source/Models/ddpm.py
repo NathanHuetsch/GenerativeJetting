@@ -39,6 +39,10 @@ class DDPM(GenerativeModel):
         else:
             raise ValueError(f'unknown sigma mode {self.sigma_mode}')
 
+        self.C = get(self.params, "C", 1)
+        if self.C != 1:
+            print(f"C is {self.C}")
+
         self.to(self.device)
     def build_net(self):
         """
@@ -50,6 +54,8 @@ class DDPM(GenerativeModel):
         except AttributeError:
             raise NotImplementedError(f"build_model: Network class {network} not recognised")
 
+    def get_relative_factor(self,t):
+        return self.betas[t]**2/(2 * self.sigmas[t]**2 * self.alphas[t]*self.One_minus_alphas_bar[t])
     def xT_from_x0_and_noise(self, x0, t, noise):
         return self.sqrt_alphas_bar[t]*x0 + self.sqrt_One_minus_alphas_bar[t]*noise
 
@@ -95,18 +101,22 @@ class DDPM(GenerativeModel):
         #for i in range(x.size(0)):
         #    xT[i] = self.xT_from_x0_and_noise(x[i], t[i], noise[i])
         model_pred = self.net(xT.float(), t.float(), condition)
-        loss = F.mse_loss(model_pred, noise) + self.net.kl / len(self.data_train)
+        loss = F.mse_loss(model_pred, noise) + self.C*self.net.kl / len(self.data_train)
 
         self.regular_loss.append(F.mse_loss(model_pred, noise).detach().cpu().numpy())
         try:
-            self.kl_loss.append((self.net.kl / len(self.data_train)).detach().cpu().numpy())
+            self.kl_loss.append((self.C*self.net.kl / len(self.data_train)).detach().cpu().numpy())
         except:
             pass
 
         return loss
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):
-        self.net.map = get(self.params,"fix_mu", False)
+        if self.net.bayesian:
+            self.net.map = get(self.params,"fix_mu", False)
+            for bay_layer in self.net.bayesian_layers:
+                bay_layer.random = None
+
         self.eval()
         batch_size = get(self.params, "batch_size_sample", 8192)
         events = []

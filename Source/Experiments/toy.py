@@ -26,14 +26,10 @@ class Toy_Experiment(Experiment):
         super().__init__(params)
 
         self.istoy = get(self.params,"istoy", True)
-        self.params['istoy'] = self.istoy
         self.n_data = get(self.params, "n_data", 1000000)
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian",False)
-        self.params['bayesian'] = self.bayesian
         self.prior_prec = get(self.params, "prior_prec", 1.0)
-        self.params['prior_prec'] = self.prior_prec
-
 
     def full_run(self):
         self.prepare_experiment()
@@ -41,7 +37,7 @@ class Toy_Experiment(Experiment):
 
         if get(self.params, "toy_type", "ramp")=="ramp":
             self.n_dim = get(self.params, "n_flat", 1)+get(self.params, "n_lin", 1)+get(self.params, "n_quad", 0)
-            self.obs_ranges = [[-.5, 1.5]] * self.dim
+            self.obs_ranges = [[0, 1]] * self.dim
         else:
             self.n_dim = get(self.params, "n_dim", 2)
             self.obs_ranges = [[-1.5, 1.5]] * self.dim
@@ -84,6 +80,7 @@ class Toy_Experiment(Experiment):
             self.generate_samples()
             self.make_plots()
 
+        self.make_video()
         self.finish_up()
 
     def load_data(self):
@@ -136,7 +133,7 @@ class Toy_Experiment(Experiment):
                 # Read in the "n_samples" parameter specifying how many samples to generate
                 # Call the model.sample_n_parallel(n_samples) method to perform the sampling
                 n_samples = get(self.params, "n_samples", 1000000)
-                print(f"generate_samples: Starting generation of {n_samples} samples")
+                print(f"generate_samples: {i}.Starting generation of {n_samples} samples")
                 t0 = time.time()
                 sample = self.model.sample_n(n_samples)
                 t1 = time.time()
@@ -144,7 +141,7 @@ class Toy_Experiment(Experiment):
                 self.params["sampletime"] = sampletime
                 bay_samples.append(sample)
 
-                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime:.2f} seconds")
+                print(f"generate_samples {i}: Finished generation of {n_samples} samples after {sampletime:.2f} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
                     np.save(f"samples/samples_final_{i}.npy", self.samples)
@@ -164,3 +161,21 @@ class Toy_Experiment(Experiment):
             print("make_plots: Finished making plots")
         else:
             print("make_plots: plot set to False")
+
+    def make_video(self):
+        video = get(self.params, "video", False)
+
+        if video:
+            n_samples = get(self.params, "n_samples", 1000000)
+            print(f"make_video: Starting generation of video frame samples")
+            t0 = time.time()
+            sample = self.model.sample_n_evolution(n_samples)
+            t1 = time.time()
+            videosampletime = t1 - t0
+            self.params["videosampletime"] = videosampletime
+            print(f"make_video: Drawing videos")
+            t0 = time.time()
+            self.model.toy_video(sample)
+            t1 = time.time()
+            videotime = t1 - t0
+            self.params["videotime"] = videotime

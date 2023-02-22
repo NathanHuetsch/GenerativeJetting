@@ -76,10 +76,3 @@ for j in range(par["n_epochs"]):
         plt.close()
     except ValueError: #file does not exist
         plt.close()
-
-
-
-
-
-
-

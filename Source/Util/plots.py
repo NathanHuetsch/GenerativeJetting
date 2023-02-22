@@ -63,12 +63,9 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             colors = ["#e41a1c", "#3b528b", "#1a8507"]
             dup_last = lambda a: np.append(a, a[-1])
 
-            if weight_samples == 1:
-                fig1, axs = plt.subplots(3, 1, sharex=True,
-                        gridspec_kw={"height_ratios" : [4, 1, 1], "hspace" : 0.00})
-            else:
-                fig1, axs = plt.subplots(5, 1, sharex=True,
-                        gridspec_kw={"height_ratios" : [4, 1, 1, 1, 1], "hspace" : 0.00})
+            fig1, axs = plt.subplots(3, 1, sharex=True,
+                    gridspec_kw={"height_ratios" : [4, 1, 1], "hspace" : 0.00})
+
             if n_epochs is not None:
                 if n_jets is not None:
                      fig1.suptitle(f"After training for {n_epochs+1} epochs for {n_jets} jets")
@@ -113,14 +110,6 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
                 [cap.set_alpha(0.5) for cap in caps]
                 [bar.set_alpha(0.5) for bar in bars]
 
-            if weight_samples > 1:
-                mu = hists[1] * scales[1]
-                sigma = hist_errors[1] * scales[1]
-                train = hists [0] * scales[0]
-                axs[3].step(bins, dup_last(sigma /mu) , label=label, color="#3b528b",
-                        linewidth=1.0, where="post")
-                axs[4].step(bins, dup_last(np.abs(train - mu )/mu) , label=label,
-                        color="#3b528b", linewidth=1.0, where="post")
 
             axs[0].legend(loc="upper right", frameon=False)
             axs[0].set_ylabel("Normalized", fontsize = FONTSIZE)
@@ -148,17 +137,10 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
             axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
 
-            if weight_samples > 1:
-                axs[3].set_yscale("log")
-                axs[3].set_ylabel(r"$\frac{\sigma_{\mathrm{INN}}}{\mu_{\mathrm{INN}}}$",
-                        fontsize = 10)
-
-                axs[4].set_yscale("log")
-                axs[4].set_ylabel(r"$\frac{\mu_{\mathrm{INN}}-\mu_{\mathrm{True}}}" +
-                                  r"{\mu_{\mathrm{INN}}}$", fontsize = 10)
 
             plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
             plt.close()
+
 
 def delta_phi(y, idx1, idx2):
     # return y[:,idx1] - y[:,idx2]
@@ -240,7 +222,7 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
         plt.savefig(pp, format="pdf")
         plt.close()
 
-def plot_loss(pp,total, regular, kl, regularizeGMM, loss_log=True):
+def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False, loss_log=True):
     y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
@@ -253,9 +235,59 @@ def plot_loss(pp,total, regular, kl, regularizeGMM, loss_log=True):
     if loss_log:
         axes.set_yscale("log")
         axes.plot(y, y*0, "k--")
-    
     axes.set_xlabel("Number of Iterations", fontsize=14)
     axes.set_ylabel("Loss", fontsize=14)
     axes.legend(fontsize=14)
     fig.savefig(pp, format="pdf")
+    plt.close()
+
+def plot_binned_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, weight_samples=1,
+                              predict_weights=None, n_epochs=None):
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+
+    FONTSIZE =12
+    obs_predict = obs_predict.reshape(weight_samples,
+                                      len(obs_predict) // weight_samples)
+    hist_weights = (weight_samples * [None] if predict_weights is None
+                    else predict_weights.reshape(obs_predict.shape))
+    _, bins = np.histogram(obs_predict[0,:], bins=bins, range=range)
+    hists_g = np.array([np.histogram(obs_predict[i, :], bins=bins,
+                                     weights=hist_weights[i])[0]
+                        for i in np.arange(weight_samples)])
+    hist = np.mean(hists_g, axis=0)
+    hist_errors = np.std(hists_g, axis=0)
+
+
+    integral = np.sum((bins[1:] - bins[:-1]) * hist)
+    scales = 1 / integral if integral != 0. else 1.
+    mu = hist * scales
+    sigma = hist_errors * scales
+    dup_last = lambda a: np.append(a, a[-1])
+
+    fig, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios" : [1,1], "hspace" : 0.00})
+    axs[0].step(bins, dup_last(sigma), label=r"$\sigma$", color="#3b528b",
+                linewidth=1.0, where="post")
+    axs[1].step(bins, dup_last(sigma / mu), label=r"$\frac{\sigma}{\mu}$", color="#1a8507",
+                linewidth=1.0, where="post")
+
+    #axs[1].set_yscale("log")
+    axs[1].set_ylabel(r"Relative Uncertainty",
+                      fontsize=FONTSIZE)
+
+    #axs[0].set_yscale("log")
+    axs[0].set_ylabel(r"Absolute Uncertainty", fontsize=FONTSIZE)
+    #axs[1].set_ylim(0,1)
+
+    axs[0].legend(loc="upper right", frameon=False)
+    axs[1].legend(loc="upper right", frameon=False)
+
+    fig.suptitle(f"After training for {n_epochs + 1} epochs")
+    fig.align_labels()
+    plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
+               fontsize=FONTSIZE)
+
+
+    plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
     plt.close()
