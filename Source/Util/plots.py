@@ -113,7 +113,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
 
             axs[0].legend(loc="upper right", frameon=False)
             axs[0].set_ylabel("Normalized", fontsize = FONTSIZE)
-            if "p_{T" in name:
+            if "p_{T" in name or "mu" in name:
                 axs[0].set_yscale("log")
 
             axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{True}}$",
@@ -222,7 +222,7 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
         plt.savefig(pp, format="pdf")
         plt.close()
 
-def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False):
+def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False, loss_log=True):
     y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
@@ -232,7 +232,10 @@ def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False):
     if regularizeGMM:
         axes.plot(y, regularizeGMM, label="GMM regularization")
 
-    axes.set_yscale("log")
+    if loss_log:
+        axes.set_yscale("log")
+        axes.plot(y, y*0, "k--")
+
     axes.set_xlabel("Number of Iterations", fontsize=14)
     axes.set_ylabel("Loss", fontsize=14)
     axes.legend(fontsize=14)
@@ -276,7 +279,7 @@ def plot_binned_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, wei
 
     #axs[0].set_yscale("log")
     axs[0].set_ylabel(r"Absolute Uncertainty", fontsize=FONTSIZE)
-    axs[1].set_ylim(0,1)
+    #axs[1].set_ylim(0,1)
 
     axs[0].legend(loc="upper right", frameon=False)
     axs[1].legend(loc="upper right", frameon=False)

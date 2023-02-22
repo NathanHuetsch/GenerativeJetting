@@ -70,14 +70,22 @@ class ToySimulator:
         n_dim = get(self.params, "n_dim", 2)
         mu = get(self.params, "mu", 1.)
         sigma = get(self.params, "sigma", .1)
-        half = get(self.params, "half", False)
+        batch_size = get(self.params, "batch_size_gen_toy", 100000)
+        xmin, xmax = -1.5, 1.5 #boundaries in our plots
 
-        R = np.abs(sigma * np.random.randn(self.n_data) + mu)
-        phi = np.random.rand(self.n_data, n_dim - 1)
-        phi[:, -1] *= 2*np.pi if not half else np.pi
-        phi[:, :-1] *= np.pi
-
-        samples = self.getCartesian(R, phi)
+        samples = np.zeros((0, n_dim))
+        acc_rates = []
+        while np.shape(samples)[0] < self.n_data:
+            x = np.random.uniform(low=xmin, high=xmax, size=(batch_size, n_dim))
+            def p(x):
+                return 1/(2*np.pi*sigma**2)**(n_dim/2) * np.exp(-(np.sum(x**2, axis=1)**.5-mu)**2 / (2*sigma**2))
+            px = p(x)
+            y = np.random.uniform(low=0., high=np.max(px), size=batch_size)
+            idx = np.where(y < px)[0]
+            samples = np.append(samples, x[idx,:], axis=0)
+            acc_rates = np.append(acc_rates, len(idx) / batch_size)
+        samples = samples[:self.n_data, :]
+        #print(f"Sampled {self.n_data} events with acceptance rate {np.mean(acc_rates):.2e}")
         return samples
 
     @staticmethod

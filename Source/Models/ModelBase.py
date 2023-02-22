@@ -10,6 +10,11 @@ from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
 
+import cv2
+import os
+from natsort import natsorted, ns
+
+
 
 class GenerativeModel(nn.Module):
     """
@@ -56,6 +61,7 @@ class GenerativeModel(nn.Module):
         self.n_jets = get(self.params,'n_jets',2)
         self.con_depth = get(self.params,'con_depth',0)
         self.batch_size = self.params["batch_size"]
+        self.batch_size_sample = get(self.params, "batch_size_sample", self.batch_size)
         self.istoy = get(self.params, "istoy", False)
         self.epoch = get(self.params, "total_epochs", 0)
         self.net = self.build_net()
@@ -435,7 +441,7 @@ class GenerativeModel(nn.Module):
             obs_train = ToySimulator.get_xsum(self.data_train)
             obs_test = ToySimulator.get_xsum(self.data_test)
             obs_generated = ToySimulator.get_xsum(samples)
-            obs_range = [-2*n_dim, 2*n_dim]
+            obs_range = [-1.5*n_dim, 1.5*n_dim]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
                      name=obs_name, range=obs_range)
 
@@ -446,4 +452,45 @@ class GenerativeModel(nn.Module):
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss)
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
+
+    def toy_video(self, samples = None):
+        n_epochs = self.epoch + get(self.params, "total_epochs", 0)
+        path = f"videos/epoch_{n_epochs}"
+        os.makedirs(path, exist_ok=True)
+
+        video_dim = get(self.params, "video_dim", self.dim)
+        for i in range(0, video_dim):
+            image_folder = f"{path}/dim_{i}"
+            os.makedirs(image_folder, exist_ok=True)
+            obs_train = self.data_train[:, i]
+            obs_test = self.data_test[:, i]
+            obs_name = self.obs_names[i]
+            obs_range = None if self.obs_ranges == None else self.obs_ranges[i]
+            frames = samples.shape[-1]
+            for t in range(frames):
+                out = f"{path}/dim_{i}/timestep_{t}.png"
+                obs_generated = samples[:,i, t]
+
+                plot_obs(pp=out,
+                         obs_train=obs_train,
+                         obs_test=obs_test,
+                         obs_predict=obs_generated,
+                         name=obs_name,
+                         range=obs_range)
+
+            video_name = f"videos/epoch_{n_epochs}_dim_{i}_frames{frames}.mp4"
+
+            images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+            images = natsorted(images)
+            frame = cv2.imread(os.path.join(image_folder, images[0]))
+
+            height, width, layers = frame.shape
+
+            video = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'DIVX'), 5, (width, height))
+
+            for image in images:
+                video.write(cv2.imread(os.path.join(image_folder, image)))
+
+            cv2.destroyAllWindows()
+            video.release()
