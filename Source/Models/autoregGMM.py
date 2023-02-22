@@ -30,13 +30,14 @@ class AutoRegGMM(GenerativeModel):
         self.l2_p = get(params, "l2_p", 2)
         self.n_gauss = n_gauss
         assert n_gauss is not None, "build_model: n_gauss not specified"
-        print(f"Build model AutoRegGMM with n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
-              f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss} with bayesian={self.bayesian}")
+        print(f"Model AutoRegGMM hyperparameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
+              f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
         
         params["vocab_size"] = 3 * n_gauss
         params["block_size"] = params["dim"]
         self.block_size = params["block_size"]
         super().__init__(params)
+        print(f"Bayesianization hyperparameters: bayesian={self.bayesian}, prior_prec={get(self.params, 'prior_prec', 1.)}, iterations={self.iterations}")
 
         if self.conditional:
             raise ValueError("conditional=True not implemented for autoregressive models")
@@ -60,16 +61,20 @@ class AutoRegGMM(GenerativeModel):
         mix = D.Categorical(weights)
         comp = D.Normal(mu, sigma)
         gmm = D.MixtureSameFamily(mix, comp)
-        loss = -gmm.log_prob(targets).mean()
 
-        loss -= self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))
+        # log Likelihood loss
+        loss = -gmm.log_prob(targets).mean()
+        self.regular_loss.append(-gmm.log_prob(targets).mean().detach().cpu().numpy())
+
+        # GMM weight regularization
         if self.l2_lambda > 0.:
+            loss = loss - self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))
             self.regularizeGMM_loss.append( (-self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))).detach().cpu().tolist())
 
-        self.regular_loss.append(-gmm.log_prob(targets).mean().detach().cpu().numpy())
+        # KL loss
         if self.bayesian:
-            loss += self.net.KL() / len(self.train_loader.dataset)
-            self.kl_loss.append( (self.net.KL() / len(self.train_loader.dataset)).detach().cpu().tolist())
+            loss = loss + self.net.KL() / len(self.data_train)
+            self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
 
         if getMore:
             logLikelihood = torch.sum(gmm.log_prob(targets), dim=-1)
@@ -84,6 +89,19 @@ class AutoRegGMM(GenerativeModel):
         :n_samples: Number of samples to be generated
         :returns: Generated samples in the shape (n_samples, block_size)
         """
+        if self.net.bayesian >= 1:
+            self.net.map = get(self.params, "fix_mu", False)
+            for i in range(self.net.n_blocks):
+                self.net.transformer.h[i].mlp.c_fc.random = None
+                self.net.transformer.h[i].mlp.c_proj.random = None
+        if self.net.bayesian >= 2:
+            for i in range(self.net.n_blocks):
+                self.net.transformer.h[i].attn.c_attn.random = None
+                self.net.transformer.h[i].attn.c_proj.random = None
+        if self.net.bayesian >= 3:
+            self.net.transformer.wte.random = None
+            self.net.lm_head.random = None
+            
         self.eval()
 
         n_batches = int(n_samples / self.batch_size)+1

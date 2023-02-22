@@ -144,7 +144,7 @@ class Toy_Experiment(Experiment):
                 self.params["sampletime"] = sampletime
                 bay_samples.append(sample)
 
-                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime} seconds")
+                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime:.2f} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
                     np.save(f"samples/samples_final_{i}.npy", self.samples)

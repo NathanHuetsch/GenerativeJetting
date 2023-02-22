@@ -408,7 +408,7 @@ class GenerativeModel(nn.Module):
             obs_train = ToySimulator.get_xsum(self.data_train)
             obs_test = ToySimulator.get_xsum(self.data_test)
             obs_generated = ToySimulator.get_xsum(samples)
-            obs_range = [-2*n_dim, 2*n_dim]
+            obs_range = [-1.5*n_dim, 1.5*n_dim]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
                      name=obs_name, range=obs_range)
 
@@ -419,4 +419,4 @@ class GenerativeModel(nn.Module):
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss)
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
