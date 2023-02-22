@@ -1,13 +1,14 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d_TBD_Resnet_800l8d"
-run_name : "CosineAnnealing_Start1e3_1e-6LR"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/JetBayesian"
+run_name : "First_smallest"
 redirect_console : True
 
 # #########
 # # Data: #
 # #########
+bayesian: 2
 data_path : "/remote/gpu07/huetsch/data/z+njet_full.h5"
 data_type: np
 preprocess : 3
@@ -31,16 +32,16 @@ weight_decay : 0
 betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
-eta_min: 1.e-6
+#eta_min: 1.e-6
 loss_type: "l2"
 multiple_t: False
 
-n_epochs : 20000
+n_epochs : 5000
 validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 4000
+sample_every: 1000
 sample_every_n_samples: 1000000
 # #################
 # # Architecture: #
@@ -54,8 +55,8 @@ encode_t_scale: 10
 
 network: "Resnet"
 n_blocks : 1
-intermediate_dim: 800
-layers_per_block: 8
+intermediate_dim: 128
+layers_per_block: 4
 resid_pdrop: 0
 
 n_layers: 5

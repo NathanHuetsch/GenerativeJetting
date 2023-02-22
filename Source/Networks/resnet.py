@@ -118,6 +118,7 @@ class Resnet(nn.Module):
 
         for block in self.blocks[:-1]:
             x = x + block(torch.cat([x, add_input], 1))
+        #print(x.shape, add_input.shape)
         x = self.blocks[-1](torch.cat([x, add_input], 1))
 
         for bay_layer in self.bayesian_layers:

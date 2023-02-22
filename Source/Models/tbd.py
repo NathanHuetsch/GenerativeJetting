@@ -221,13 +221,13 @@ def sine_cosine_trajectory(x, x_1, t):
     return x_t, x_t_dot
 
 def sine2_cosine2_trajectory(x, x_1, t):
-    c = torch.cos(t * np.pi / 2)**2
-    s = torch.sin(t * np.pi / 2)**2
-    x_t = c * x + s * x_1
+    c = torch.cos(t * np.pi / 2)
+    s = torch.sin(t * np.pi / 2)
+    x_t = c**2 * x + s**2 * x_1
 
     c_dot = -np.pi / 2 * s
     s_dot = np.pi / 2 * c
-    x_t_dot = c_dot * x + s_dot * x_1
+    x_t_dot = 2 * c_dot * c * x + 2 * s_dot * s * x_1
     return x_t, x_t_dot
 
 def linear_trajectory(x, x_1, t):

@@ -10,9 +10,9 @@ from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
 
-#import cv2
+import cv2
 import os
-#from natsort import natsorted, ns
+from natsort import natsorted, ns
 
 
 
@@ -434,7 +434,8 @@ class GenerativeModel(nn.Module):
         path = f"videos/epoch_{n_epochs}"
         os.makedirs(path, exist_ok=True)
 
-        for i in range(0, self.dim):
+        video_dim = get(self.params, "video_dim", self.dim)
+        for i in range(0, video_dim):
             image_folder = f"{path}/dim_{i}"
             os.makedirs(image_folder, exist_ok=True)
             obs_train = self.data_train[:, i]

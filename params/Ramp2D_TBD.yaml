@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/Bayesian/BatchSize"
-run_name : "50000Batch"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dSphere/TBD/Bayesian/Larger"
+run_name : "Sin2Cos2"
 redirect_console : True
 istoy: True
 bayesian: 2
@@ -11,7 +11,8 @@ bayesian: 2
 # #########
 load_dataset : False
 n_data: 1000000
-toy_type: "ramp"
+toy_type: "gauss_sphere"
+n_dim : 10
 obs_ranges: [-2,2]
 # ##############
 # # Training:  #
@@ -28,7 +29,7 @@ betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 200
+n_epochs : 400
 validate: False
 validate_every : 10
 
@@ -41,10 +42,10 @@ sample_every_n_samples: 100000
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 4
-intermediate_dim : 40
+layers_per_block : 6
+intermediate_dim : 128
 n_head: 4
-trajectory: "linear_trajectory"
+trajectory: "sine2_cosine2_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
