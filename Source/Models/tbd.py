@@ -25,6 +25,21 @@ class TBD(GenerativeModel):
 
         self.multiple_t = get(self.params, "multiple_t", False)
 
+        self.C = get(self.params, "C", 1)
+        if self.C != 1:
+            print(f"C is {self.C}")
+
+        self.beta_dist = get(self.params, "beta_dist", False)
+        if self.beta_dist:
+            self.beta_dist_a = get(self.params, "beta_dist_a", 1)
+            self.beta_dist_b = get(self.params, "beta_dist_b", 0.7)
+            self.dist = torch.distributions.beta.Beta(concentration1=torch.Tensor([self.beta_dist_a]),
+                                                      concentration0=torch.Tensor([self.beta_dist_b]))
+            print(f"Using beta distribution to sample t with params {self.beta_dist_a, self.beta_dist_b}")
+        else:
+            self.dist = torch.distributions.uniform.Uniform(low=0, high=1)
+            print(f"Using uniform distribution to sample t")
+
     def build_net(self):
         """
         Build the network
@@ -73,12 +88,12 @@ class TBD(GenerativeModel):
         self.net.kl = 0
         drift = self.net(x_t, t, condition)
         if self.loss_type=="l2":
-            loss = 0.5 * torch.mean((drift - x_t_dot) ** 2) + self.net.kl / len(self.data_train)
+            loss = 0.5 * torch.mean((drift - x_t_dot) ** 2) + self.C*self.net.kl / len(self.data_train)
         elif self.loss_type=="l1":
-            loss = torch.mean(torch.abs(drift-x_t_dot)) + self.net.kl / len(self.data_train)
+            loss = torch.mean(torch.abs(drift-x_t_dot)) + self.C*self.net.kl / len(self.data_train)
         return loss
 
-    def sample_n(self, n_samples, prior_samples=None, con_depth=0, t=1):
+    def sample_n(self, n_samples, prior_samples=None, con_depth=0):
         """
         Generate n_samples new samples.
         Start from Gaussian random noise and solve the reverse ODE to obtain samples
@@ -148,7 +163,7 @@ class TBD(GenerativeModel):
                     c = condition[batch_size * i: batch_size * (i + 1)].flatten()
                 else:
                     c = None
-                sol = solve_ivp(f, (t, 0), x_T[batch_size * i: batch_size * (i + 1)].flatten(), args=[c])
+                sol = solve_ivp(f, (1, 0), x_T[batch_size * i: batch_size * (i + 1)].flatten(), args=[c])
 
                 if self.conditional:
                     c = condition[batch_size * i: batch_size * (i + 1)]
@@ -164,9 +179,49 @@ class TBD(GenerativeModel):
                 events.append(s)
         return np.concatenate(events, axis=0)[:n_samples]
 
+    def sample_n_evolution(self, n_samples):
+
+        n_frames = get(self.params, "n_frames", 1000)
+        t_frames = np.linspace(0, 1, n_frames)[::-1]
+
+        batch_size = get(self.params, "batch_size", 8192)
+        x_T = np.random.randn(n_samples + batch_size, self.dim)
+
+        def f(t, x_t, c=None):
+            x_t_torch = torch.Tensor(x_t).reshape((batch_size, self.dim)).to(self.device)
+            t_torch = t * torch.ones_like(x_t_torch[:, [0]])
+
+            with torch.no_grad():
+                if c is not None:
+                    c_torch = torch.Tensor(c).reshape((batch_size, self.n_con)).to(self.device)
+                    f_t = self.net(x_t_torch, t_torch, c_torch).detach().cpu().numpy().flatten()
+                else:
+                    f_t = self.net(x_t_torch, t_torch).detach().cpu().numpy().flatten()
+            return f_t
+
+        events = []
+        with torch.no_grad():
+            for i in range(int(n_samples / batch_size) + 1):
+                sol = solve_ivp(f, (1, 0), x_T[batch_size * i: batch_size * (i + 1)].flatten(), t_eval=t_frames)
+                s = sol.y.reshape(batch_size, self.dim, -1)
+                events.append(s)
+        return np.concatenate(events, axis=0)[:n_samples]
+
+
+
 def sine_cosine_trajectory(x, x_1, t):
     c = torch.cos(t * np.pi / 2)
     s = torch.sin(t * np.pi / 2)
+    x_t = c * x + s * x_1
+
+    c_dot = -np.pi / 2 * s
+    s_dot = np.pi / 2 * c
+    x_t_dot = c_dot * x + s_dot * x_1
+    return x_t, x_t_dot
+
+def sine2_cosine2_trajectory(x, x_1, t):
+    c = torch.cos(t * np.pi / 2)**2
+    s = torch.sin(t * np.pi / 2)**2
     x_t = c * x + s * x_1
 
     c_dot = -np.pi / 2 * s
