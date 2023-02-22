@@ -26,9 +26,9 @@ class AutoRegGMM(GenerativeModel):
         assert intermediate_fac is not None, "build_model: intermediate_fac not specified"
         params["intermediate_dim"] = n_head * n_per_head
         n_gauss = get(params, "n_gauss", None)
+        self.n_gauss = n_gauss
         self.l2_lambda = get(params, "l2_lambda", 0.)
         self.l2_p = get(params, "l2_p", 2)
-        self.n_gauss = n_gauss
         assert n_gauss is not None, "build_model: n_gauss not specified"
         print(f"Model AutoRegGMM hyperparameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
               f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
@@ -68,12 +68,12 @@ class AutoRegGMM(GenerativeModel):
 
         # GMM weight regularization
         if self.l2_lambda > 0.:
-            loss = loss - self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))
+            loss -= self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))
             self.regularizeGMM_loss.append( (-self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))).detach().cpu().tolist())
 
         # KL loss
         if self.bayesian:
-            loss = loss + self.net.KL() / len(self.data_train)
+            loss += self.net.KL() / len(self.data_train)
             self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
 
         if getMore:

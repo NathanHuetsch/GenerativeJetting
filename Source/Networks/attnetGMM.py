@@ -39,10 +39,8 @@ class CausalSelfAttention(nn.Module):
         self.c_proj = VBLinear(self.intermediate_dim, self.intermediate_dim, prior_prec = self.prior_prec) \
                       if self.bayesian>=2 else nn.Linear(self.intermediate_dim, self.intermediate_dim)
 
-        # regularization
         self.attn_dropout = nn.Dropout(self.attn_pdrop)
         self.resid_dropout = nn.Dropout(self.resid_pdrop)
-        # causal mask to ensure that attention is only applied to the left in the input sequence
         self.register_buffer("bias", torch.tril(torch.ones(self.block_size, self.block_size))
                                      .view(1, 1, self.block_size, self.block_size))
 
@@ -78,9 +76,9 @@ class TransformerBlock(nn.Module):
         self.intermediate_dim = params["intermediate_dim"]
         self.intermediate_fac = params.get("intermediate_fac", 4)
         self.resid_pdrop = params.get("resid_pdrop", 0.1)
-
         self.bayesian = params.get("bayesian", 0)
         self.prior_prec = params.get("prior_prec", 1.)
+
 
         self.ln_1 = nn.LayerNorm(self.intermediate_dim)
         self.attn = CausalSelfAttention(params)
@@ -118,7 +116,6 @@ class attnetGMM(nn.Module):
         self.intermediate_dim = params["intermediate_dim"]
         self.n_gauss = params["n_gauss"]
         self.embd_pdrop = params.get("embd_pdrop", 0.1)
-
         self.bayesian = params.get("bayesian", False)
         self.prior_prec = params.get("prior_prec", 1.)
 

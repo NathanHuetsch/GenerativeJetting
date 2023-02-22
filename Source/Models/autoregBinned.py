@@ -13,6 +13,7 @@ class AutoRegBinned(GenerativeModel):
     """
 
     def __init__(self, params):
+        self.bayesian = get(params, "bayesian", 0)
         n_blocks = get(params, "n_blocks", None)
         assert n_blocks is not None, "build_model: n_blocks not specified"
         n_head = get(params, "n_head", None)
@@ -25,13 +26,14 @@ class AutoRegBinned(GenerativeModel):
         n_bins = get(params, "n_bins", None)
         self.n_bins = n_bins
         assert n_bins is not None, "build_model: n_bins not specified"
-        print(f"Build model AutoRegBinned with n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
+        print(f"Build model AutoRegBinned parameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
               f"intermediate_fac={intermediate_fac}, n_bins={n_bins}")
         
         params["vocab_size"] = self.n_bins
         params["block_size"] = params['dim']
         self.block_size = params["block_size"]
         super().__init__(params)
+        print(f"Bayesianization hyperparameters: bayesian={self.bayesian}, prior_prec={get(self.params, 'prior_prec', 1.)}, iterations={self.iterations}")
 
         if self.params["discretize"]==0:
             raise ValueError("AutoReg.__init__: No discretization, please set discretize to a non-zero value")
@@ -42,7 +44,7 @@ class AutoRegBinned(GenerativeModel):
         """Build the network"""
         return Source.Networks.attnetBinned(self.params).to(self.device)
 
-    def batch_loss(self, x, conditional=False):
+    def batch_loss(self, x, conditional=False, getMore=False):
         """
         Loss function for autoregressive model
         :x: Training data in shape (batch_size, block_size)
@@ -52,10 +54,21 @@ class AutoRegBinned(GenerativeModel):
         targets = x[:, 1:]          #targets (not the first value, because it is inserted into the model)
         logits = self.net(idx)
 
-        #return cross_entropy loss (makes 
         loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1), ignore_index=-1)
-        return loss
 
+        if self.bayesian:
+            loss += self.net.KL() / len(self.data_train)
+            self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
+
+        if getMore:
+            logits_targets = torch.zeros(targets.size())
+            for i in range(np.shape(targets)[0]):
+                for j in range(np.shape(targets)[1]):
+                    logits_targets[i,j] = logits[i,j,targets[i,j]]
+            logLikelihood = torch.sum(F.log_softmax(logits_targets, dim=-1), dim=-1)
+            return loss, torch.exp(logLikelihood), logits
+        else:
+            return loss
     
     def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
         """

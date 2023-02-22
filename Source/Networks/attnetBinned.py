@@ -30,16 +30,16 @@ class CausalSelfAttention(nn.Module):
         self.block_size = params["block_size"]
         self.attn_pdrop = params.get("attn_pdrop", 0.1)
         self.resid_pdrop = params.get("resid_pdrop", 0.1)
+        self.bayesian = params.get("bayesian", 0)
+        self.prior_prec = params.get("prior_prec", 1.)
     
-        assert self.intermediate_dim % self.n_head == 0
-        # key, query, value projections for all heads, but in a batch
-        self.c_attn = nn.Linear(self.intermediate_dim, 3 * self.intermediate_dim)
-        # output projection
-        self.c_proj = nn.Linear(self.intermediate_dim, self.intermediate_dim)
-        # regularization
+        self.c_attn = VBLinear(self.intermediate_dim, 3 * self.intermediate_dim, prior_prec = self.prior_prec) \
+                      if self.bayesian>=2 else nn.Linear(self.intermediate_dim, 3 * self.intermediate_dim)
+        self.c_proj = VBLinear(self.intermediate_dim, self.intermediate_dim, prior_prec = self.prior_prec) \
+                      if self.bayesian>=2 else nn.Linear(self.intermediate_dim, self.intermediate_dim)
+        
         self.attn_dropout = nn.Dropout(self.attn_pdrop)
         self.resid_dropout = nn.Dropout(self.resid_pdrop)
-        # causal mask to ensure that attention is only applied to the left in the input sequence
         self.register_buffer("bias", torch.tril(torch.ones(self.block_size, self.block_size))
                                      .view(1, 1, self.block_size, self.block_size))
 
@@ -64,6 +64,9 @@ class CausalSelfAttention(nn.Module):
         y = self.resid_dropout(self.c_proj(y))
         return y
 
+    def KL(self):
+        return self.c_attn.KL() + self.c_proj.KL() if self.bayesian >=2 else 0.
+
 class TransformerBlock(nn.Module):
     """ A transformer block, consisting of a CausalSelfAttention block and a multilayer perceptron"""
 
@@ -72,13 +75,17 @@ class TransformerBlock(nn.Module):
         self.intermediate_dim = params["intermediate_dim"]
         self.intermediate_fac = params.get("intermediate_fac", 4)
         self.resid_pdrop = params.get("resid_pdrop", 0.1)
+        self.bayesian = params.get("bayesian", 0)
+        self.prior_prec = params.get("prior_prec", 1.)
         
         self.ln_1 = nn.LayerNorm(self.intermediate_dim)
         self.attn = CausalSelfAttention(params)
         self.ln_2 = nn.LayerNorm(self.intermediate_dim)
         self.mlp = nn.ModuleDict(dict(
-            c_fc    = nn.Linear(self.intermediate_dim, self.intermediate_fac * self.intermediate_dim),
-            c_proj  = nn.Linear(self.intermediate_fac * self.intermediate_dim, self.intermediate_dim),
+            c_fc    = VBLinear(self.intermediate_dim, self.intermediate_fac*self.intermediate_dim, self.prior_prec) \
+                if self.bayesian>=1 else nn.Linear(self.intermediate_dim, self.intermediate_fac * self.intermediate_dim),
+            c_proj  = VBLinear(self.intermediate_dim*self.intermediate_fac, self.intermediate_dim, self.prior_prec) \
+                if self.bayesian>=1 else nn.Linear(self.intermediate_dim*self.intermediate_fac, self.intermediate_dim),
             act     = NewGELU(),
             dropout = nn.Dropout(self.resid_pdrop),
         ))
@@ -90,7 +97,8 @@ class TransformerBlock(nn.Module):
         x = x + self.attn(self.ln_1(x))
         x = x + self.mlpf(self.ln_2(x))
         return x
-
+    def KL(self):
+        return self.attn.KL() + self.mlp.c_fc.KL() + self.mlp.c_proj.KL() if self.bayesian>=1 else 0.
 class attnetBinned(nn.Module):
     """Autoregressive transformer model, following the GPT architecture"""
 
@@ -103,6 +111,8 @@ class attnetBinned(nn.Module):
         self.n_head = params["n_head"]
         self.intermediate_dim = params["intermediate_dim"]
         self.embd_pdrop = params.get("embd_pdrop", 0.1)
+        self.bayesian = params.get("bayesian", 0)
+        self.prior_prec = params.get("prior_prec", 1.)
 
         self.transformer = nn.ModuleDict(dict(
             wte = nn.Embedding(self.vocab_size, self.intermediate_dim),
@@ -111,7 +121,8 @@ class attnetBinned(nn.Module):
             h = nn.ModuleList([TransformerBlock(params) for _ in range(self.n_blocks)]),
             ln_f = nn.LayerNorm(self.intermediate_dim),
         ))
-        self.lm_head = nn.Linear(self.intermediate_dim, self.vocab_size, bias=False)
+        self.lm_head = VBLinear(self.intermediate_dim, self.vocab_size) \
+                       if self.bayesian>=3 else nn.Linear(self.intermediate_dim, self.vocab_size)
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
@@ -147,3 +158,10 @@ class attnetBinned(nn.Module):
         logits = self.lm_head(x)
 
         return logits
+
+    def KL(self):
+        assert self.bayesian!=0
+        kl = self.lm_head.KL() if self.bayesian>=3 else 0.
+        for i in range(self.n_blocks):
+            kl += self.transformer.h[i].KL()
+        return kl
