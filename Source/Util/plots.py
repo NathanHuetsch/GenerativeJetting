@@ -234,7 +234,6 @@ def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False, loss_log=T
 
     if loss_log:
         axes.set_yscale("log")
-        axes.plot(y, y*0, "k--")
     axes.set_xlabel("Number of Iterations", fontsize=14)
     axes.set_ylabel("Loss", fontsize=14)
     axes.legend(fontsize=14)

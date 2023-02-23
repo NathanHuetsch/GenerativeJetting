@@ -37,7 +37,7 @@ class Toy_Experiment(Experiment):
 
         if get(self.params, "toy_type", "ramp")=="ramp":
             self.n_dim = get(self.params, "n_flat", 1)+get(self.params, "n_lin", 1)+get(self.params, "n_quad", 0)
-            self.obs_ranges = [[0, 1]] * self.dim
+            self.obs_ranges = [[-.5, 1.5]] * self.dim
         else:
             self.n_dim = get(self.params, "n_dim", 2)
             self.obs_ranges = [[-1.5, 1.5]] * self.dim
