@@ -26,12 +26,10 @@ class Toy_Experiment(Experiment):
         super().__init__(params)
 
         self.istoy = get(self.params,"istoy", True)
-        self.params['istoy'] = self.istoy
         self.n_data = get(self.params, "n_data", 1000000)
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian",False)
         self.prior_prec = get(self.params, "prior_prec", 1.0)
-
 
     def full_run(self):
         self.prepare_experiment()
@@ -143,7 +141,7 @@ class Toy_Experiment(Experiment):
                 self.params["sampletime"] = sampletime
                 bay_samples.append(sample)
 
-                print(f"generate_samples: {i}.Finished generation of {n_samples} samples after {sampletime} seconds")
+                print(f"generate_samples {i}: Finished generation of {n_samples} samples after {sampletime:.2f} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
                     np.save(f"samples/samples_final_{i}.npy", self.samples)

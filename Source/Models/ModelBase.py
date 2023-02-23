@@ -5,7 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma
 from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
@@ -61,6 +61,7 @@ class GenerativeModel(nn.Module):
         self.n_jets = get(self.params,'n_jets',2)
         self.con_depth = get(self.params,'con_depth',0)
         self.batch_size = self.params["batch_size"]
+        self.batch_size_sample = get(self.params, "batch_size_sample", self.batch_size)
         self.istoy = get(self.params, "istoy", False)
         self.epoch = get(self.params, "total_epochs", 0)
         self.net = self.build_net()
@@ -69,7 +70,7 @@ class GenerativeModel(nn.Module):
         self.kl_loss = []
         self.regularizeGMM_loss = []
         self.runs = get(self.params, "runs", 0)
-
+        self.iterate_periodically = get(self.params, "iterate_periodically", False)
     def build_net(self):
         pass
 
@@ -105,7 +106,6 @@ class GenerativeModel(nn.Module):
         print(f"train_model: Beginning training. n_epochs set to {n_epochs}")
         for e in range(n_epochs):
             t0 = time.time()
-
             self.epoch = past_epochs + e
             self.train()
             self.train_one_epoch()
@@ -119,7 +119,13 @@ class GenerativeModel(nn.Module):
                                                    n_jets=self.n_jets)
                         self.plot_samples(samples=samples)
                     else:
-                        samples = self.sample_n(self.sample_every_n_samples)
+                        iterations = self.iterations if self.iterate_periodically else 1
+                        bay_samples = []
+                        for i in range(0, iterations):
+                            sample = self.sample_n(self.sample_every_n_samples)
+                            bay_samples.append(sample)
+
+                        samples = np.concatenate(bay_samples)
                         self.plot_toy(samples=samples)
 
             if get(self.params,"save_periodically",False):
@@ -368,7 +374,10 @@ class GenerativeModel(nn.Module):
             iterations = self.iterations
         else:
             path = "plots"
-            iterations = 1
+            if self.iterate_periodically:
+                iterations = self.iterations
+            else:
+                iterations = 1
 
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
         with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
@@ -376,10 +385,8 @@ class GenerativeModel(nn.Module):
                 obs_train = self.data_train[:,i]
                 obs_test = self.data_test[:,i]
                 obs_generated = samples[:,i]
-                # Get the name and the range of the observable
                 obs_name = self.obs_names[i]
                 obs_range = None if self.obs_ranges==None else self.obs_ranges[i]
-                # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,
                          obs_test=obs_test,
@@ -389,6 +396,21 @@ class GenerativeModel(nn.Module):
                          n_epochs=n_epochs,
                          n_jets=None,
                          weight_samples=iterations)
+        if get(self.params, "plot_sigma", False) and iterations > 1:
+            with PdfPages(f"{path}/binned_sigma_{n_epochs}.pdf") as out:
+                for i in range(0, self.dim):
+                    obs_generated = samples[:, i]
+                    # Get the name and the range of the observable
+                    obs_name = self.obs_names[i]
+                    obs_range = None if self.obs_ranges == None else self.obs_ranges[i]
+                    # Create the plot
+                    plot_binned_sigma(pp=out,
+                             obs_predict=obs_generated,
+                             name=obs_name,
+                             range=obs_range,
+                             n_epochs=n_epochs,
+                             weight_samples=iterations)
+
 
         if get(self.params, "toy_type", "ramp") == "gauss_sphere":
             with PdfPages(f"{path}/spherical_{n_epochs}.pdf") as out:
@@ -416,7 +438,7 @@ class GenerativeModel(nn.Module):
             obs_train = ToySimulator.get_xsum(self.data_train)
             obs_test = ToySimulator.get_xsum(self.data_test)
             obs_generated = ToySimulator.get_xsum(samples)
-            obs_range = [-2*n_dim, 2*n_dim]
+            obs_range = [-1.5*n_dim, 1.5*n_dim]
             plot_obs(pp=out, obs_train=obs_train, obs_test=obs_test, obs_predict=obs_generated,
                      name=obs_name, range=obs_range)
 
