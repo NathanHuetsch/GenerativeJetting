@@ -3,15 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Experiments/toy.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/toy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Models/autoregGMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/autoregGMM.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Models/ddpm.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ddpm.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Networks/resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/resnet.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Util/plots.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/plots.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Util/simulateToyData.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/simulateToyData.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/tbd.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -119,7 +111,7 @@
       <workItem from="1676614147126" duration="10362000" />
       <workItem from="1676752346566" duration="18000" />
       <workItem from="1676879025226" duration="15954000" />
-      <workItem from="1677050374085" duration="10365000" />
+      <workItem from="1677050374085" duration="11091000" />
     </task>
     <servers />
   </component>
