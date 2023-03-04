@@ -89,9 +89,9 @@ class TBD(GenerativeModel):
         self.net.kl = 0
         drift = self.net(x_t, t, condition)
         if self.loss_type=="l2":
-            loss = 0.5 * torch.mean((drift - x_t_dot) ** 2) + self.C*self.net.kl / len(self.data_train)
+            loss = 0.5*torch.mean((drift - x_t_dot) ** 2) + self.C*self.net.kl / self.n_traindata
         elif self.loss_type=="l1":
-            loss = torch.mean(torch.abs(drift-x_t_dot)) + self.C*self.net.kl / len(self.data_train)
+            loss = torch.mean(torch.abs(drift-x_t_dot)) + self.C*self.net.kl / self.n_traindata
         return loss
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):
@@ -234,3 +234,18 @@ def linear_trajectory(x, x_1, t):
     x_t = (1 - t) * x + t * x_1
     x_t_dot = x_1 - x
     return x_t, x_t_dot
+
+def vp_trajectory(x, x_1, t, a=19.9, b=0.1):
+
+    e = -1./4. * a * (1-t)**2 - 1./2. * b * (1-t)
+    alpha_t = torch.exp(e)
+    beta_t = torch.sqrt(1-alpha_t**2)
+    x_t = x * alpha_t + x_1 * beta_t
+
+    e_dot = 2 * a * (1-t) + 1./2. * b
+    alpha_t_dot = e_dot * alpha_t
+    beta_t_dot = -2 * alpha_t * alpha_t_dot / beta_t
+    x_t_dot = x * alpha_t_dot + x_1 * beta_t_dot
+    return x_t, x_t_dot
+
+

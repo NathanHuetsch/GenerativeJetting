@@ -8,15 +8,15 @@
 # Copy-Pasted command from the qsub wiki page. Enables the job to see the cluster GPUs
 export CUDA_VISIBLE_DEVICES=$(cat $PBS_GPUFILE | sed s/.*-gpu// )
 export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/lib/python3.9/site-packages
-
+export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/GenerativeJetting
 
 # Activate the python venv environment
 #source venv/bin/activate
 module load anaconda/3.0
 module load cuda/11.7
 # cd into the project folder
-cd GenerativeJetting
+cd GenerativeJetting/Scripts
 
 # Run the actual python script with necessary parameters
-python run_classifier.py "/remote/gpu07/huetsch/GenerativeJetting/params/classifier.yaml"
+python toyrun.py
 

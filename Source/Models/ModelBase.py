@@ -80,6 +80,7 @@ class GenerativeModel(nn.Module):
         self.train_losses = np.array([])
         self.train_losses_epoch = np.array([])
         self.n_trainbatches = len(self.train_loader)
+        self.n_traindata = len(self.data_train)
 
         self.sample_periodically = get(self.params, "sample_periodically", False)
         if self.sample_periodically:

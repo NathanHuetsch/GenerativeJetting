@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/Bayesian/Larger"
-run_name : "Linear_0001C"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/NoBayesian/SigmaFromSize"
+run_name : "Linear_8l_40d"
 redirect_console : True
 
 # #########
@@ -21,7 +21,7 @@ train: True
 log: True
 
 data_split: [0.5, 0, 0.5]
-batch_size : 2048
+batch_size : 10000
 
 optimizer: Adam
 betas : [0.9, 0.99]
@@ -31,26 +31,26 @@ lr : 1.e-2
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 1000
+n_epochs : 500
 validate: False
 validate_every : 10
 
 sample_periodically: True
-sample_every: 100
+sample_every: 5000
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-bayesian: 2
-C : 0.001
-iterations : 25
+bayesian: 0
+C : 1
+iterations : 50
 
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 6
-intermediate_dim : 128
-n_head: 4
+layers_per_block : 8
+intermediate_dim : 40
+n_head: 2
 trajectory: "linear_trajectory"
 encode_t: False
 encode_t_dim: 4
@@ -74,3 +74,4 @@ n_samples : 1000000
 # #############
 plot : True
 plot_sigma : True
+plot_loss : True
