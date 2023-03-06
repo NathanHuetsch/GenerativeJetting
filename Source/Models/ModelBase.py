@@ -119,7 +119,7 @@ class GenerativeModel(nn.Module):
                                                    n_jets=self.n_jets)
                         self.plot_samples(samples=samples)
                     else:
-                        iterations = self.iterations if self.iterate_periodically else 1
+                        iterations = self.iterations if (self.iterate_periodically and self.bayesian) else 1
                         bay_samples = []
                         for i in range(0, iterations):
                             sample = self.sample_n(self.sample_every_n_samples)
@@ -365,6 +365,10 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              range=obs_range,
                              n_jets=j+self.n_jets)
+
+        if get(self.params,"plot_loss", False):
+            out = f"{path}/loss_epoch_{n_epochs}.pdf"
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
 
     def plot_toy(self, samples = None, finished=False):
         os.makedirs(f"plots", exist_ok=True)

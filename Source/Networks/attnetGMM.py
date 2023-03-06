@@ -33,6 +33,7 @@ class CausalSelfAttention(nn.Module):
         self.resid_pdrop = params.get("resid_pdrop", 0.1)
         self.bayesian = params.get("bayesian", 0)
         self.prior_prec = params.get("prior_prec", 1.)
+        self.iterations = params.get("iterations", 1)
 
         self.c_attn = VBLinear(self.intermediate_dim, 3 * self.intermediate_dim, prior_prec = self.prior_prec) \
                       if self.bayesian>=2 else nn.Linear(self.intermediate_dim, 3 * self.intermediate_dim)
@@ -66,7 +67,13 @@ class CausalSelfAttention(nn.Module):
         return y
 
     def KL(self):
-        return self.c_attn.KL() + self.c_proj.KL() if self.bayesian >=2 else 0.
+        if self.bayesian >= 2:
+            c_attn_KL = self.c_attn.KL()
+            c_proj_KL = self.c_proj.KL()
+        elif self.bayesian == 0 and self.iterations > 1:
+            c_attn_KL = .5 * self.prior_prec * self.c_attn.weight.pow(2).sum()
+            c_proj_KL = .5 * self.prior_prec * self.c_proj.weight.pow(2).sum()
+        return c_attn_KL + c_attn_KL
 
 class TransformerBlock(nn.Module):
     """ A transformer block, consisting of a CausalSelfAttention block and a multilayer perceptron"""
@@ -78,7 +85,7 @@ class TransformerBlock(nn.Module):
         self.resid_pdrop = params.get("resid_pdrop", 0.1)
         self.bayesian = params.get("bayesian", 0)
         self.prior_prec = params.get("prior_prec", 1.)
-
+        self.iterations = params.get("iterations", 1)
 
         self.ln_1 = nn.LayerNorm(self.intermediate_dim)
         self.attn = CausalSelfAttention(params)
@@ -101,7 +108,14 @@ class TransformerBlock(nn.Module):
         return x
 
     def KL(self):
-        return self.attn.KL() + self.mlp.c_fc.KL() + self.mlp.c_proj.KL() if self.bayesian>=1 else 0.
+        if self.bayesian >= 1:
+            mlpc_fc_KL = self.mlp.c_fc.KL()
+            mlpc_proj_KL = self.mlp.c_proj.KL()
+        elif self.bayesian==0 and self.iterations > 1:
+            mlpc_fc_KL = .5 * self.prior_prec * self.mlp.c_fc.weight.sum()
+            mlpc_proj_KL = .5 * self.prior_prec * self.mlp.c_proj.weight.sum()
+        return self.attn.KL() + mlpc_fc_KL + mlpc_proj_KL
+            
 class attnetGMM(nn.Module):
     """Autoregressive transformer model, following the GPT architecture"""
 
@@ -118,6 +132,7 @@ class attnetGMM(nn.Module):
         self.embd_pdrop = params.get("embd_pdrop", 0.1)
         self.bayesian = params.get("bayesian", False)
         self.prior_prec = params.get("prior_prec", 1.)
+        self.iterations = params.get("iterations", 1)
 
         self.transformer = nn.ModuleDict(dict(
             wte = VBLinear(1, self.intermediate_dim, self.prior_prec) \
@@ -170,9 +185,16 @@ class attnetGMM(nn.Module):
         return mu, sigma, weights
 
     def KL(self):
-        assert self.bayesian!=0
-        kl =  self.transformer.wte.KL() + self.lm_head.KL() if self.bayesian>=3 else 0.
+        kl = 0.
         for i in range(self.n_blocks):
             kl += self.transformer.h[i].KL()
+            
+        if self.bayesian >= 3:
+            wte_KL = self.transformer.wte.KL()
+            lm_head_KL = self.lm_head.KL()
+            kl += wte_KL + lm_head_KL
+        if self.bayesian == 0 and self.iterations > 1:
+            wte_KL = .5 * self.prior_prec * self.transformer.wte.weight.sum()
+            lm_head_KL = .5 * self.prior_prec * self.lm_head.weight.sum()
+            kl += wte_KL + lm_head_KL
         return kl
-
