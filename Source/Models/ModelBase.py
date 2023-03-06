@@ -5,7 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
 from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
@@ -351,12 +351,12 @@ class GenerativeModel(nn.Module):
 
         if get(self.params, "plot_Mll", False):
             for j,_ in enumerate(plot_train):
-                obs_name = "M_{\mu \mu}"
-                obs_range = [70,120]
+                obs_name = "M_{\ell \ell}"
+                obs_range = [75,110]
                 bin_num = 40
                 data_train = get_M_ll(plot_train[j])
                 data_test = get_M_ll(plot_test[j])
-                data_generated = get_M_ll(plot_samples[j])
+                data_generated = get_M_ll(plot_samples[j][:,:12])
                 with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
                     plot_obs(pp=out,
                              obs_train=data_train,
@@ -365,7 +365,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              range=obs_range,
-                             n_jets=j+self.n_jets)
+                             n_jets=j+self.n_jets,
+                             bins= bin_num)
 
     def plot_toy(self, samples = None, finished=False):
         os.makedirs(f"plots", exist_ok=True)
@@ -414,6 +415,21 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              weight_samples=iterations)
 
+        if get(self.params, "plot_mu_sigma",False) and iterations > 1:
+            with PdfPages(f"{path}/mu_sigma_{n_epochs}.pdf") as out:
+                for i in range(0, self.dim):
+                    obs_generated = samples[:, i]
+                    # Get the name and the range of the observable
+                    obs_name = self.obs_names[i]
+                    obs_range = None if self.obs_ranges == None else self.obs_ranges[i]
+                    # Create the plot
+                    plot_mu_sigma(pp=out,
+                             obs_predict=obs_generated,
+                             name=obs_name,
+                             range=obs_range,
+                             n_epochs=n_epochs,
+                             weight_samples=iterations)
+
 
         if get(self.params, "toy_type", "ramp") == "gauss_sphere":
             with PdfPages(f"{path}/spherical_{n_epochs}.pdf") as out:
@@ -452,7 +468,7 @@ class GenerativeModel(nn.Module):
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss)
 
     def toy_video(self, samples = None):
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)

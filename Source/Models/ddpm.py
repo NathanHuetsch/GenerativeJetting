@@ -118,7 +118,7 @@ class DDPM(GenerativeModel):
                 bay_layer.random = None
 
         self.eval()
-        batch_size = get(self.params, "batch_size_sample", 8192)
+        batch_size = self.batch_size_sample
         events = []
 
         if self.conditional:
