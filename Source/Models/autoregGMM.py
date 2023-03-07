@@ -72,7 +72,7 @@ class AutoRegGMM(GenerativeModel):
             self.regularizeGMM_loss.append( (-self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))).detach().cpu().tolist())
 
         # KL loss
-        if self.bayesian:
+        if self.bayesian or self.iterations > 1:
             loss += self.net.KL() / len(self.data_train)
             self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
 

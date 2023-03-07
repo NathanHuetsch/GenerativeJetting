@@ -20,7 +20,7 @@ def preformat(data, params):
         events = EpppToPTPhiEta(data[:, :-1], reduce_data=False, include_masses=True)
     else:
         events = EpppToPTPhiEta(data, reduce_data=False, include_masses=True)
-
+        
     events[:, 5::4] = events[:, 5::4] - events[:,1,None]
     events[:, 1::4] = (events[:, 1::4] + np.pi) % (2*np.pi)- np.pi
 
@@ -112,7 +112,7 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
     channels = params["channels"]
     conditional = get(params, "conditional", False)
     n_jets = get(params, "n_jets", 2)
-
+    
     if conditional and n_jets != 3:
         cut = 4 - n_jets
         events = data[:, :-cut]

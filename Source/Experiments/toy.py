@@ -30,18 +30,19 @@ class Toy_Experiment(Experiment):
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian",False)
         self.prior_prec = get(self.params, "prior_prec", 1.0)
+        self.toy_type = get(self.params, "toy_type", "ramp")
+        if self.toy_type == "ramp":
+            self.n_dim = get(self.params, "n_flat", 1) + get(self.params, "n_lin", 1) + get(self.params, "n_quad", 0)
+            self.obs_ranges = get(self.params, "obs_ranges", [[-.5, 1.5]]) * self.n_dim
+        else:
+            self.n_dim = get(self.params, "n_dim", 2)
+            self.obs_ranges = get(self.params, "obs_ranges", [[-1.5, 1.5]]) * self.n_dim
+        self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
 
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
 
-        if get(self.params, "toy_type", "ramp")=="ramp":
-            self.n_dim = get(self.params, "n_flat", 1)+get(self.params, "n_lin", 1)+get(self.params, "n_quad", 0)
-            self.obs_ranges = [[-.5, 1.5]] * self.dim
-        else:
-            self.n_dim = get(self.params, "n_dim", 2)
-            self.obs_ranges = [[-1.5, 1.5]] * self.dim
-        self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
         self.data_raw = self.data.detach().cpu().numpy()
 
         if self.iterations > 1 and not self.bayesian:

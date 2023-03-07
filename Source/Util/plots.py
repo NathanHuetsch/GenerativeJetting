@@ -138,10 +138,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
 
 
-            if type(pp) == str:
-                plt.savefig(pp, bbox_inches="tight", pad_inches=0.05)
-            else:
-                plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
+            plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
             plt.close()
 
 
@@ -226,7 +223,7 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
         plt.close()
 
 def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False, loss_log=True):
-    y = np.arange(1, len(total) + 1)
+    y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
     if regular and kl:
@@ -237,7 +234,6 @@ def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False, loss_log=T
 
     if loss_log:
         axes.set_yscale("log")
-        axes.plot(y, y*0, "k--")
     axes.set_xlabel("Number of Iterations", fontsize=14)
     axes.set_ylabel("Loss", fontsize=14)
     axes.legend(fontsize=14)

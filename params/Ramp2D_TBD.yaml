@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/NoBayesian/SigmaFromSize"
-run_name : "Linear_8l_40d"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/Bayesian/SinCos8_40_long"
+run_name : "7l_60d"
 redirect_console : True
 
 # #########
@@ -13,14 +13,13 @@ load_dataset : False
 n_data: 1000000
 toy_type: "ramp"
 n_dim : 2
-obs_ranges: [-2,2]
 # ##############
 # # Training:  #
 # ##############
 train: True
 log: True
 
-data_split: [0.5, 0, 0.5]
+data_split: [0.6, 0, 0.4]
 batch_size : 10000
 
 optimizer: Adam
@@ -31,27 +30,27 @@ lr : 1.e-2
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 500
+n_epochs : 5000
 validate: False
 validate_every : 10
 
 sample_periodically: True
-sample_every: 5000
+sample_every: 500
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
-bayesian: 0
+bayesian: 2
 C : 1
 iterations : 50
 
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 8
-intermediate_dim : 40
+layers_per_block : 7
+intermediate_dim : 60
 n_head: 2
-trajectory: "linear_trajectory"
+trajectory: "sine_cosine_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
