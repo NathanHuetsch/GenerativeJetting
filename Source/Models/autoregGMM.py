@@ -145,7 +145,7 @@ class AutoRegGMM(GenerativeModel):
         idx = self.n_jets * torch.ones(self.batch_size_sample, 1, dtype=torch.int, device=self.device).float()
         for idim in range(self.block_size):
             mu, sigma, weights = self.net(idx)
-
+            
             # generate distribution and next event (standard)                
             mix = D.Categorical(weights[:,-1,:])
             comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
