@@ -70,7 +70,7 @@ class GenerativeModel(nn.Module):
         self.kl_loss = []
         self.regularizeGMM_loss = []
         self.runs = get(self.params, "runs", 0)
-        self.iterate_periodically = get(self.params, "iterate_periodically", False)
+        self.iterate_periodically = get(self.params, "iterate_periodically", True)
     def build_net(self):
         pass
 

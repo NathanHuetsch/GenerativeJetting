@@ -47,8 +47,8 @@ iterations : 50
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 7
-intermediate_dim : 60
+layers_per_block : 4
+intermediate_dim : 40
 n_head: 2
 trajectory: "sine_cosine_trajectory"
 encode_t: False
@@ -67,6 +67,7 @@ warm_start_path : "/remote/gpu05/palacios/GenerativeJetting/runs/z13/TBD_Visuali
 sample: True
 load_best_checkpoint: False
 n_samples : 1000000
+save_samples: True
 
 # #############
 # # Plotting: #

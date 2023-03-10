@@ -7,6 +7,10 @@ class ToySimulator:
         self.type = get(self.params,"toy_type","ramp")
         self.n_data = get(self.params, "n_data", 1000000)
 
+        self.deterministic_data = get(self.params, "deterministic_data", False)
+        if self.deterministic_data:
+            np.random.seed(0)
+
         if self.type == "camel":
             self.data = self.get_camelback()
         elif self.type == "ramp":
