@@ -25,7 +25,7 @@ class AutoRegGMM(GenerativeModel):
         intermediate_fac = get(params, "intermediate_fac", None)
         assert intermediate_fac is not None, "build_model: intermediate_fac not specified"
         params["intermediate_dim"] = n_head * n_per_head
-        n_gauss = get(params, "n_gauss", None)
+        n_gauss = get(params, "n_gauss", round(n_head * n_per_head/3))
         self.n_gauss = n_gauss
         self.l2_lambda = get(params, "l2_lambda", 0.)
         self.l2_p = get(params, "l2_p", 2)
@@ -128,7 +128,7 @@ class AutoRegGMM(GenerativeModel):
         sample = sample[:n_samples]
         return sample
 
-    def sample_n_bonus(self, n_samples, conditional=False, prior_samples=None, con_depth=0, prec=1000):
+    def sample_n_bonus(self, n_samples, xmin, xmax, conditional=False, prior_samples=None, con_depth=0, prec=1000):
         '''
         Variant of sample_n that returns not only the samples, but also the generate Gaussian
         mixture pdf (probstotal) and the pdfs of all individual gaussians (probsindiv)
@@ -155,7 +155,7 @@ class AutoRegGMM(GenerativeModel):
 
             # generate total pdf (using torch.distributions)
             probs = torch.zeros(self.batch_size_sample, prec, dtype=torch.float, device=self.device)
-            vals = torch.linspace(torch.min(idx_next), torch.max(idx_next), prec)
+            vals = torch.linspace(xmin, xmax, prec)
             for ix in range(prec):
                 x=vals[ix]
                 probs[:,ix] = torch.exp(gmm.log_prob(x))
