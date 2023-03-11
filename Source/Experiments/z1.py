@@ -38,10 +38,11 @@ class Z1_Experiment(Experiment):
         self.n_jets = get(self.params, "n_jets", 1)
         if self.channels is None:
             self.channels = np.array([i for i in range(self.n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
+            self.params["channels"] = self.channels
 
         if self.conditional:
             self.n_con = 3
-            self.params['n_con'] = 3
+            self.params["n_con"] = self.n_con
 
         if get(self.params, "plot_channels", None) is None:
             self.plot_channels = self.channels

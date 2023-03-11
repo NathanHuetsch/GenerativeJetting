@@ -55,7 +55,7 @@ class DDPM(GenerativeModel):
             raise NotImplementedError(f"build_model: Network class {network} not recognised")
 
     def get_relative_factor(self,t):
-        return self.betas[t]**2/(2 * self.sigmas[t]**2 * self.alphas[t]*self.One_minus_alphas_bar[t])
+        return self.betas[t]/(np.sqrt(2) * self.sigmas[t] * self.sqrt_alphas[t]*self.sqrt_One_minus_alphas_bar[t])
     def xT_from_x0_and_noise(self, x0, t, noise):
         return self.sqrt_alphas_bar[t]*x0 + self.sqrt_One_minus_alphas_bar[t]*noise
 
@@ -92,8 +92,8 @@ class DDPM(GenerativeModel):
 
         else:
             condition = None
-
-        t = torch.randint(low=1, high=self.timesteps, size=(x.size(0), 1), device=self.device)
+        T = self.timesteps
+        t = torch.randint(low=1, high=T, size=(x.size(0), 1), device=self.device)
         noise = torch.randn_like(x, device=self.device)
 
         xT = self.xT_from_x0_and_noise(x, t, noise)
@@ -101,9 +101,10 @@ class DDPM(GenerativeModel):
         #for i in range(x.size(0)):
         #    xT[i] = self.xT_from_x0_and_noise(x[i], t[i], noise[i])
         model_pred = self.net(xT.float(), t.float(), condition)
-        loss = F.mse_loss(model_pred, noise) + self.C*self.net.kl / len(self.data_train)
+        c = self.get_relative_factor(t)
+        loss = F.mse_loss(c*model_pred, c*noise) + self.C*self.net.kl / (len(self.data_train)*T)
 
-        self.regular_loss.append(F.mse_loss(model_pred, noise).detach().cpu().numpy())
+        self.regular_loss.append(F.mse_loss(c*model_pred, c*noise).detach().cpu().numpy())
         try:
             self.kl_loss.append((self.C*self.net.kl / len(self.data_train)).detach().cpu().numpy())
         except:
