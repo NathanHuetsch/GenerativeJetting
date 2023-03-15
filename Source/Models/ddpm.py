@@ -1,4 +1,6 @@
 import numpy as np
+import numpy.random
+
 from Source.Util.util import linear_beta_schedule, cosine_beta_schedule
 import torch
 import torch.nn.functional as F
@@ -106,7 +108,7 @@ class DDPM(GenerativeModel):
 
         self.regular_loss.append(F.mse_loss(c*model_pred, c*noise).detach().cpu().numpy())
         try:
-            self.kl_loss.append((self.C*self.net.kl / len(self.data_train)).detach().cpu().numpy())
+            self.kl_loss.append((self.C*self.net.kl / (len(self.data_train)*T)).detach().cpu().numpy())
         except:
             pass
 
@@ -195,3 +197,18 @@ class DDPM(GenerativeModel):
             model_pred = self.net(x, t*torch.ones_like(x[:, [0]])).detach()
             x = self.mu_tilde_t(x, t, model_pred) + self.sigmas[t]*z
         return x.cpu().numpy().flatten()
+
+    def get_likelihood(self):
+        pass
+    def sample_joint_x(self,x0):
+
+        dim = x0.shape[0]
+        xs = torch.zeros(self.timesteps, dim)
+        x = x0
+
+        for t in range(self.timesteps):
+            variance = np.sqrt(self.betas[t])
+            mean = self.sqrt_alphas[t] * x
+            x = torch.normal(mean,variance).to(self.device)
+            xs[t] = x
+
