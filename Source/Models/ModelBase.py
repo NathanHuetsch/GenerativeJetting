@@ -365,8 +365,11 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              range=obs_range,
-                             n_jets=j+self.n_jets,
-                             bins= bin_num)
+                             n_jets=j+self.n_jets)
+
+        if get(self.params,"plot_loss", False):
+            out = f"{path}/loss_epoch_{n_epochs}.pdf"
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
 
     def plot_toy(self, samples = None, finished=False):
         os.makedirs(f"plots", exist_ok=True)
@@ -468,7 +471,7 @@ class GenerativeModel(nn.Module):
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss)
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
 
     def toy_video(self, samples = None):
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
