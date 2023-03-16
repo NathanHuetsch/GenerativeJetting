@@ -16,8 +16,6 @@ prior_prec = par["prior_prec"]
 prior_prec = 1 / prior_prec**.5
 bayesian = par["bayesian"]
 
-print(prior_prec)
-
 par["warm_start"] = True
 par["warm_path"] = path
 par["device"] = get_device()
@@ -26,39 +24,46 @@ os.makedirs(os.path.join(path, "mu_sigma"), exist_ok=True)
 col = mpl.cm.Set1(np.linspace(0,1,9))
 
 for j in range(par["n_epochs"]):
+    if j!=1 and j%par["save_every"]!=0:
+        continue
+    print(j)
     par["model_name"] = f"model_epoch_{j}"
 
     fig, axes = plt.subplots()
     try:
         ex = toy.Toy_Experiment(par)
         ex.model = ex.build_model(par, prior_path = par['warm_path'])
-        for i in range(par["n_blocks"]):
-            if bayesian >= 1:
+        if bayesian >= 1:
+            muMLP = torch.zeros(0)
+            sigMLP = torch.zeros(0)
+            for i in range(par["n_blocks"]):
                 mu1 = ex.model.net.transformer.h[i].mlp.c_fc.mu_w.data.cpu().flatten()
                 mu2 = ex.model.net.transformer.h[i].mlp.c_proj.mu_w.data.cpu().flatten()
                 sig1 = ex.model.net.transformer.h[i].mlp.c_fc.logsig2_w.data.cpu().flatten()
                 sig2 = ex.model.net.transformer.h[i].mlp.c_proj.logsig2_w.data.cpu().flatten()
-                muMLP = torch.cat([mu1, mu2])
-                sigMLP = torch.cat([sig1, sig2])
-                
-                axes.scatter(muMLP,(np.e**sigMLP)**.5, s=1, color=col[0], label="mlp")
-            if bayesian >= 2:
+                muMLP = torch.cat([muMLP, mu1, mu2])
+                sigMLP = torch.cat([sigMLP, sig1, sig2])    
+            axes.scatter(muMLP,(np.e**sigMLP)**.5, s=1, color=col[0], label="mlp")
+        if bayesian >= 2:
+            muATT = torch.zeros(0)
+            sigATT = torch.zeros(0)
+            for i in range(par["n_blocks"]):
                 mu1 = ex.model.net.transformer.h[i].attn.c_attn.mu_w.data.cpu().flatten()
                 mu2 = ex.model.net.transformer.h[i].attn.c_proj.mu_w.data.cpu().flatten()
                 sig1 = ex.model.net.transformer.h[i].attn.c_attn.logsig2_w.data.cpu().flatten()
                 sig2 = ex.model.net.transformer.h[i].attn.c_proj.logsig2_w.data.cpu().flatten()
-                muATT = torch.cat([mu1, mu2])
-                sigATT = torch.cat([sig1, sig2])
+                muATT = torch.cat([muATT, mu1, mu2])
+                sigATT = torch.cat([sigATT, sig1, sig2])    
+            axes.scatter(muATT,(np.e**sigATT)**.5, s=1, color=col[1], label="att")
+        if bayesian >= 3:
+            muWTE = ex.model.net.transformer.wte.mu_w.data.cpu().flatten()
+            muEND = ex.model.net.lm_head.mu_w.data.cpu().flatten()
+            sigWTE = ex.model.net.transformer.wte.logsig2_w.data.cpu().flatten()
+            sigEND = ex.model.net.lm_head.logsig2_w.data.cpu().flatten()
                 
-                axes.scatter(muATT,(np.e**sigATT)**.5, s=1, color=col[1], label="att")
-            if bayesian >= 3:
-                muWTE = ex.model.net.transformer.wte.mu_w.data.cpu().flatten()
-                muEND = ex.model.net.lm_head.mu_w.data.cpu().flatten()
-                sigWTE = ex.model.net.transformer.wte.logsig2_w.data.cpu().flatten()
-                sigEND = ex.model.net.lm_head.logsig2_w.data.cpu().flatten()
             
-                axes.scatter(muEND,(np.e**sigEND)**.5, s=1, color=col[3], label="gauss")
-                axes.scatter(muWTE,(np.e**sigWTE)**.5, s=1, color=col[2], label="emb")
+            axes.scatter(muEND,(np.e**sigEND)**.5, s=1, color=col[3], label="gauss")
+            axes.scatter(muWTE,(np.e**sigWTE)**.5, s=1, color=col[2], label="emb")
 
         xrange = 2.
         axes.set_xlabel("$\mu_\Theta$",fontsize=14)

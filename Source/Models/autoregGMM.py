@@ -29,7 +29,6 @@ class AutoRegGMM(GenerativeModel):
         self.n_gauss = n_gauss
         self.l2_lambda = get(params, "l2_lambda", 0.)
         self.l2_p = get(params, "l2_p", 2)
-        assert n_gauss is not None, "build_model: n_gauss not specified"
         print(f"Model AutoRegGMM hyperparameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
               f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
         

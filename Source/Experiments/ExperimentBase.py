@@ -6,6 +6,7 @@ from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
+from Source.Models.autoregNN import AutoRegNN
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -224,7 +225,7 @@ class Experiment:
         try:
             model = eval(model_type)(p)
         except NameError: # do this more general?
-            raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD, DDPM, AutoRegGMM or AutoRegBinned")
+            raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD, DDPM, AutoRegGMM, AutoRegNN or AutoRegBinned")
 
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
