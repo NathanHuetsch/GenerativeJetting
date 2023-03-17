@@ -7,19 +7,13 @@ from Source.Models.ddpm import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
 from Source.Models.autoregNN import AutoRegNN
-from matplotlib.backends.backend_pdf import PdfPages
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Util.lr_scheduler import OneCycleLR
-from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
 from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get, load_params
 import time
 from datetime import datetime
-import sys
-import os
-import h5py
-import pandas
+import os, sys
 from torch.optim import Adam, AdamW
 
 
@@ -50,19 +44,6 @@ class Experiment:
     """
 
     def __init__(self, params):
-        # Names of the observables for plotting
-        self.obs_names = ["p_{T,l1}", "\phi_{l1}", "\eta_{l1}", "\mu_{l1}",
-                          "p_{T,l2}", "\phi_{l2}", "\eta_{l2}", "\mu_{l2}",
-                          "p_{T,j1}", "\phi_{j1}", "\eta_{j1}", "\mu_{j1}",
-                          "p_{T,j2}", "\phi_{j2}", "\eta_{j2}", "\mu_{j2}",
-                          "p_{T,j3}", "\phi_{j3}", "\eta_{j3}", "\mu_{j3}"]
-
-        # Ranges of the observables for plotting
-        self.obs_ranges = [[0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50]]
         self.params = params
         self.conditional = get(self.params, "conditional", False)
         if not self.conditional:
@@ -74,11 +55,7 @@ class Experiment:
         self.data_split = get(self.params, "data_split", [0.55, 0.05, 0.4])
         self.runs = get(self.params, "runs", 0)
         self.total_epochs = get(self.params, "total_epochs", 0)
-        self.con_depth = get(self.params, "con_depth", 0)
         self.load_dataset = get(self.params, "load_dataset", False)
-        self.prior_model = None
-        self.prior_prior_model = None
-
 
         self.starttime = time.time()
 
@@ -157,53 +134,6 @@ class Experiment:
             self.z_1 = data_all.z_1
             self.z_2 = data_all.z_2
             self.z_3 = data_all.z_3
-
-    def preprocess_data(self, p, data_raw, save_in_params=True, conditional=False):
-        """
-        The preprocess_data method gets the necessary parameters and preprocesses the data
-        Currently preprocessing is only implemented for Z2 jet data.
-
-        Overwrite this method if other preprocessing is required
-        This method should include moving the data to device.
-        The final result should be placed under self.data
-        The dimensionality of the data should be placed under self.dim
-        """
-
-        # Read in the "preprocess" parameter to specify weather or not the data should be preprocessed
-        # Read in the "channels" and "dim" parameters specifiying which channels of the data should be used
-        # If "channels" is specified, "dim" will be ignored and will be inferred from channels
-        # If "channels" is not specified, only "dim" 4,6 and None are valid
-        channels = get(p, "channels", None)
-        n_jets = get(p, "n_jets", 2)
-        if channels is None:
-            print(f"preprocess_data: channels and dim not specified. Defaulting to {5 + 4 * n_jets} channels.")
-            channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
-            p["channels"] = channels
-            print(f"preprocess_data: channels {channels}")
-        else:
-            print(f"preprocess_data: channels {channels} specified.")
-        # Do the preprocessing
-        data_raw = preformat(data_raw, p)
-
-        data, data_mean, data_std, data_u, data_s, bin_edges, bin_means = preprocess(data_raw, p)
-        print("preprocess_data: Finished preprocessing")
-
-        n_data = len(data)
-
-        # Quick optional check whether preprocessing works as intended (data_raw = data_raw2?)
-        # data_raw2 = undo_preprocessing(data, data_mean, data_std, data_u, data_s, bin_edges, bin_means, p)
-
-        # Make sure the data is a torch.Tensor and move it to device
-        data = data.to(self.device)
-        print(f"preprocess_data: Moved data to {data.device}")
-
-        if save_in_params:
-            if get(p, "dim", None) is None:
-                self.params["dim"] = len(channels)
-
-            self.params["channels"] = channels
-            self.params["n_data"] = n_data
-        return data, data_mean, data_std, data_u, data_s, bin_edges, bin_means, data_raw
 
     def build_model(self,p, prior_path=None, save_in_params=False):
         """
@@ -376,7 +306,7 @@ class Experiment:
             # Keep track of the time and perform the model training
             # See the model classes for documentation on the run_training() method
             t0 = time.time()
-            self.model.run_training(prior_model=self.prior_model, prior_prior_model=self.prior_prior_model)
+            self.model.run_training()
             t1 = time.time()
             traintime = t1 - t0
             n_epochs = get(self.params,"n_epochs",100)
@@ -413,8 +343,7 @@ class Experiment:
             n_samples = get(self.params, "n_samples", 1000000)
             print(f"generate_samples: Starting generation of {n_samples} samples")
             t0 = time.time()
-            self.samples = self.model.sample_and_undo(n_samples, prior_model=self.prior_model,
-                                                      prior_prior_model=self.prior_prior_model,n_jets=self.n_jets)
+            self.samples = self.model.sample_and_undo(n_samples)
             t1 = time.time()
             sampletime = t1 - t0
             self.params["sampletime"] = sampletime

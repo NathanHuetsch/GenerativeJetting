@@ -77,7 +77,7 @@ def preprocess(data, params):
     else:
         u, s = None, None
 
-    if get(params, "discretize", 0) != 0:
+    if params["model"] == "AutoRegBinned":
         events, bin_edges, bin_means = discretize(events, params)
     else:
         bin_edges, bin_means = [None, None]
@@ -88,10 +88,10 @@ def preprocess(data, params):
 
     # make data torch.Tensor of correct type
     events = torch.from_numpy(events)
-    if get(params, "discretize", 0)==0:
-        events = events.float()
-    else:
+    if params["model"] == "AutoRegBinned":
         events = events.long()
+    else:
+        events = events.float()
 
     # return preprocessed events and information needed to undo transformations
     return events, events_mean, events_std, u, s, bin_edges, bin_means
@@ -119,7 +119,7 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
     else:
         events = data
 
-    if get(params, "discretize", 0) != 0:
+    if params["model"] == "AutoRegBinned":
         events = undo_discretize(events, params, bin_edges, bin_means)
 
     # undo whitening

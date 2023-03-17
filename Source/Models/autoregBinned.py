@@ -23,9 +23,8 @@ class AutoRegBinned(GenerativeModel):
         intermediate_fac = get(params, "intermediate_fac", None)
         assert intermediate_fac is not None, "build_model: intermediate_fac not specified"
         params["intermediate_dim"] = n_head * n_per_head
-        n_bins = get(params, "n_bins", None)
+        n_bins = get(params, "n_bins", n_head * n_per_head)
         self.n_bins = n_bins
-        assert n_bins is not None, "build_model: n_bins not specified"
         print(f"Build model AutoRegBinned parameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
               f"intermediate_fac={intermediate_fac}, n_bins={n_bins}")
         

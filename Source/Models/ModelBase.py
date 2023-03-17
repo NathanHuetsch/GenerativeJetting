@@ -5,6 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
+from Source.Util.discretize import undo_discretize
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
 from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
@@ -96,7 +97,7 @@ class GenerativeModel(nn.Module):
         else:
             print("train_model: log set to False. No logs will be written")
 
-    def run_training(self, prior_model=None, prior_prior_model=None):
+    def run_training(self):
 
         self.prepare_training()
         samples = []
@@ -114,15 +115,15 @@ class GenerativeModel(nn.Module):
                 if (self.epoch + 1) % self.sample_every == 0:
                     self.eval()
                     if not self.istoy:
-                        samples = self.sample_and_undo(self.sample_every_n_samples, prior_model=prior_model,
-                                                   prior_prior_model=prior_prior_model,
-                                                   n_jets=self.n_jets)
+                        samples = self.sample_and_undo(self.sample_every_n_samples)
                         self.plot_samples(samples=samples)
                     else:
                         iterations = self.iterations if (self.iterate_periodically and self.bayesian) else 1
                         bay_samples = []
                         for i in range(0, iterations):
                             sample = self.sample_n(self.sample_every_n_samples)
+                            if self.params["model"] == "AutoRegBinned":
+                                sample = undo_discretize(sample, self.params, self.bin_edges, self.bin_means)
                             bay_samples.append(sample)
 
                         samples = np.concatenate(bay_samples)
@@ -178,9 +179,9 @@ class GenerativeModel(nn.Module):
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):
         pass
 
-    def sample_and_undo(self, n_samples, prior_model=None, prior_prior_model=None,n_jets=2):
-        if self.conditional and n_jets ==2:
-            prior_samples = prior_model.sample_n(n_samples+self.batch_size, con_depth=self.con_depth)
+    def sample_and_undo(self, n_samples):
+        if self.conditional and self.n_jets ==2:
+            prior_samples = self.prior_model.sample_n(n_samples+self.batch_size, con_depth=self.con_depth)
             samples = self.sample_n(n_samples, prior_samples=prior_samples,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
@@ -191,10 +192,10 @@ class GenerativeModel(nn.Module):
 
             samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
 
-        elif self.conditional and n_jets == 3:
-            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size,
+        elif self.conditional and self.n_jets == 3:
+            prior_prior_samples = self.prior_prior_model.sample_n(n_samples + 2*self.batch_size,
                                                          con_depth=self.con_depth)
-            prior_samples = prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
+            prior_samples = self.prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
                                                  con_depth=self.con_depth)
 
             priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)

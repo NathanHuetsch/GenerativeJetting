@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import math
 from torch.nn import functional as F
+from Source.Networks.vblinear import VBLinear
 
 '''
 This is a minimal implementation of the autoregressive transformer architecture used in the GPT models,

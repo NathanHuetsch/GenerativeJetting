@@ -1,22 +1,12 @@
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
-from Source.Models.inn import INN
-from Source.Models.tbd import TBD
-from Source.Models.ddpm import DDPM
-from matplotlib.backends.backend_pdf import PdfPages
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
-from Source.Util.preprocessing import preprocess, undo_preprocessing
 from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get, load_params
+from Source.Util.discretize import discretize, undo_discretize
 from Source.Experiments.ExperimentBase import Experiment
 import time
 from datetime import datetime
-import sys
-import os
-import h5py
-import pandas
-from torch.optim import Adam
+import os, sys
 from Source.Util.simulateToyData import ToySimulator
 
 class Toy_Experiment(Experiment):
@@ -29,12 +19,12 @@ class Toy_Experiment(Experiment):
         self.n_data = get(self.params, "n_data", 1000000)
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian",False)
-        self.prior_prec = get(self.params, "prior_prec", 1.0)
         self.warm_start_path = get(self.params, "warm_start_path", None)
 
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
+        self.preprocess_data()
 
         if get(self.params, "toy_type", "ramp")=="ramp":
             self.n_dim = get(self.params, "n_flat", 1)+get(self.params, "n_lin", 1)+get(self.params, "n_quad", 0)
@@ -43,7 +33,6 @@ class Toy_Experiment(Experiment):
             self.n_dim = get(self.params, "n_dim", 2)
             self.obs_ranges = [[-1.5, 1.5]] * self.dim
         self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
-        self.data_raw = self.data.detach().cpu().numpy()
 
         if self.iterations > 1 and not self.bayesian:
             det_samples = []
@@ -55,6 +44,7 @@ class Toy_Experiment(Experiment):
                 self.model.obs_names = self.obs_names
                 self.model.obs_ranges = self.obs_ranges
                 self.model.data = self.data
+                self.model.bin_edges, self.model.bin_means = self.bin_edges, self.bin_means
 
                 self.build_optimizer()
                 self.build_dataloaders()
@@ -68,11 +58,12 @@ class Toy_Experiment(Experiment):
             self.samples = np.concatenate(det_samples)
             self.make_plots()
         else:
-            self.model = self.build_model(self.params, save_in_params=True, prior_path=self.warm_start_path)
+            self.model = self.build_model(self.params, prior_path=self.warm_start_path, save_in_params=True)
             print(f"build_model: Building Bayesian model is set to {self.bayesian}")
             self.model.obs_names = self.obs_names
             self.model.obs_ranges = self.obs_ranges
             self.model.data = self.data
+            self.model.bin_edges, self.model.bin_means = self.bin_edges, self.bin_means
 
             self.build_optimizer()
             self.build_dataloaders()
@@ -97,16 +88,26 @@ class Toy_Experiment(Experiment):
             else:
                 raise ValueError(f"load_data: Cannot load data from {data_path}")
         else:
-            self.data = ToySimulator(self.params).data
-
-        self.dim = self.data.shape[1]
+            self.data_raw = ToySimulator(self.params).data
+        self.dim = self.data_raw.shape[1]
         self.params["dim"] = self.dim
-        print(f"load_data: Simulated data with shape {self.data.shape} following a "
+        print(f"load_data: Simulated data with shape {self.data_raw.shape} following a "
               f"{self.dim}-dimensional {get(self.params, 'toy_type', 'ramp')} distribution")
 
-        if not isinstance(self.data, torch.Tensor):
+    def preprocess_data(self):
+        if self.params["model"] == "AutoRegBinned":
+            self.data, self.bin_edges, self.bin_means = discretize(self.data_raw.copy(), self.params)
+        else:
+            self.data = self.data_raw
+            self.bin_edges, self.bin_means = None, None
+
+        if not isinstance(self.data_raw, torch.Tensor):
             self.data = torch.from_numpy(self.data)
-        self.data = self.data.to(self.device).float()
+        if self.params["model"] == "AutoRegBinned":
+            self.data = self.data.long()
+        else:
+            self.data = self.data.float()
+        self.data = self.data.to(self.device)
         print(f"load_data: Moved data to {self.data.device}")
 
     def generate_samples(self):
@@ -137,6 +138,8 @@ class Toy_Experiment(Experiment):
                 print(f"generate_samples: {i}.Starting generation of {n_samples} samples")
                 t0 = time.time()
                 sample = self.model.sample_n(n_samples)
+                if self.params["model"] == "AutoRegBinned":
+                    sample = undo_discretize(sample, self.params, self.bin_edges, self.bin_means)
                 t1 = time.time()
                 sampletime = t1 - t0
                 self.params["sampletime"] = sampletime
