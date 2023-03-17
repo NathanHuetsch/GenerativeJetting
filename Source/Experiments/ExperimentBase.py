@@ -77,6 +77,8 @@ class Experiment:
         self.load_dataset = get(self.params, "load_dataset", False)
         self.prior_model = None
         self.prior_prior_model = None
+        self.iterations = get(self.params, "iterations", 1)
+        self.bayesian = get(self.params, "bayesian", False)
 
 
         self.starttime = time.time()
@@ -406,23 +408,33 @@ class Experiment:
 
         # Read in the "sample" parameter. If it is set to True, perform the sampling, otherwise skip it.
         sample = get(self.params, "sample", True)
-        if sample:
-            # Read in the "n_samples" parameter specifying how many samples to generate
-            # Call the model.sample_n_parallel(n_samples) method to perform the sampling
-            n_samples = get(self.params, "n_samples", 1000000)
-            print(f"generate_samples: Starting generation of {n_samples} samples")
-            t0 = time.time()
-            self.samples = self.model.sample_and_undo(n_samples, prior_model=self.prior_model,
-                                                      prior_prior_model=self.prior_prior_model,n_jets=self.n_jets)
-            t1 = time.time()
-            sampletime = t1 - t0
-            self.params["sampletime"] = sampletime
+        if self.bayesian:
+            iterations = self.iterations
+        else:
+            iterations = 1
 
-            print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime:.2f} s = {sampletime/60:.2f} min.")
-            if get(self.params, "save_samples", False):
-                os.makedirs('samples', exist_ok=True)
-                np.save("samples/samples_final.npy", self.samples)
-                print(f"save_samples: generated samples have been saved")
+        if sample:
+            bay_samples = []
+            for i in range(0, iterations):
+                # Read in the "n_samples" parameter specifying how many samples to generate
+                # Call the model.sample_n_parallel(n_samples) method to perform the sampling
+                n_samples = get(self.params, "n_samples", 1000000)
+                print(f"generate_samples: Starting generation of {n_samples} samples")
+                t0 = time.time()
+                sample = self.model.sample_and_undo(n_samples, prior_model=self.prior_model,
+                                                      prior_prior_model=self.prior_prior_model,n_jets=self.n_jets)
+                t1 = time.time()
+                sampletime = t1 - t0
+                self.params["sampletime"] = sampletime
+                bay_samples.append(sample)
+
+                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime:.2f} s = {sampletime/60:.2f} min.")
+                if get(self.params, "save_samples", False):
+                    os.makedirs('samples', exist_ok=True)
+                    np.save(f"samples/samples_final_{i}.npy", sample)
+                    print(f"save_samples: generated samples have been saved")
+
+            self.samples = np.concatenate(bay_samples)
         else:
             print("generate_samples: sample set to False")
 

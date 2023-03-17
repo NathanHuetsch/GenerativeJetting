@@ -221,11 +221,15 @@ class GenerativeModel(nn.Module):
     def plot_samples(self, samples, finished=False):
         os.makedirs(f"plots", exist_ok=True)
         if finished:
-            runs = get(self.params, "runs", 0)
-            path = f"plots/run{runs}"
+            path = f"plots/run{self.runs}"
             os.makedirs(path, exist_ok=True)
+            iterations = self.iterations
         else:
             path = "plots"
+            if self.iterate_periodically:
+                iterations = self.iterations
+            else:
+                iterations = 1
 
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
 
@@ -370,8 +374,8 @@ class GenerativeModel(nn.Module):
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
             plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
-
     def plot_toy(self, samples = None, finished=False):
+        self.sigma_path = get(self.params, "sigma_path", None)
         os.makedirs(f"plots", exist_ok=True)
         if finished:
             path = f"plots/run{self.runs}"
@@ -416,7 +420,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              range=obs_range,
                              n_epochs=n_epochs,
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             save_path=self.sigma_path)
 
         if get(self.params, "plot_mu_sigma",False) and iterations > 1:
             with PdfPages(f"{path}/mu_sigma_{n_epochs}.pdf") as out:

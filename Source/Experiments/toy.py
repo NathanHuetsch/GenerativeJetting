@@ -30,7 +30,11 @@ class Toy_Experiment(Experiment):
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian",False)
         self.prior_prec = get(self.params, "prior_prec", 1.0)
-        self.warm_start_path = get(self.params, "warm_start_path", None)
+
+        if get(self.params,"warm_start",False):
+            self.warm_start_path = get(self.params, "warm_start_path", None)
+        else:
+            self.warm_start_path = None
 
 
     def full_run(self):
@@ -146,7 +150,7 @@ class Toy_Experiment(Experiment):
                 print(f"generate_samples: {i}.Finished generation of {n_samples} samples after {sampletime} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
-                    np.save(f"samples/samples_final_{i}.npy", self.samples)
+                    np.save(f"samples/samples_final_{i}.npy", sample)
                     print(f"save_samples: generated samples have been saved")
 
             self.samples = np.concatenate(bay_samples)
