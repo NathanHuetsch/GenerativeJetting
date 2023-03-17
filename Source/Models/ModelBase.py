@@ -356,7 +356,7 @@ class GenerativeModel(nn.Module):
                 bin_num = 40
                 data_train = get_M_ll(plot_train[j])
                 data_test = get_M_ll(plot_test[j])
-                data_generated = get_M_ll(plot_samples[j][:,:12])
+                data_generated = get_M_ll(plot_samples[j])
                 with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
                     plot_obs(pp=out,
                              obs_train=data_train,

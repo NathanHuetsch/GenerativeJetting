@@ -6,6 +6,9 @@ class ToySimulator:
         self.params = params
         self.type = get(self.params,"toy_type","ramp")
         self.n_data = get(self.params, "n_data", 1000000)
+        self.set_seed = get(self.params, "set_seed", False)
+        if self.set_seed:
+            np.random.seed(42)
 
         if self.type == "camel":
             self.data = self.get_camelback()
