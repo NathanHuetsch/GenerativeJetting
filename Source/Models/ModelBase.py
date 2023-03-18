@@ -273,7 +273,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              range=obs_range,
                              n_epochs=n_epochs,
-                             n_jets=j + self.n_jets)
+                             n_jets=j + self.n_jets,
+                             weight_samples=iterations)
 
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
             if get(self.params,"plot_deltaR", True):
@@ -290,7 +291,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
-                             range=[0, 8])
+                             range=[0, 8],
+                             weight_samples=iterations)
                         if self.n_jets == 3:
                             obs_name = "\Delta R_{j_1 j_3}"
                             obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
@@ -304,7 +306,8 @@ class GenerativeModel(nn.Module):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
-                                 range=[0, 8])
+                                 range=[0, 8],
+                                 weight_samples=iterations)
                             obs_name = "\Delta R_{j_2 j_3}"
                             obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
                             obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
@@ -317,7 +320,8 @@ class GenerativeModel(nn.Module):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
-                                 range=[0, 8])
+                                 range=[0, 8],
+                                 weight_samples=iterations)
             if get(self.params,"plot_Deta_Dphi", True):
                 with PdfPages(f"{path}/deta_dphi_jets_epoch_{n_epochs}.pdf") as out:
                     for j, _ in enumerate(plot_train):
@@ -369,7 +373,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              range=obs_range,
-                             n_jets=j+self.n_jets)
+                             n_jets=j+self.n_jets,
+                             weight_samples=iterations)
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
