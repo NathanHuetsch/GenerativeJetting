@@ -72,24 +72,20 @@ class DDPM(GenerativeModel):
         self.net.map = False
 
         if self.conditional and self.n_jets == 1:
-            condition = x[:, -3:]
-            condition = condition.float()
-            x = x[:, :-3]
+            condition = x[:, :3]
+            x = x[:, 3:]
 
         elif self.conditional and self.n_jets == 2:
-            condition_1 = x[:, :9]
-            #condition_1 = prior_model(condition_1)
-            condition_2 = x[:, -2:]
+            condition_1 = x[:, 2:11]
+            # condition_1 = prior_model(condition_1)
+            condition_2 = x[:, :2]
             condition = torch.cat([condition_1, condition_2], 1)
-            condition = condition.float()
-            x = x[:, 9:-2]
+            x = x[:, 11:]
 
         elif self.conditional and self.n_jets == 3:
             condition = x[:, :13]
-            condition = condition.float()
-            #condition = prior_model(condition)
+            # condition = prior_model(condition)
             x = x[:, 13:]
-
 
 
         else:
@@ -134,7 +130,6 @@ class DDPM(GenerativeModel):
                 c_3 = np.array([[0, 0, 1]] * n_r)
 
                 condition = np.concatenate([c_1, c_2, c_3])
-                condition = torch.Tensor(condition).to(self.device)
 
             elif self.n_jets == 1 and con_depth == 1:
                 n_c = (n_samples + batch_size) // 2
@@ -144,32 +139,28 @@ class DDPM(GenerativeModel):
                 c_2 = np.array([[0, 0, 1]] * n_r)
 
                 condition = np.concatenate([c_1, c_2])
-                condition = torch.Tensor(condition).to(self.device)
 
             elif self.n_jets == 1 and con_depth == 2:
                 n_c = n_samples + batch_size
 
                 condition = np.array([[0, 0, 1]] * n_c)
-                condition = torch.Tensor(condition).to(self.device)
 
             elif self.n_jets == 2:
 
-                condition_1 = prior_samples[:,:9]
-                condition_2 = prior_samples[:, -2:]
+                condition_1 = prior_samples[:, 3:12]
+                condition_2 = prior_samples[:, 1:3]
 
                 condition = np.concatenate([condition_1, condition_2], axis=1)
-                condition = torch.Tensor(condition).to(self.device)
 
             elif self.n_jets == 3:
-                condition = prior_samples[:,:13]
-                condition = torch.Tensor(condition).to(self.device)
+                condition = prior_samples[:, :13]
 
         else:
             condition = None
 
         for i in range(int(n_samples / batch_size) + 1):
             if self.conditional:
-                c = condition[batch_size * i: batch_size * (i + 1)]
+                c = torch.from_numpy(condition[batch_size * i: batch_size * (i + 1)])
             else:
                 c = None
             noise_i = torch.randn(self.timesteps, batch_size, self.dim).to(self.device)
@@ -181,9 +172,9 @@ class DDPM(GenerativeModel):
                 x = self.mu_tilde_t(x, t, model_pred) + self.sigmas[t] * z
 
             if self.conditional and self.n_jets == 1:
-                s = torch.concatenate([x, c], dim=1)
+                s = torch.concatenate([c,x], dim=1)
             elif self.conditional and self.n_jets == 2:
-                s = torch.concatenate([x, c[:, -2:]], dim=1)
+                s = torch.concatenate([c[:, -2:],x], dim=1)
             else:
                 s = x
             events.append(s.cpu().numpy())

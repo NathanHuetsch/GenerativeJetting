@@ -51,18 +51,18 @@ class Dataset:
             c_1 = 12
             c_2 = 16
             x = event[:c_1]
-            x = np.append(x, m)
+            x = np.append(m,x)
             z_1.append(x)
 
             if m != 1:
 
                 y = event[:c_2]
-                y = np.append(y, m)
+                y = np.append(m,y)
                 z_2.append(y)
 
             if m == 3:
                 z = event
-                z = np.append(z, m)
+                z = np.append(m,z)
                 z_3.append(z)
 
         z_1 = np.array(z_1)

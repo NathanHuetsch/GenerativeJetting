@@ -267,7 +267,7 @@ def plot_binned_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, wei
 
     if save_path is not None:
         np.save(f"{save_path}_sigma.npy", sigma)
-        np.save(f"{save_path}_mu_path.npy", mu)
+        np.save(f"{save_path}_mu.npy", mu)
 
     dup_last = lambda a: np.append(a, a[-1])
 

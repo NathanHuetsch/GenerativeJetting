@@ -181,7 +181,7 @@ class GenerativeModel(nn.Module):
 
     def sample_and_undo(self, n_samples, prior_model=None, prior_prior_model=None,n_jets=2):
         if self.conditional and n_jets ==2:
-            prior_samples = prior_model.sample_n(n_samples+self.batch_size, con_depth=self.con_depth)
+            prior_samples = prior_model.sample_n(n_samples+self.batch_size_sample, con_depth=self.con_depth)
             samples = self.sample_n(n_samples, prior_samples=prior_samples,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
@@ -190,15 +190,15 @@ class GenerativeModel(nn.Module):
             samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
                                           self.data_bin_means, self.data_bin_edges, self.params)
 
-            samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
+            samples = np.concatenate([prior_samples[:n_samples, :13], samples[:, 13:]], axis=1)
 
         elif self.conditional and n_jets == 3:
-            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size,
+            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size_sample,
                                                          con_depth=self.con_depth)
-            prior_samples = prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
+            prior_samples = prior_model.sample_n(n_samples + self.batch_size_sample, prior_samples=prior_prior_samples,
                                                  con_depth=self.con_depth)
 
-            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
+            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size_sample,3:12],prior_samples[:,2:6]], axis=1)
             samples = self.sample_n(n_samples, prior_samples=priors, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
                                            self.prior_prior_u, self.prior_prior_s, self.prior_prior_bin_edges,
@@ -208,7 +208,7 @@ class GenerativeModel(nn.Module):
             samples = undo_preprocessing(samples, self.data_mean, self.data_std,
                                      self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.params)
 
-            samples = np.concatenate([prior_prior_samples[:n_samples, :12], prior_samples[:n_samples, 12:16],
+            samples = np.concatenate([prior_prior_samples[:n_samples, 1:13], prior_samples[:n_samples, 13:17],
                                       samples[:,16:]], axis=1)
 
         else:
@@ -238,15 +238,18 @@ class GenerativeModel(nn.Module):
         plot_samples = []
 
 
-        if self.conditional and self.n_jets != 3:
+        if self.conditional and self.n_jets !=3:
             for i in range(self.n_jets, 4):
-                plot_train_jets = self.data_train[self.data_train[:, -1] == i]
+                plot_train_jets = self.data_train[self.data_train[:, 0] == i]
+                plot_train_jets = plot_train_jets[:,1:]
                 plot_train.append(plot_train_jets)
 
-                plot_test_jets = self.data_test[self.data_test[:, -1] == i]
+                plot_test_jets = self.data_test[self.data_test[:, 0] == i]
+                plot_test_jets = plot_test_jets[:,1:]
                 plot_test.append(plot_test_jets)
 
-                plot_samples_jets = samples[samples[:, -1] == i]
+                plot_samples_jets = samples[samples[:, 0] == i]
+                plot_samples_jets = plot_samples_jets[:,1:]
                 plot_samples.append(plot_samples_jets)
 
         else:
@@ -358,14 +361,14 @@ class GenerativeModel(nn.Module):
             print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
 
         if get(self.params, "plot_Mll", False):
-            for j,_ in enumerate(plot_train):
-                obs_name = "M_{\ell \ell}"
-                obs_range = [75,110]
-                bin_num = 40
-                data_train = get_M_ll(plot_train[j])
-                data_test = get_M_ll(plot_test[j])
-                data_generated = get_M_ll(plot_samples[j][:,:12])
-                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
+            with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
+                for j,_ in enumerate(plot_train):
+                    obs_name = "M_{\ell \ell}"
+                    obs_range = [75,110]
+                    bin_num = 40
+                    data_train = get_M_ll(plot_train[j])
+                    data_test = get_M_ll(plot_test[j])
+                    data_generated = get_M_ll(plot_samples[j])
                     plot_obs(pp=out,
                              obs_train=data_train,
                              obs_test=data_test,
@@ -420,13 +423,17 @@ class GenerativeModel(nn.Module):
                     obs_name = self.obs_names[i]
                     obs_range = None if self.obs_ranges == None else self.obs_ranges[i]
                     # Create the plot
+                    if self.sigma_path is not None:
+                        save_path = self.sigma_path + f"_{i}"
+                    else:
+                        save_path = None
                     plot_binned_sigma(pp=out,
                              obs_predict=obs_generated,
                              name=obs_name,
                              range=obs_range,
                              n_epochs=n_epochs,
                              weight_samples=iterations,
-                             save_path=self.sigma_path)
+                             save_path=save_path)
 
         if get(self.params, "plot_mu_sigma",False) and iterations > 1:
             with PdfPages(f"{path}/mu_sigma_{n_epochs}.pdf") as out:
