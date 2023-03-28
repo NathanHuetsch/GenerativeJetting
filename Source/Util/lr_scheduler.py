@@ -1,6 +1,7 @@
 import types
 import math
-from torch._six import inf
+#from torch._six import inf #in torch 1
+from torch import inf #in torch 2
 from functools import wraps
 import warnings
 import weakref

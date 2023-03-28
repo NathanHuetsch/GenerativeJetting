@@ -4,3 +4,4 @@
 /params/
 /runfiles/
 *__pycache__*
+*.pdf
