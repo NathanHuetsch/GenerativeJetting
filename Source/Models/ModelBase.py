@@ -190,7 +190,7 @@ class GenerativeModel(nn.Module):
             samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
                                           self.data_bin_means, self.data_bin_edges, self.params)
 
-            samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
+            samples = np.concatenate([prior_samples[:n_samples, :13], samples[:, 13:]], axis=1)
 
         elif self.conditional and self.n_jets == 3:
             prior_prior_samples = self.prior_prior_model.sample_n(n_samples + 2*self.batch_size,
@@ -198,7 +198,7 @@ class GenerativeModel(nn.Module):
             prior_samples = self.prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
                                                  con_depth=self.con_depth)
 
-            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
+            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size_sample,3:12],prior_samples[:,2:6]], axis=1)
             samples = self.sample_n(n_samples, prior_samples=priors, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
                                            self.prior_prior_u, self.prior_prior_s, self.prior_prior_bin_edges,
@@ -208,7 +208,7 @@ class GenerativeModel(nn.Module):
             samples = undo_preprocessing(samples, self.data_mean, self.data_std,
                                      self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.params)
 
-            samples = np.concatenate([prior_prior_samples[:n_samples, :12], prior_samples[:n_samples, 12:16],
+            samples = np.concatenate([prior_prior_samples[:n_samples, 1:13], prior_samples[:n_samples, 13:17],
                                       samples[:,16:]], axis=1)
 
         else:
@@ -221,11 +221,15 @@ class GenerativeModel(nn.Module):
     def plot_samples(self, samples, finished=False):
         os.makedirs(f"plots", exist_ok=True)
         if finished:
-            runs = get(self.params, "runs", 0)
-            path = f"plots/run{runs}"
+            path = f"plots/run{self.runs}"
             os.makedirs(path, exist_ok=True)
+            iterations = self.iterations
         else:
             path = "plots"
+            if self.iterate_periodically:
+                iterations = self.iterations
+            else:
+                iterations = 1
 
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
 
@@ -234,15 +238,18 @@ class GenerativeModel(nn.Module):
         plot_samples = []
 
 
-        if self.conditional and self.n_jets != 3:
+        if self.conditional and self.n_jets !=3:
             for i in range(self.n_jets, 4):
-                plot_train_jets = self.data_train[self.data_train[:, -1] == i]
+                plot_train_jets = self.data_train[self.data_train[:, 0] == i]
+                plot_train_jets = plot_train_jets[:,1:]
                 plot_train.append(plot_train_jets)
 
-                plot_test_jets = self.data_test[self.data_test[:, -1] == i]
+                plot_test_jets = self.data_test[self.data_test[:, 0] == i]
+                plot_test_jets = plot_test_jets[:,1:]
                 plot_test.append(plot_test_jets)
 
-                plot_samples_jets = samples[samples[:, -1] == i]
+                plot_samples_jets = samples[samples[:, 0] == i]
+                plot_samples_jets = plot_samples_jets[:,1:]
                 plot_samples.append(plot_samples_jets)
 
         else:
@@ -269,7 +276,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              range=obs_range,
                              n_epochs=n_epochs,
-                             n_jets=j + self.n_jets)
+                             n_jets=j + self.n_jets,
+                             weight_samples=iterations)
 
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
             if get(self.params,"plot_deltaR", True):
@@ -286,7 +294,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
-                             range=[0, 8])
+                             range=[0, 8],
+                             weight_samples=iterations)
                         if self.n_jets == 3:
                             obs_name = "\Delta R_{j_1 j_3}"
                             obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
@@ -300,7 +309,8 @@ class GenerativeModel(nn.Module):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
-                                 range=[0, 8])
+                                 range=[0, 8],
+                                 weight_samples=iterations)
                             obs_name = "\Delta R_{j_2 j_3}"
                             obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
                             obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
@@ -313,7 +323,8 @@ class GenerativeModel(nn.Module):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
-                                 range=[0, 8])
+                                 range=[0, 8],
+                                 weight_samples=iterations)
             if get(self.params,"plot_Deta_Dphi", True):
                 with PdfPages(f"{path}/deta_dphi_jets_epoch_{n_epochs}.pdf") as out:
                     for j, _ in enumerate(plot_train):
@@ -350,14 +361,13 @@ class GenerativeModel(nn.Module):
             print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
 
         if get(self.params, "plot_Mll", False):
-            for j,_ in enumerate(plot_train):
-                obs_name = "M_{\ell \ell}"
-                obs_range = [75,110]
-                bin_num = 40
-                data_train = get_M_ll(plot_train[j])
-                data_test = get_M_ll(plot_test[j])
-                data_generated = get_M_ll(plot_samples[j])
-                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
+            with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
+                for j,_ in enumerate(plot_train):
+                    obs_name = "M_{\ell \ell}"
+                    obs_range = [75,110]
+                    data_train = get_M_ll(plot_train[j])
+                    data_test = get_M_ll(plot_test[j])
+                    data_generated = get_M_ll(plot_samples[j])
                     plot_obs(pp=out,
                              obs_train=data_train,
                              obs_test=data_test,
@@ -366,13 +376,14 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              range=obs_range,
                              n_jets=j+self.n_jets,
-                             bins= bin_num)
+                             weight_samples=iterations)
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
             plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
 
     def plot_toy(self, samples = None, finished=False):
+        self.sigma_path = get(self.params, "sigma_path", None)
         os.makedirs(f"plots", exist_ok=True)
         if finished:
             path = f"plots/run{self.runs}"
@@ -410,12 +421,17 @@ class GenerativeModel(nn.Module):
                     obs_name = self.obs_names[i]
                     obs_range = None if self.obs_ranges == None else self.obs_ranges[i]
                     # Create the plot
+                    if self.sigma_path is not None:
+                        save_path = self.sigma_path + f"_{i}"
+                    else:
+                        save_path = None
                     plot_binned_sigma(pp=out,
                              obs_predict=obs_generated,
                              name=obs_name,
                              range=obs_range,
                              n_epochs=n_epochs,
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             save_path=save_path)
 
         if get(self.params, "plot_mu_sigma",False) and iterations > 1:
             with PdfPages(f"{path}/mu_sigma_{n_epochs}.pdf") as out:

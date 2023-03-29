@@ -57,15 +57,15 @@ class TBD(GenerativeModel):
         """
 
         if self.conditional and self.n_jets == 1:
-            condition = x[:, -3:]
-            x = x[:, :-3]
+            condition = x[:, :3]
+            x = x[:, 3:]
 
         elif self.conditional and self.n_jets == 2:
-            condition_1 = x[:, :9]
+            condition_1 = x[:, 2:11]
             #condition_1 = prior_model(condition_1)
-            condition_2 = x[:, -2:]
+            condition_2 = x[:, :2]
             condition = torch.cat([condition_1, condition_2], 1)
-            x = x[:, 9:-2]
+            x = x[:, 11:]
 
         elif self.conditional and self.n_jets == 3:
             condition = x[:, :13]
@@ -133,8 +133,8 @@ class TBD(GenerativeModel):
 
             elif self.n_jets == 2:
 
-                condition_1 = prior_samples[:,:9]
-                condition_2 = prior_samples[:, -2:]
+                condition_1 = prior_samples[:,3:12]
+                condition_2 = prior_samples[:, 1:3]
 
                 condition = np.concatenate([condition_1, condition_2], axis=1)
 
@@ -168,9 +168,9 @@ class TBD(GenerativeModel):
                 if self.conditional:
                     c = condition[batch_size * i: batch_size * (i + 1)]
                     if self.n_jets == 1:
-                        s = np.concatenate([sol.y[:, -1].reshape(batch_size, self.dim), c], axis=1)
+                        s = np.concatenate([c, sol.y[:, -1].reshape(batch_size, self.dim)], axis=1)
                     elif self.n_jets == 2:
-                        s = np.concatenate([sol.y[:, -1].reshape(batch_size, self.dim), c[:,-2:]], axis=1)
+                        s = np.concatenate([c[:,-2:], sol.y[:, -1].reshape(batch_size, self.dim)], axis=1)
                     elif self.n_jets == 3:
                         s = sol.y[:, -1].reshape(batch_size, self.dim)
                 else:

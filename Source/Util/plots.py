@@ -242,7 +242,7 @@ def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False, loss_log=T
     plt.close()
 
 def plot_binned_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, weight_samples=1,
-                              predict_weights=None, n_epochs=None):
+                              predict_weights=None, n_epochs=None, save_path=False):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
@@ -264,6 +264,11 @@ def plot_binned_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, wei
     scales = 1 / integral if integral != 0. else 1.
     mu = hist * scales
     sigma = hist_errors * scales
+
+    if save_path is not None:
+        np.save(f"{save_path}_sigma.npy", sigma)
+        np.save(f"{save_path}_mu.npy", mu)
+
     dup_last = lambda a: np.append(a, a[-1])
 
     fig, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios" : [1,1], "hspace" : 0.00})

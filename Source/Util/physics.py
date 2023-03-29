@@ -276,8 +276,8 @@ def apply_scale(events, format, downscale=True, upscale=None, reduce_data=False)
                 events[:,0::dim] = np.tanh(events[:,0::dim]) * np.pi
         return events, upscale
 
-def get_M_ll(events_in, masses=0.1): #0.1 for muon mass
-    events = events_in.copy()
+def get_M_ll(events_in, masses=0.1):
+    events = events_in[:,:12].copy()
     events[:,1] = np.random.uniform(0, 2 * np.pi, size=(events.shape[0],))
     events[:,5::4] = events[:, 5::4] + events[:,1,None]
 

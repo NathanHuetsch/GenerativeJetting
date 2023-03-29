@@ -17,9 +17,6 @@ class Toy_Experiment(Experiment):
 
         self.istoy = get(self.params,"istoy", True)
         self.n_data = get(self.params, "n_data", 1000000)
-        self.iterations = get(self.params, "iterations", 1)
-        self.bayesian = get(self.params, "bayesian",False)
-        self.warm_start_path = get(self.params, "warm_start_path", None)
 
     def full_run(self):
         self.prepare_experiment()
@@ -28,7 +25,10 @@ class Toy_Experiment(Experiment):
 
         if get(self.params, "toy_type", "ramp")=="ramp":
             self.n_dim = get(self.params, "n_flat", 1)+get(self.params, "n_lin", 1)+get(self.params, "n_quad", 0)
-            self.obs_ranges = [[-0.1, 1.1]] * self.dim
+            if get(self.params, "obs_ranges",None) is None:
+                self.obs_ranges = [[-0.1, 1.1]] * self.dim
+            else:
+                self.obs_ranges = self.params['obs_ranges'] * self.dim
         else:
             self.n_dim = get(self.params, "n_dim", 2)
             self.obs_ranges = [[-1.5, 1.5]] * self.dim
@@ -148,7 +148,7 @@ class Toy_Experiment(Experiment):
                 print(f"generate_samples {i}: Finished generation of {n_samples} samples after {sampletime:.2f} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
-                    np.save(f"samples/samples_final_{i}.npy", self.samples)
+                    np.save(f"samples/samples_final_{i}.npy", sample)
                     print(f"save_samples: generated samples have been saved")
 
             self.samples = np.concatenate(bay_samples)
