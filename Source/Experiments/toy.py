@@ -83,16 +83,16 @@ class Toy_Experiment(Experiment):
             # Read in the "data_type" parameter, defaulting to np if not specified. Try to read in the data accordingly
             data_type = get(self.params, "data_type", "np")
             if data_type == "np":
-                self.data = np.load(data_path)
-                print(f"load_data: Loaded data with shape {self.data.shape} from ", data_path)
+                self.data_raw = np.load(data_path)
+                print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
             else:
                 raise ValueError(f"load_data: Cannot load data from {data_path}")
         else:
-            self.data_raw = ToySimulator(self.params).data
+            self.data_raw = ToySimulator(self.params).data        
+            print(f"load_data: Simulated data with shape {self.data_raw.shape} following a "
+                  f"{self.dim}-dimensional {get(self.params, 'toy_type', 'ramp')} distribution")
         self.dim = self.data_raw.shape[1]
         self.params["dim"] = self.dim
-        print(f"load_data: Simulated data with shape {self.data_raw.shape} following a "
-              f"{self.dim}-dimensional {get(self.params, 'toy_type', 'ramp')} distribution")
 
     def preprocess_data(self):
         if self.params["model"] == "AutoRegBinned":

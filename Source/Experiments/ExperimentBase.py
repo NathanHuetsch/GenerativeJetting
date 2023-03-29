@@ -51,7 +51,7 @@ class Experiment:
         self.warm_start = get(self.params, "warm_start", False)
         if self.warm_start:
             self.warm_start_path = get(self.params, "warm_start_path", None)
-        else
+        else:
             self.warm_start_path = None
         self.device = get(self.params, "device", get_device())
         self.batch_size = get(self.params, "batch_size", 1024)
@@ -357,8 +357,7 @@ class Experiment:
                 n_samples = get(self.params, "n_samples", 1000000)
                 print(f"generate_samples: Starting generation of {n_samples} samples")
                 t0 = time.time()
-                sample = self.model.sample_and_undo(n_samples, prior_model=self.prior_model,
-                                                      prior_prior_model=self.prior_prior_model,n_jets=self.n_jets)
+                sample = self.model.sample_and_undo(n_samples)
                 t1 = time.time()
                 sampletime = t1 - t0
                 self.params["sampletime"] = sampletime
