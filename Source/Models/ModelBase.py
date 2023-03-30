@@ -85,7 +85,7 @@ class GenerativeModel(nn.Module):
         self.sample_periodically = get(self.params, "sample_periodically", False)
         if self.sample_periodically:
             self.sample_every = get(self.params, "sample_every", 1)
-            self.sample_every_n_samples = get(self.params, "sample_every_n_samples", 100000)
+            self.sample_every_n_samples = get(self.params, "sample_every_n_samples", 1000000)
             print(f'train_model: sample_periodically set to True. Sampling {self.sample_every_n_samples} every'
                   f' {self.sample_every} epochs. This may significantly slow down training!')
 

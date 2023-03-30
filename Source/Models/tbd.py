@@ -40,6 +40,11 @@ class TBD(GenerativeModel):
 
         self.bayesian = get(self.params, "bayesian", 0)
 
+        self.t_weighting = get(self.params, "t_weighting", False)
+        self.t_factor = get(self.params, "t_factor", 0)
+        if self.t_factor !=0:
+            print(f"t_factor is {self.t_factor}")
+
     def build_net(self):
         """
         Build the network
@@ -82,9 +87,9 @@ class TBD(GenerativeModel):
         self.net.kl = 0
         drift = self.net(x_t, t, condition)
         if self.loss_type=="l2":
-            loss = torch.mean((drift - x_t_dot) ** 2)
+            loss = torch.mean((drift - x_t_dot) ** 2 * torch.exp(self.t_factor * t))
             self.regular_loss.append(loss.detach().cpu().numpy())
-            if self.bayesian > 1:
+            if self.C != 0:
                 kl_loss = self.C*self.net.kl / self.n_traindata
                 self.kl_loss.append(kl_loss.detach().cpu().numpy())
                 loss = loss + kl_loss

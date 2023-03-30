@@ -17,27 +17,11 @@ class BINN(GenerativeModel):
         return build_BINN(self.params).to(self.device)
 
     def batch_loss(self, x):
-        if self.conditional and self.n_jets == 1:
-            condition = x[:, -3:]
-            x = x[:, :-3]
-
-        elif self.conditional and self.n_jets == 2:
-            condition_1 = x[:, :9]
-            condition_2 = x[:, -2:]
-            condition = torch.cat([condition_1, condition_2], 1)
-            x = x[:, 9:-2]
-
-        elif self.conditional and self.n_jets == 3:
-            condition = x[:, :13]
-            x = x[:, 13:]
-
-        else:
-            condition = None
 
         z, jac = self.net(x)
         net_loss = torch.mean(z ** 2) / 2 - torch.mean(jac) / z.shape[1]
         kl_loss = sum(layer.KL() for layer in self.bayesian_layers)
-        return loss
+        return net_loss
 
     def sample_n(self, n_samples, jets=None, prior_samples=None, con_depth=0):
         self.eval()

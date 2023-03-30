@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import sys
 import matplotlib as mpl
+from Source.Networks.vblinear import VBLinear
 
 path = sys.argv[1]
 
@@ -23,7 +24,7 @@ par["warm_path"] = path
 par["device"] = get_device()
 os.makedirs(os.path.join(path, "mu_sigma"), exist_ok=True)
 
-col = mpl.cm.Set1(np.linspace(0,1,9))
+col = mpl.cm.Set1(np.linspace(0,1,20))
 
 for j in range(par["n_epochs"]):
     par["model_name"] = f"model_epoch_{j}"
@@ -33,32 +34,16 @@ for j in range(par["n_epochs"]):
         ex = toy.Toy_Experiment(par)
         ex.model = ex.build_model(par, prior_path = par['warm_path'])
         for i in range(par["n_blocks"]):
-            if bayesian >= 1:
-                mu1 = ex.model.net.transformer.h[i].mlp.c_fc.mu_w.data.cpu().flatten()
-                mu2 = ex.model.net.transformer.h[i].mlp.c_proj.mu_w.data.cpu().flatten()
-                sig1 = ex.model.net.transformer.h[i].mlp.c_fc.logsig2_w.data.cpu().flatten()
-                sig2 = ex.model.net.transformer.h[i].mlp.c_proj.logsig2_w.data.cpu().flatten()
-                muMLP = torch.cat([mu1, mu2])
-                sigMLP = torch.cat([sig1, sig2])
-                
-                axes.scatter(muMLP,(np.e**sigMLP)**.5, s=1, color=col[0], label="mlp")
-            if bayesian >= 2:
-                mu1 = ex.model.net.transformer.h[i].attn.c_attn.mu_w.data.cpu().flatten()
-                mu2 = ex.model.net.transformer.h[i].attn.c_proj.mu_w.data.cpu().flatten()
-                sig1 = ex.model.net.transformer.h[i].attn.c_attn.logsig2_w.data.cpu().flatten()
-                sig2 = ex.model.net.transformer.h[i].attn.c_proj.logsig2_w.data.cpu().flatten()
-                muATT = torch.cat([mu1, mu2])
-                sigATT = torch.cat([sig1, sig2])
-                
-                axes.scatter(muATT,(np.e**sigATT)**.5, s=1, color=col[1], label="att")
-            if bayesian >= 3:
-                muWTE = ex.model.net.transformer.wte.mu_w.data.cpu().flatten()
-                muEND = ex.model.net.lm_head.mu_w.data.cpu().flatten()
-                sigWTE = ex.model.net.transformer.wte.logsig2_w.data.cpu().flatten()
-                sigEND = ex.model.net.lm_head.logsig2_w.data.cpu().flatten()
-            
-                axes.scatter(muEND,(np.e**sigEND)**.5, s=1, color=col[3], label="gauss")
-                axes.scatter(muWTE,(np.e**sigWTE)**.5, s=1, color=col[2], label="emb")
+            block = ex.model.net.blocks[i]
+            print(len(block))
+            for layer in range(len(block)):
+                if isinstance(block[layer], VBLinear):
+
+                    mu = block[layer].mu_w.data.cpu().flatten()
+                    sig = block[layer].logsig2_w.data.cpu().flatten()
+
+                    axes.scatter(mu,(np.e**sig)**.5, s=1, color=col[layer], label=f"layer{layer}")
+
 
         xrange = 2.
         axes.set_xlabel("$\mu_\Theta$",fontsize=14)
