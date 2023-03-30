@@ -33,14 +33,14 @@ class CausalSelfAttention(nn.Module):
         self.resid_pdrop = params.get("resid_pdrop", 0.1)
         self.bayesian = params.get("bayesian", 0)
         self.prior_prec = params.get("prior_prec", 1.)
-        self.allowflashatt = params.get("allowflash", True) and hasattr(F, "scaled_dot_product_attention")
+        self.allowflash = params.get("allowflash", True) and hasattr(F, "scaled_dot_product_attention")
 
         self.c_attn = VBLinear(self.intermediate_dim, 3 * self.intermediate_dim, prior_prec = self.prior_prec) \
                       if self.bayesian>=2 else nn.Linear(self.intermediate_dim, 3 * self.intermediate_dim)
         self.c_proj = VBLinear(self.intermediate_dim, self.intermediate_dim, prior_prec = self.prior_prec) \
                       if self.bayesian>=2 else nn.Linear(self.intermediate_dim, self.intermediate_dim)
             
-        if not self.allowflashatt:
+        if not self.allowflash:
             self.register_buffer("bias", torch.tril(torch.ones(self.block_size, self.block_size))
                                      .view(1, 1, self.block_size, self.block_size))
         
@@ -57,7 +57,7 @@ class CausalSelfAttention(nn.Module):
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-        if self.allowflashatt:
+        if self.allowflash:
             # efficient attention using Flash Attention CUDA kernels
             y = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.attn_pdrop, is_causal=True)
         else:

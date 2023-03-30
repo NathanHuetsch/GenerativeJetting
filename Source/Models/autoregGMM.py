@@ -14,7 +14,7 @@ class AutoRegGMM(GenerativeModel):
     GPT implementation in https://github.com/karpathy/minGPT.
     """
 
-    def __init__(self, params):
+    def __init__(self, params, out=True):
         self.bayesian = get(params, "bayesian", 0)
         n_blocks = get(params, "n_blocks", None)
         assert n_blocks is not None, "build_model: n_blocks not specified"
@@ -29,14 +29,16 @@ class AutoRegGMM(GenerativeModel):
         self.n_gauss = n_gauss
         self.l2_lambda = get(params, "l2_lambda", 0.)
         self.l2_p = get(params, "l2_p", 2)
-        print(f"Model AutoRegGMM hyperparameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
-              f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
+        if out:
+            print(f"Model AutoRegGMM hyperparameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
+                  f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
         
         params["vocab_size"] = 3 * n_gauss
         params["block_size"] = params["dim"]
         self.block_size = params["block_size"]
         super().__init__(params)
-        print(f"Bayesianization hyperparameters: bayesian={self.bayesian}, prior_prec={get(self.params, 'prior_prec', 1.)}, iterations={self.iterations}")
+        if out:
+            print(f"Bayesianization hyperparameters: bayesian={self.bayesian}, prior_prec={get(self.params, 'prior_prec', 1.)}, iterations={self.iterations}")
 
         if self.conditional:
             raise ValueError("conditional=True not implemented for autoregressive models")
@@ -114,7 +116,7 @@ class AutoRegGMM(GenerativeModel):
                 mix = D.Categorical(weights[:,-1,:])
                 comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
                 gmm = D.MixtureSameFamily(mix, comp)
-                idx_next = gmm.sample_n(1).permute(1,0)
+                idx_next = gmm.sample((1,)).permute(1,0)
 
                 idx = torch.cat((idx, idx_next), dim=1)
             sample = np.append(sample, idx[:,1:].detach().cpu().numpy(), axis=0)
