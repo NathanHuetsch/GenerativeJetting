@@ -8,30 +8,28 @@ plt.rc('font', family='serif')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
 def plot(toy_type):
-    histograms = np.load(f"paper/toy/histograms_{toy_type}.npy")
+    histograms = np.load(f"paper/toy/GMM_{toy_type}.npy")
     if toy_type == "ramp":
         name = "x_1"
         unit=None
-        ymaxAbs = .07
-        ymaxRel = .05
+        yminAbs = 0.
+        ymaxAbs = .11
+        yminRel = 0.
+        ymaxRel = .11
     elif toy_type == "gauss_sphere":
         name = "R"
         unit=None
-        ymaxAbs = .1
-        ymaxRel = .1
+        yminAbs = 0.
+        ymaxAbs = .11
+        yminRel = 0.
+        ymaxRel = .45
 
-    #for i in range(61):
-    #    print("{0:.2e} {1:.2e} {2:.2e}".format(histograms[3,i,1], histograms[4,i,1], histograms[5,i,1]))
-
-    with warnings.catch_warnings() and PdfPages("paper/toy/plot_ramp.pdf") as pp:
+    with warnings.catch_warnings() and PdfPages(f"paper/toy/GMM_{toy_type}.pdf") as pp:
         warnings.simplefilter("ignore", RuntimeWarning)
 
         bins = histograms[0,:,0]
-        hists = [histograms[2,:,0], histograms[4,:,0], histograms[1,:,0]]
-        hist_errors = [histograms[2,:,1], histograms[4,:,1], histograms[1,:,1]]
-
-        hists_unc = [histograms[2,:,0], histograms[3,:,0], histograms[1,:,0]]
-        hist_errors_unc = [histograms[2,:,1], histograms[3,:,1], histograms[1,:,1]]
+        hists = [histograms[2,:,0], histograms[5,:,0], histograms[1,:,0]]
+        hist_errors = [histograms[2,:,1], histograms[5,:,1], histograms[1,:,1]]
         
         FONTSIZE = 14
         labels = ["True", "Model", "Train"]
@@ -113,10 +111,19 @@ def plot(toy_type):
         axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                        fontsize=FONTSIZE)
 
-        axs.step(bins, hist_errors_unc[1], color=colors[1])
-        axs.fill_between(bins, hist_errors_unc[1]+histograms[0,:,1], hist_errors_unc[1]-histograms[0,:,1],
-                         step="post", alpha=.3, color=colors[1])
-        axs.set_ylim(0., ymaxAbs)
+        abs_unc = histograms[3,:,1]
+        #abs_unc = histograms[4,:,0]
+        abs_unc_unc = histograms[4,:,1]
+        abs_unc_i = histograms[5:, :, 1]
+    
+        axs.step(bins, abs_unc, color=colors[1], linewidth=1.0, where="post")
+        axs.step(bins, abs_unc + abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
+        axs.step(bins, abs_unc - abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
+        axs.fill_between(bins, abs_unc + abs_unc_unc, abs_unc-+ abs_unc_unc,
+                         step="post", alpha=.3, facecolor=colors[1])
+        for i in range(len(histograms[:,0,1])-5):
+            axs.step(bins, abs_unc_i[i, :], color="orange", linewidth=1.0, where="post")
+        axs.set_ylim(yminAbs, ymaxAbs)
 
         plt.savefig(pp, format="pdf")
         plt.close()
@@ -128,15 +135,21 @@ def plot(toy_type):
         axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                        fontsize=FONTSIZE)
 
-        rel_unc = hist_errors_unc[1] / hists_unc[1]
+        rel_unc = histograms[3,:,1] / histograms[3,:,0]
+        #rel_unc = histograms[4,:,0] / histograms[3,:,0]
         rel_unc[np.isnan(rel_unc)] = 0.
-        rel_unc_unc = histograms[0,:,1] / hists_unc[1]
+        rel_unc_unc = histograms[4,:,1] / histograms[3,:,0]
         rel_unc_unc[np.isnan(rel_unc_unc)] = 0.
+        rel_unc_i = histograms[5:,:,1] / histograms[5:,:,0]
         
-        axs.step(bins, rel_unc, color=colors[1])
+        axs.step(bins, rel_unc, color=colors[1], linewidth=1.0, where="post")
+        axs.step(bins, rel_unc + rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
+        axs.step(bins, rel_unc - rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.fill_between(bins, rel_unc + rel_unc_unc, rel_unc - rel_unc_unc,
                          color=colors[1], alpha=0.3, step="post")
-        axs.set_ylim(0., ymaxRel)
+        for i in range(len(histograms[:,0,1])-5):
+            axs.step(bins, rel_unc_i[i, :], color="orange", linewidth=1.0, where="post")
+        axs.set_ylim(yminRel, ymaxRel)
         '''
 
         fig2, ax = plt.subplots(2,1, sharex=True, gridspec_kw={"height_ratios": [1,1], "hspace": 0.})
@@ -148,28 +161,43 @@ def plot(toy_type):
         axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                        fontsize=FONTSIZE)
 
-        axs.step(bins, hist_errors_unc[1], color=colors[1])
-        axs.fill_between(bins, hist_errors_unc[1]+histograms[0,:,1], hist_errors_unc[1]-histograms[0,:,1],
-                         step="post", alpha=.3, color=colors[1])
-        axs.set_ylim(0., ymaxAbs)
+        #abs_unc = histograms[3,:,1]
+        abs_unc = histograms[4,:,0]
+        abs_unc_unc = histograms[4,:,1]
+        abs_unc_i = histograms[5:, :, 1]
+    
+        axs.step(bins, abs_unc, color=colors[1], linewidth=1.0, where="post")
+        axs.step(bins, abs_unc + abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
+        axs.step(bins, abs_unc - abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
+        axs.fill_between(bins, abs_unc + abs_unc_unc, abs_unc-+ abs_unc_unc,
+                         step="post", alpha=.3, facecolor=colors[1])
+        #for i in range(len(histograms[:,0,1])-5):
+        #    axs.step(bins, abs_unc_i[i, :], color="orange", linewidth=1.0, where="post")
+        axs.set_ylim(yminAbs, ymaxAbs)
 
         axs = ax[1]
         axs.set_ylabel("Relative uncertainty", fontsize=FONTSIZE)
         axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                        fontsize=FONTSIZE)
 
-        rel_unc = hist_errors_unc[1] / hists_unc[1]
+        #rel_unc = histograms[3,:,1] / histograms[3,:,0]
+        rel_unc = histograms[4,:,0] / histograms[3,:,0]
         rel_unc[np.isnan(rel_unc)] = 0.
-        rel_unc_unc = histograms[0,:,1] / hists_unc[1]
+        rel_unc_unc = histograms[4,:,1] / histograms[3,:,0]
         rel_unc_unc[np.isnan(rel_unc_unc)] = 0.
+        rel_unc_i = histograms[5:,:,1] / histograms[5:,:,0]
         
-        axs.step(bins, rel_unc, color=colors[1])
+        axs.step(bins, rel_unc, color=colors[1], linewidth=1.0, where="post")
+        axs.step(bins, rel_unc + rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
+        axs.step(bins, rel_unc - rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.fill_between(bins, rel_unc + rel_unc_unc, rel_unc - rel_unc_unc,
                          color=colors[1], alpha=0.3, step="post")
-        axs.set_ylim(0., ymaxRel)
+        #for i in range(len(histograms[:,0,1])-5):
+        #    axs.step(bins, rel_unc_i[i, :], color="orange", linewidth=1.0, where="post")
+        axs.set_ylim(yminRel, ymaxRel)
 
         plt.savefig(pp, format="pdf")
         plt.close()
 
 plot("ramp")
-#plot("gauss_sphere")
+plot("gauss_sphere")

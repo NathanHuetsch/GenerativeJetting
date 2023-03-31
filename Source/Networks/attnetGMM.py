@@ -25,14 +25,15 @@ class attnetGMM(nn.Module):
 
         self.transformer = nn.ModuleDict(dict(
             wte = VBLinear(1, self.intermediate_dim, self.prior_prec) \
-                if self.bayesian>=3 else nn.Linear(1, self.intermediate_dim), 
+                if self.bayesian==3 else nn.Linear(1, self.intermediate_dim), 
             wpe = nn.Embedding(self.block_size, self.intermediate_dim),
             drop = nn.Dropout(self.embd_pdrop),
             h = nn.ModuleList([TransformerBlock(params) for _ in range(self.n_blocks)]),
             ln_f = nn.LayerNorm(self.intermediate_dim),
         ))
         self.lm_head = VBLinear(self.intermediate_dim, self.vocab_size) \
-                       if self.bayesian>=3 else nn.Linear(self.intermediate_dim, self.vocab_size)
+                       if self.bayesian==3 or self.bayesian==4 \
+                       else nn.Linear(self.intermediate_dim, self.vocab_size)
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
@@ -78,11 +79,12 @@ class attnetGMM(nn.Module):
         for i in range(self.n_blocks):
             kl += self.transformer.h[i].KL()
             
-        if self.bayesian >= 3:
-            wte_KL = self.transformer.wte.KL()
-            lm_head_KL = self.lm_head.KL()
-            kl += wte_KL + lm_head_KL
-        if self.bayesian == 0 and self.iterations > 1:
+        if self.bayesian == 3 or self.bayesian == 4:
+            kl+= self.lm_head.KL()
+        if self.bayesian == 3:
+            kl += self.transformer.wte.KL()
+            
+        if self.bayesian == 0 and self.iterations > 1: #ensemble regularization
             wte_KL = .5 * self.prior_prec * self.transformer.wte.weight.sum()
             lm_head_KL = .5 * self.prior_prec * self.lm_head.weight.sum()
             kl += wte_KL + lm_head_KL

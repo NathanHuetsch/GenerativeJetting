@@ -36,9 +36,11 @@ class CausalSelfAttention(nn.Module):
         self.allowflash = params.get("allowflash", True) and hasattr(F, "scaled_dot_product_attention")
 
         self.c_attn = VBLinear(self.intermediate_dim, 3 * self.intermediate_dim, prior_prec = self.prior_prec) \
-                      if self.bayesian>=2 else nn.Linear(self.intermediate_dim, 3 * self.intermediate_dim)
+                      if self.bayesian==2 or self.bayesian==3 \
+                      else nn.Linear(self.intermediate_dim, 3 * self.intermediate_dim)
         self.c_proj = VBLinear(self.intermediate_dim, self.intermediate_dim, prior_prec = self.prior_prec) \
-                      if self.bayesian>=2 else nn.Linear(self.intermediate_dim, self.intermediate_dim)
+                      if self.bayesian>=2 or self.bayesian==3 \
+                      else nn.Linear(self.intermediate_dim, self.intermediate_dim)
             
         if not self.allowflash:
             self.register_buffer("bias", torch.tril(torch.ones(self.block_size, self.block_size))
@@ -74,7 +76,10 @@ class CausalSelfAttention(nn.Module):
         return y
 
     def KL(self):
-        return self.c_attn.KL() + self.c_proj.KL() if self.bayesian >=2 else 0.
+        if self.bayesian==2 or self.bayesian==3:
+            return self.c_attn.KL() + self.c_proj.KL()
+        else:
+            return 0.
 
 class TransformerBlock(nn.Module):
     """ A transformer block, consisting of a CausalSelfAttention block and a multilayer perceptron"""
@@ -92,9 +97,11 @@ class TransformerBlock(nn.Module):
         self.ln_2 = nn.LayerNorm(self.intermediate_dim)
         self.mlp = nn.ModuleDict(dict(
             c_fc    = VBLinear(self.intermediate_dim, self.intermediate_fac*self.intermediate_dim, self.prior_prec) \
-                if self.bayesian>=1 else nn.Linear(self.intermediate_dim, self.intermediate_fac * self.intermediate_dim),
+                if self.bayesian==1 or self.bayesian==2 or self.bayesian==3 \
+                else nn.Linear(self.intermediate_dim, self.intermediate_fac * self.intermediate_dim),
             c_proj  = VBLinear(self.intermediate_dim*self.intermediate_fac, self.intermediate_dim, self.prior_prec) \
-                if self.bayesian>=1 else nn.Linear(self.intermediate_dim*self.intermediate_fac, self.intermediate_dim),
+                if self.bayesian==1 or self.bayesian==2 or self.bayesian==3 \
+                else nn.Linear(self.intermediate_dim*self.intermediate_fac, self.intermediate_dim),
             act     = NewGELU(),
             dropout = nn.Dropout(self.resid_pdrop),
         ))
@@ -107,4 +114,8 @@ class TransformerBlock(nn.Module):
         x = x + self.mlpf(self.ln_2(x))
         return x
     def KL(self):
-        return self.attn.KL() + self.mlp.c_fc.KL() + self.mlp.c_proj.KL() if self.bayesian>=1 else 0.
+        kl = 0.
+        kl += self.attn.KL()
+        if self.bayesian==1 or self.bayesian==2 or self.bayesian==3:
+            kl += self.mlp.c_fc.KL() + self.mlp.c_proj.KL()
+        return kl

@@ -27,7 +27,7 @@ class attnetBinned(nn.Module):
             ln_f = nn.LayerNorm(self.intermediate_dim),
         ))
         self.lm_head = VBLinear(self.intermediate_dim, self.vocab_size) \
-                       if self.bayesian>=3 else nn.Linear(self.intermediate_dim, self.vocab_size)
+                       if self.bayesian==3 or self.bayesian==4 else nn.Linear(self.intermediate_dim, self.vocab_size)
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
@@ -41,7 +41,7 @@ class attnetBinned(nn.Module):
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, stsd=0.02)
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
         elif isinstance(module, nn.LayerNorm):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
@@ -65,8 +65,15 @@ class attnetBinned(nn.Module):
         return logits
 
     def KL(self):
-        assert self.bayesian!=0
-        kl = self.lm_head.KL() if self.bayesian>=3 else 0.
+        kl = 0.
         for i in range(self.n_blocks):
             kl += self.transformer.h[i].KL()
+
+        if self.bayesian == 3 or self.bayesian == 4:
+            kl+= self.lm_head.KL()
+            
+        if self.bayesian == 0 and self.iterations > 1: #ensemble regularization
+            wte_KL = .5 * self.prior_prec * self.transformer.wte.weight.sum()
+            lm_head_KL = .5 * self.prior_prec * self.lm_head.weight.sum()
+            kl += wte_KL + lm_head_KL
         return kl

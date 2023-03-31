@@ -14,7 +14,8 @@ from Source.Util.simulateToyData import ToySimulator
 import matplotlib.pyplot as plt
 
 paths_ramp = [f"runs/paper_rampv2_{i}/" for i in range(1, 11)]
-paths_sphere = ["runs/paper_spherev2_{i}/" for i in range(1, 11)]
+paths_sphere = [f"runs/paper_spherev2_{i}/" for i in range(1, 11)]
+device = get_device()
 
 def genHistograms(paths):
     print(f"## Generating histograms for {paths} ##")
@@ -22,6 +23,7 @@ def genHistograms(paths):
     
     nbins = 60
     nBNN = 30
+    n_samples = 1000000
     nEnsemble = len(paths)
     #range_ramp = [-0.1, 1.1]
     range_ramp = [0.1, 0.9]
@@ -30,12 +32,13 @@ def genHistograms(paths):
     dup_last = lambda a: np.append(a, a[-1])
 
     # generate data, then generate histograms (for each BNN in the ensemble)
-    histograms = np.zeros((4+nEnsemble, nbins+1, 2)) #first 4 for bins, train, test and BNN ensemble, then individual BNNs
+    histograms = np.zeros((5+nEnsemble, nbins+1, 2)) #first 4 for bins, train, test, BNN ensemble and uncertainty stuff, then individual BNNs
     for ipath in range(nEnsemble):
+        print(f"Starting to generate histograms for BNN {ipath}")
+        
         # load param dict
         params = load_params(paths[ipath] + "paramfile.yaml")
-        params["n_samples"] = 100000
-        params["device"] = get_device()
+        params["device"] = device
         if params["toy_type"] == "ramp":
             params["data_path"] = "../data/2dRamp.npy"
         elif params["toy_type"] == "gauss_sphere":
@@ -59,7 +62,7 @@ def genHistograms(paths):
         # generate events
         data_predict = np.zeros((0, data_train.shape[1]))
         for _ in range(nBNN):
-            data_predict= np.append(data_predict, model.sample_n(params["n_samples"]), axis=0)
+            data_predict= np.append(data_predict, model.sample_n(n_samples), axis=0)
     
         # compute component of interest
         def get_obs(data):
@@ -89,24 +92,37 @@ def genHistograms(paths):
         scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
         if ipath==0:
-            histograms[0, :, 0] = bins 
+            histograms[0, :, 0] = bins
             histograms[1, :, 0] = dup_last(y_tr * scales[2])
             histograms[1, :, 1] = dup_last(np.sqrt(y_tr) * scales[2])
             histograms[2, :, 0] = dup_last(y_t * scales[0])
             histograms[2, :, 1] = dup_last(np.sqrt(y_t) * scales[0])
-        histograms[4+ipath, :, 0] = dup_last(hists[1] * scales[1])
-        histograms[4+ipath, :, 1] = dup_last(hist_errors[1] * scales[1])
+        histograms[5+ipath, :, 0] = dup_last(hists[1] * scales[1])
+        histograms[5+ipath, :, 1] = dup_last(hist_errors[1] * scales[1])
 
 
     # compute
-    histograms[3, :, 0] = dup_last(np.mean(histograms[4:, :-1, 0], axis=0))
-    histograms[3, :, 1] = dup_last(1/nEnsemble * np.sum(histograms[4:, :-1, 1]**2, axis=0)**.5) #gaussian error propagation -> mean uncertainty
-    histograms[0, :, 1] = dup_last(np.std(histograms[4:, :-1, 1], axis=0)) #uncertainty on uncertainty
-    
-    np.save(f"paper/toy/histograms_{params['toy_type']}.npy", histograms)
+    histograms[3, :, 0] = dup_last(np.mean(histograms[5:, :-1, 0], axis=0)) #histogram means (for normalization)
+    histograms[3, :, 1] = dup_last(1/nEnsemble * np.sum(histograms[5:, :-1, 1]**2, axis=0)**.5) #gaussian error propagation -> effective uncertainty (reduced!)
+    histograms[4, :, 0] = dup_last(np.mean(histograms[5:, :-1, 1], axis=0)) #mean of uncertainties (just to have it)
+    histograms[4, :, 1] = dup_last(np.std(histograms[5:, :-1, 1], axis=0)) #uncertainty on uncertainty
+
+    if params["model"]=="AutoRegGMM":
+        model_type = "GMM"
+    elif params["model"]=="AutoRegBinned":
+        model_type = "Binned"
+    np.save(f"paper/toy/{model_type}_{params['toy_type']}.npy", histograms)
 
     t1 = time.time()
     print(f"Total time consumption: {t1-t0:.2f}s = {(t1-t0)/60:.2f}min = {(t1-t0)/60**2:.2f}h")
 
+if device=="cuda":
+    sys.stdout = open("paper/toy/stdout.txt", "w", buffering=1)
+    sys.stderr = open("paper/toy/stderr.txt", "w", buffering=1)
+
 genHistograms(paths_ramp)
 genHistograms(paths_sphere)
+
+if device=="cuda":
+    sys.stdout.close()
+    sys.stderr.close()
