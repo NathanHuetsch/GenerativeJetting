@@ -457,9 +457,21 @@ class GenerativeModel(nn.Module):
                 R_test, phi_test = ToySimulator.getSpherical(self.data_test)
                 R_gen, phi_gen = ToySimulator.getSpherical(samples)
                 obs_name = "R"
-                obs_range = [0,2]
+                obs_range = [0.5,1.5]
                 plot_obs(pp=out, obs_train=R_train, obs_test=R_test, obs_predict=R_gen,
                      name=obs_name, range=obs_range, weight_samples=iterations)
+                if get(self.params, "plot_sigma", False) and iterations > 1:
+                    if self.sigma_path is not None:
+                        save_path = self.sigma_path + f"_R"
+                    else:
+                        save_path = None
+                    plot_binned_sigma(pp=out,
+                                    obs_predict=R_gen,
+                                    name=obs_name,
+                                    range=obs_range,
+                                    n_epochs=n_epochs,
+                                    weight_samples=iterations,
+                                    save_path=save_path)
 
                 for i in range(self.dim-1):
                     obs_name=f"\phi_{i}"

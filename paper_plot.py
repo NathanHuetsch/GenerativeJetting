@@ -13,47 +13,42 @@ from Source.Experiments import toy
 
 
 path = sys.argv[1]
+toy_type = sys.argv[2]
+data_split = 0.5
 
 
-
-params = load_params(path + "paramfile.yaml")
-
-params["warm_start"] = True
-params["warm_start_path"] = path
-params['train'] = False
-
-params['redirect_console'] = False
-params['iterations'] = 30
-params['plot_loss'] = False
-params["plot_sigma"] = False
-params['plot_mu_sigma'] = False
-params['plot'] = False
-
-
-data = np.load("/remote/gpu05/palacios/data/2dRamp.npy")
+data = np.load("/remote/gpu05/palacios/data/2dGaussSphere.npy")
 n_data = len(data)
-cut1 = int(n_data * params["data_split"][0])
-cut2 = int(n_data * (params["data_split"][0] + params["data_split"][1]))
+cut1 = int(n_data * data_split)
+cut2 = int(n_data * data_split)
 data_train = data[:cut1]
 data_test = data[cut2:]
 
-mu_path = path + params['sigma_path'] + "1_mu.npy"
-sigma_path = path + params['sigma_path'] + "1_sigma.npy"
+mus = []
+sigmas = []
+for i in range(0,10):
+    path_path = path + f"DDPM_base_{i}/"
+    mu_path = path_path + "run_R_mu.npy"
+    sigma_path = path_path + "run_R_sigma.npy"
+    mu = np.load(mu_path)
+    sigma = np.load(sigma_path)
+    mus.append(mu)
+    sigmas.append(sigma)
 
-mu = np.load(mu_path)
-sigma = np.load(sigma_path)
-
-#experiment = toy.Toy_Experiment(params)
-#experiment.full_run()
-
-
-
+mus = np.array(mus)
+sigmas = np.array(sigmas)
 def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,unit=None, ymaxAbs=1., ymaxRel=1.):
 
     with PdfPages(out) as pp:
         y_t, bins = np.histogram(obs_test, bins=bins, range=range)
         y_tr, _ = np.histogram(obs_train, bins=bins)
-        mu, sigma = obs_predict[0] , obs_predict[1]
+        mus, sigmas = obs_predict[0] , obs_predict[1]
+
+        mu = np.mean(mus, axis=0)
+        sigma = np.mean(sigmas, axis=0)
+
+        std = np.std(sigmas, axis=0)
+
         hists = [y_t, mu, y_tr]
         hist_errors = [np.sqrt(y_t), sigma , np.sqrt(y_tr)]
         integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
@@ -133,40 +128,62 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         plt.savefig(pp, format="pdf")
         plt.close()
 
-        fig2, axs = plt.subplots(1, 1)
+        fig2, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1, 1], "hspace": 0.00})
+        #fig2, axs = plt.subplots(1, 1)
         fig2.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
 
-        axs.set_ylabel("Absolute uncertainty", fontsize=FONTSIZE)
-        axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
-                       fontsize=FONTSIZE)
+        axs[0].set_ylabel("Absolute uncertainty", fontsize=FONTSIZE)
+        #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
+        #               fontsize=FONTSIZE)
 
-        axs.step(bins, dup_last(hist_errors[1] * scales[1]), color=colors[1])
-        axs.set_ylim(0., ymaxAbs)
+        axs[0].step(bins, dup_last(hist_errors[1] * scales[1]), color=colors[1],linewidth=1.0, where="post")
 
-        plt.savefig(pp, format="pdf")
-        plt.close()
+        axs[0].step(bins, dup_last(hist_errors[1] - std) * scales[1], color=colors[1],
+                    alpha=0.5, linewidth=0.5, where="post")
+        axs[0].step(bins, dup_last(hist_errors[1] + std) * scales[1], color=colors[1],
+                    alpha=0.5, linewidth=0.5, where="post")
+        axs[0].fill_between(bins, dup_last(hist_errors[1] - std) * scales[1],
+                            dup_last(hist_errors[1] + std) * scales[1], facecolor=colors[1],
+                            alpha=0.3, step="post")
 
-        fig3, axs = plt.subplots(1, 1)
-        fig3.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
+        axs[0].set_ylim(0., ymaxAbs)
 
-        axs.set_ylabel("Relative uncertainty", fontsize=FONTSIZE)
-        axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
-                       fontsize=FONTSIZE)
+        #plt.savefig(pp, format="pdf")
+        #plt.close()
 
-        axs.step(bins, dup_last(hist_errors[1] / hists[1]), color=colors[1])
-        axs.set_ylim(0., ymaxRel)
+        #fig3, axs = plt.subplots(1, 1)
+        #fig3.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
+
+        axs[1].set_ylabel("Relative uncertainty", fontsize=FONTSIZE)
+        #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
+        #               fontsize=FONTSIZE)
+
+        axs[1].step(bins, dup_last(hist_errors[1] / hists[1]), color=colors[1],linewidth=1.0, where="post")
+        axs[1].step(bins, dup_last((hist_errors[1] - std)/hists[1]) * scales[1], color=colors[1],
+                 alpha=0.5, linewidth=0.5, where="post")
+        axs[1].step(bins, dup_last((hist_errors[1] + std)/hists[1]) * scales[1], color=colors[1],
+                 alpha=0.5, linewidth=0.5, where="post")
+        axs[1].fill_between(bins, dup_last((hist_errors[1] - std)/hists[1]) * scales[1],
+                         dup_last((hist_errors[1] + std)/hists[1]) * scales[1], facecolor=colors[1],
+                         alpha=0.3, step="post")
+
+        axs[1].set_ylim(0., ymaxRel)
+
+        fig2.align_labels()
+        plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
+                   fontsize=FONTSIZE)
 
         plt.savefig(pp, format="pdf")
         plt.close()
 
 
 # %%
-if params['toy_type'] == "ramp":
-    plot_paper(f"{path}paper_plots_2.pdf", data_train[:, 1], data_test[:, 1],
-               [mu,sigma], "x_1", ymaxAbs=.2, ymaxRel=.2, range=[.1, .9])
+if toy_type == "ramp":
+    plot_paper(f"{path}paper_plots.pdf", data_train[:, 1], data_test[:, 1],
+               [mus,sigmas], "x_1", ymaxAbs=.2, ymaxRel=.2, range=[.1, .9])
 
-if params['toy_type'] == "gauss_sphere":
+if toy_type == "gauss_sphere":
     R_train, _ = ToySimulator.getSpherical(data_train)
     R_test, _ = ToySimulator.getSpherical(data_test)
-    plot_paper(f"{path}paper_plots.pdf", R_train, R_test, [mu,sigma],
-               "R", ymaxAbs=.08, ymaxRel=.3, range=[0.5, 1.5])
+    plot_paper(f"{path}paper_plots.pdf", R_train, R_test, [mus,sigmas],
+               "R", ymaxAbs=.22, ymaxRel=.44, range=[0.5, 1.5])
