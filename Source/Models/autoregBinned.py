@@ -12,7 +12,7 @@ class AutoRegBinned(GenerativeModel):
     GPT implementation in https://github.com/karpathy/minGPT.
     """
 
-    def __init__(self, params):
+    def __init__(self, params, out=True):
         self.bayesian = get(params, "bayesian", 0)
         n_blocks = get(params, "n_blocks", None)
         assert n_blocks is not None, "build_model: n_blocks not specified"
@@ -23,17 +23,18 @@ class AutoRegBinned(GenerativeModel):
         intermediate_fac = get(params, "intermediate_fac", None)
         assert intermediate_fac is not None, "build_model: intermediate_fac not specified"
         params["intermediate_dim"] = n_head * n_per_head
-        n_bins = get(params, "n_bins", None)
+        n_bins = get(params, "n_bins", n_head * n_per_head)
         self.n_bins = n_bins
-        assert n_bins is not None, "build_model: n_bins not specified"
-        print(f"Build model AutoRegBinned parameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
-              f"intermediate_fac={intermediate_fac}, n_bins={n_bins}")
+        if out:
+            print(f"Build model AutoRegBinned parameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
+                  f"intermediate_fac={intermediate_fac}, n_bins={n_bins}")
         
         params["vocab_size"] = self.n_bins
         params["block_size"] = params['dim']
         self.block_size = params["block_size"]
         super().__init__(params)
-        print(f"Bayesianization hyperparameters: bayesian={self.bayesian}, prior_prec={get(self.params, 'prior_prec', 1.)}, iterations={self.iterations}")
+        if out:
+            print(f"Bayesianization hyperparameters: bayesian={self.bayesian}, prior_prec={get(self.params, 'prior_prec', 1.)}, iterations={self.iterations}")
 
         if self.params["discretize"]==0:
             raise ValueError("AutoReg.__init__: No discretization, please set discretize to a non-zero value")

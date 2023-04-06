@@ -14,7 +14,7 @@ class AutoRegGMM(GenerativeModel):
     GPT implementation in https://github.com/karpathy/minGPT.
     """
 
-    def __init__(self, params):
+    def __init__(self, params, out=True):
         self.bayesian = get(params, "bayesian", 0)
         n_blocks = get(params, "n_blocks", None)
         assert n_blocks is not None, "build_model: n_blocks not specified"
@@ -25,19 +25,20 @@ class AutoRegGMM(GenerativeModel):
         intermediate_fac = get(params, "intermediate_fac", None)
         assert intermediate_fac is not None, "build_model: intermediate_fac not specified"
         params["intermediate_dim"] = n_head * n_per_head
-        n_gauss = get(params, "n_gauss", None)
+        n_gauss = get(params, "n_gauss", round(n_head * n_per_head/3))
         self.n_gauss = n_gauss
         self.l2_lambda = get(params, "l2_lambda", 0.)
         self.l2_p = get(params, "l2_p", 2)
-        assert n_gauss is not None, "build_model: n_gauss not specified"
-        print(f"Model AutoRegGMM hyperparameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
-              f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
+        if out:
+            print(f"Model AutoRegGMM hyperparameters: n_head={n_head}, n_per_head={n_per_head}, n_blocks={n_blocks}, "
+                  f"intermediate_fac={intermediate_fac}, n_gauss={n_gauss}")
         
         params["vocab_size"] = 3 * n_gauss
         params["block_size"] = params["dim"]
         self.block_size = params["block_size"]
         super().__init__(params)
-        print(f"Bayesianization hyperparameters: bayesian={self.bayesian}, prior_prec={get(self.params, 'prior_prec', 1.)}, iterations={self.iterations}")
+        if out:
+            print(f"Bayesianization hyperparameters: bayesian={self.bayesian}, prior_prec={get(self.params, 'prior_prec', 1.)}, iterations={self.iterations}")
 
         if self.conditional:
             raise ValueError("conditional=True not implemented for autoregressive models")
@@ -115,7 +116,7 @@ class AutoRegGMM(GenerativeModel):
                 mix = D.Categorical(weights[:,-1,:])
                 comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
                 gmm = D.MixtureSameFamily(mix, comp)
-                idx_next = gmm.sample_n(1).permute(1,0)
+                idx_next = gmm.sample((1,)).permute(1,0)
 
                 idx = torch.cat((idx, idx_next), dim=1)
             sample = np.append(sample, idx[:,1:].detach().cpu().numpy(), axis=0)
@@ -128,7 +129,7 @@ class AutoRegGMM(GenerativeModel):
         sample = sample[:n_samples]
         return sample
 
-    def sample_n_bonus(self, n_samples, conditional=False, prior_samples=None, con_depth=0, prec=1000):
+    def sample_n_bonus(self, n_samples, xmin, xmax, conditional=False, prior_samples=None, con_depth=0, prec=1000):
         '''
         Variant of sample_n that returns not only the samples, but also the generate Gaussian
         mixture pdf (probstotal) and the pdfs of all individual gaussians (probsindiv)
@@ -145,7 +146,7 @@ class AutoRegGMM(GenerativeModel):
         idx = self.n_jets * torch.ones(self.batch_size_sample, 1, dtype=torch.int, device=self.device).float()
         for idim in range(self.block_size):
             mu, sigma, weights = self.net(idx)
-
+            
             # generate distribution and next event (standard)                
             mix = D.Categorical(weights[:,-1,:])
             comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
@@ -155,7 +156,7 @@ class AutoRegGMM(GenerativeModel):
 
             # generate total pdf (using torch.distributions)
             probs = torch.zeros(self.batch_size_sample, prec, dtype=torch.float, device=self.device)
-            vals = torch.linspace(torch.min(idx_next), torch.max(idx_next), prec)
+            vals = torch.linspace(xmin, xmax, prec)
             for ix in range(prec):
                 x=vals[ix]
                 probs[:,ix] = torch.exp(gmm.log_prob(x))

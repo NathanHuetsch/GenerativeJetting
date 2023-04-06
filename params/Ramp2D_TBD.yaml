@@ -1,15 +1,16 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/2dRamp/TBD/Bayesian/SinCos8_40_long"
-run_name : "7l_60d"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/Paper/2dRamp_c3_2000e_10l30d"
+run_name : "Run1"
 redirect_console : True
 
 # #########
 # # Data: #
 # #########
 istoy: True
-load_dataset : False
+load_dataset : True
+data_path: "/remote/gpu07/huetsch/data/2dRamp.npy"
 n_data: 1000000
 toy_type: "ramp"
 n_dim : 2
@@ -30,27 +31,27 @@ lr : 1.e-2
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 5000
+n_epochs : 2000
 validate: False
 validate_every : 10
 
-sample_periodically: True
+sample_periodically: False
 sample_every: 500
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
 bayesian: 2
-C : 1
-iterations : 50
+C : 0.001
+iterations : 30
 
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 4
-intermediate_dim : 40
+layers_per_block : 10
+intermediate_dim : 30
 n_head: 2
-trajectory: "sine_cosine_trajectory"
+trajectory: "linear_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
@@ -74,4 +75,6 @@ save_samples: False
 # #############
 plot : True
 plot_sigma : True
+plot_mu_sigma: True
 plot_loss : True
+sigma_path: sigmamu

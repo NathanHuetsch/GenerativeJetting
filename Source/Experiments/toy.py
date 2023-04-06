@@ -30,26 +30,34 @@ class Toy_Experiment(Experiment):
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian",False)
         self.prior_prec = get(self.params, "prior_prec", 1.0)
-        self.toy_type = get(self.params, "toy_type", "ramp")
-        if self.toy_type == "ramp":
-            self.n_dim = get(self.params, "n_flat", 1) + get(self.params, "n_lin", 1) + get(self.params, "n_quad", 0)
-            self.obs_ranges = get(self.params, "obs_ranges", [[-.5, 1.5]]) * self.n_dim
+
+        if get(self.params,"warm_start",False):
+            self.warm_start_path = get(self.params, "warm_start_path", None)
         else:
-            self.n_dim = get(self.params, "n_dim", 2)
-            self.obs_ranges = get(self.params, "obs_ranges", [[-1.5, 1.5]]) * self.n_dim
-        self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
+            self.warm_start_path = None
+
 
     def full_run(self):
         self.prepare_experiment()
         self.load_data()
 
+        if get(self.params, "toy_type", "ramp")=="ramp":
+            self.n_dim = get(self.params, "n_flat", 1)+get(self.params, "n_lin", 1)+get(self.params, "n_quad", 0)
+            if get(self.params, "obs_ranges",None) is None:
+                self.obs_ranges = [[0.1, 0.9]] * self.dim
+            else:
+                self.obs_ranges = self.params['obs_ranges'] * self.dim
+        else:
+            self.n_dim = get(self.params, "n_dim", 2)
+            self.obs_ranges = [[-1.5, 1.5]] * self.dim
+        self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
         self.data_raw = self.data.detach().cpu().numpy()
 
         if self.iterations > 1 and not self.bayesian:
             det_samples = []
             for i in range(self.iterations):
                 self.total_epochs = 0
-                self.model = self.build_model(self.params, save_in_params=False)
+                self.model = self.build_model(self.params, save_in_params=True)
                 print(f"build_model: Building Bayesian model is set to {self.bayesian}")
 
                 self.model.obs_names = self.obs_names
@@ -68,7 +76,7 @@ class Toy_Experiment(Experiment):
             self.samples = np.concatenate(det_samples)
             self.make_plots()
         else:
-            self.model = self.build_model(self.params, save_in_params=True)
+            self.model = self.build_model(self.params, save_in_params=True, prior_path=self.warm_start_path)
             print(f"build_model: Building Bayesian model is set to {self.bayesian}")
             self.model.obs_names = self.obs_names
             self.model.obs_ranges = self.obs_ranges
@@ -142,13 +150,13 @@ class Toy_Experiment(Experiment):
                 self.params["sampletime"] = sampletime
                 bay_samples.append(sample)
 
-                print(f"generate_samples {i}: Finished generation of {n_samples} samples after {sampletime:.2f} seconds")
+                print(f"generate_samples: {i}.Finished generation of {n_samples} samples after {sampletime} seconds")
+                if get(self.params, "save_samples", False):
+                    os.makedirs('samples', exist_ok=True)
+                    np.save(f"samples/samples_final_{i}.npy", sample)
+                    print(f"save_samples: generated samples have been saved")
 
             self.samples = np.concatenate(bay_samples)
-            if get(self.params, "save_samples", False):
-                os.makedirs('samples', exist_ok=True)
-                np.save(f"samples/samples_final_{i}.npy", self.samples)
-                print(f"save_samples: generated samples have been saved")
         else:
             print("generate_samples: sample set to False")
 

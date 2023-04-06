@@ -66,13 +66,13 @@ class Z2_Experiment(Experiment):
             self.prior_raw = self.z_1
             self.prior_data, self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_bin_edges, self.prior_bin_means, self.prior_raw = \
                 self.preprocess_data(self.prior_params,self.prior_raw, save_in_params=False,conditional=True)
-            self.prior_data = self.prior_data[self.prior_data[:,-3]!=1]
-            self.prior_raw = self.prior_raw[self.prior_raw[:,-1]!=1]
+            self.prior_data = self.prior_data[self.prior_data[:,0]!=1]
+            self.prior_raw = self.prior_raw[self.prior_raw[:,0]!=1]
             self.new_data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.new_raw = \
                 self.preprocess_data(self.params, self.data_raw, conditional=True)
 
-            self.data = torch.concat([self.prior_data[:,:-3], self.new_data], dim=1)
-            self.data_raw = np.concatenate([self.prior_raw[:,:12], self.new_raw[:,12:]], axis=1)
+            self.data = torch.concat([self.prior_data[:,1:12], self.new_data[:,2:]], dim=1)
+            self.data_raw = np.concatenate([self.prior_raw[:,:13], self.new_raw[:,13:]], axis=1)
 
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.data_raw = \

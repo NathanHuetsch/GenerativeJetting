@@ -5,7 +5,7 @@ import os, time
 from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device
 from Source.Util.preprocessing import undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma
+from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
 from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
@@ -70,7 +70,7 @@ class GenerativeModel(nn.Module):
         self.kl_loss = []
         self.regularizeGMM_loss = []
         self.runs = get(self.params, "runs", 0)
-        self.iterate_periodically = get(self.params, "iterate_periodically", True)
+        self.iterate_periodically = get(self.params, "iterate_periodically", False)
     def build_net(self):
         pass
 
@@ -107,6 +107,7 @@ class GenerativeModel(nn.Module):
         print(f"train_model: Beginning training. n_epochs set to {n_epochs}")
         for e in range(n_epochs):
             t0 = time.time()
+
             self.epoch = past_epochs + e
             self.train()
             self.train_one_epoch()
@@ -120,7 +121,7 @@ class GenerativeModel(nn.Module):
                                                    n_jets=self.n_jets)
                         self.plot_samples(samples=samples)
                     else:
-                        iterations = self.iterations if (self.iterate_periodically and self.bayesian) else 1
+                        iterations = self.iterations if self.iterate_periodically else 1
                         bay_samples = []
                         for i in range(0, iterations):
                             sample = self.sample_n(self.sample_every_n_samples)
@@ -181,7 +182,7 @@ class GenerativeModel(nn.Module):
 
     def sample_and_undo(self, n_samples, prior_model=None, prior_prior_model=None,n_jets=2):
         if self.conditional and n_jets ==2:
-            prior_samples = prior_model.sample_n(n_samples+self.batch_size, con_depth=self.con_depth)
+            prior_samples = prior_model.sample_n(n_samples+self.batch_size_sample, con_depth=self.con_depth)
             samples = self.sample_n(n_samples, prior_samples=prior_samples,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
@@ -190,15 +191,15 @@ class GenerativeModel(nn.Module):
             samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.data_u, self.data_s,
                                           self.data_bin_means, self.data_bin_edges, self.params)
 
-            samples = np.concatenate([prior_samples[:n_samples, :12], samples[:, 12:]], axis=1)
+            samples = np.concatenate([prior_samples[:n_samples, :13], samples[:, 13:]], axis=1)
 
         elif self.conditional and n_jets == 3:
-            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size,
+            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size_sample,
                                                          con_depth=self.con_depth)
-            prior_samples = prior_model.sample_n(n_samples + self.batch_size, prior_samples=prior_prior_samples,
+            prior_samples = prior_model.sample_n(n_samples + self.batch_size_sample, prior_samples=prior_prior_samples,
                                                  con_depth=self.con_depth)
 
-            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size,:9],prior_samples[:,:4]], axis=1)
+            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size_sample,3:12],prior_samples[:,2:6]], axis=1)
             samples = self.sample_n(n_samples, prior_samples=priors, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
                                            self.prior_prior_u, self.prior_prior_s, self.prior_prior_bin_edges,
@@ -208,7 +209,7 @@ class GenerativeModel(nn.Module):
             samples = undo_preprocessing(samples, self.data_mean, self.data_std,
                                      self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.params)
 
-            samples = np.concatenate([prior_prior_samples[:n_samples, :12], prior_samples[:n_samples, 12:16],
+            samples = np.concatenate([prior_prior_samples[:n_samples, 1:13], prior_samples[:n_samples, 13:17],
                                       samples[:,16:]], axis=1)
 
         else:
@@ -221,11 +222,15 @@ class GenerativeModel(nn.Module):
     def plot_samples(self, samples, finished=False):
         os.makedirs(f"plots", exist_ok=True)
         if finished:
-            runs = get(self.params, "runs", 0)
-            path = f"plots/run{runs}"
+            path = f"plots/run{self.runs}"
             os.makedirs(path, exist_ok=True)
+            iterations = self.iterations
         else:
             path = "plots"
+            if self.iterate_periodically:
+                iterations = self.iterations
+            else:
+                iterations = 1
 
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)
 
@@ -234,15 +239,18 @@ class GenerativeModel(nn.Module):
         plot_samples = []
 
 
-        if self.conditional and self.n_jets != 3:
+        if self.conditional and self.n_jets !=3:
             for i in range(self.n_jets, 4):
-                plot_train_jets = self.data_train[self.data_train[:, -1] == i]
+                plot_train_jets = self.data_train[self.data_train[:, 0] == i]
+                plot_train_jets = plot_train_jets[:,1:]
                 plot_train.append(plot_train_jets)
 
-                plot_test_jets = self.data_test[self.data_test[:, -1] == i]
+                plot_test_jets = self.data_test[self.data_test[:, 0] == i]
+                plot_test_jets = plot_test_jets[:,1:]
                 plot_test.append(plot_test_jets)
 
-                plot_samples_jets = samples[samples[:, -1] == i]
+                plot_samples_jets = samples[samples[:, 0] == i]
+                plot_samples_jets = plot_samples_jets[:,1:]
                 plot_samples.append(plot_samples_jets)
 
         else:
@@ -269,7 +277,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              range=obs_range,
                              n_epochs=n_epochs,
-                             n_jets=j + self.n_jets)
+                             n_jets=j + self.n_jets,
+                             weight_samples=iterations)
 
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
             if get(self.params,"plot_deltaR", True):
@@ -286,7 +295,8 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
-                             range=[0, 8])
+                             range=[0, 8],
+                             weight_samples=iterations)
                         if self.n_jets == 3:
                             obs_name = "\Delta R_{j_1 j_3}"
                             obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
@@ -300,7 +310,8 @@ class GenerativeModel(nn.Module):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
-                                 range=[0, 8])
+                                 range=[0, 8],
+                                 weight_samples=iterations)
                             obs_name = "\Delta R_{j_2 j_3}"
                             obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
                             obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
@@ -313,7 +324,8 @@ class GenerativeModel(nn.Module):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
-                                 range=[0, 8])
+                                 range=[0, 8],
+                                 weight_samples=iterations)
             if get(self.params,"plot_Deta_Dphi", True):
                 with PdfPages(f"{path}/deta_dphi_jets_epoch_{n_epochs}.pdf") as out:
                     for j, _ in enumerate(plot_train):
@@ -349,15 +361,15 @@ class GenerativeModel(nn.Module):
         else:
             print("make_plots: Missing at least one required channel to plot DeltaR and/or dphi_deta")
 
-        if get(self.params, "plot_Mll", False):
-            for j,_ in enumerate(plot_train):
-                obs_name = "M_{\mu \mu}"
-                obs_range = [70,120]
-                bin_num = 40
-                data_train = get_M_ll(plot_train[j])
-                data_test = get_M_ll(plot_test[j])
-                data_generated = get_M_ll(plot_samples[j])
-                with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
+        if get(self.params, "plot_Mll", True):
+            with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
+                for j,_ in enumerate(plot_train):
+                    obs_name = "M_{\ell \ell}"
+                    obs_range = [75,110]
+                    bin_num = 40
+                    data_train = get_M_ll(plot_train[j])
+                    data_test = get_M_ll(plot_test[j])
+                    data_generated = get_M_ll(plot_samples[j])
                     plot_obs(pp=out,
                              obs_train=data_train,
                              obs_test=data_test,
@@ -365,13 +377,35 @@ class GenerativeModel(nn.Module):
                              name=obs_name,
                              n_epochs=n_epochs,
                              range=obs_range,
-                             n_jets=j+self.n_jets)
+                             n_jets=j+self.n_jets,
+                             weight_samples=iterations)
+
+        plot_1d_differences = get(self.params, "plot_1d_differences", [])
+        if len(plot_1d_differences) != 0:
+            with PdfPages(f"{path}/1d_differences_{n_epochs}.pdf") as out:
+                for channels in plot_1d_differences:
+                    channel1 = channels[0]
+                    channel2 = channels[1]
+                    obs_name = self.obs_names[channel1] + " - " + self.obs_names[channel2]
+                    for j,_ in enumerate(plot_train):
+                        obs_train = plot_train[j][:, channel1] - plot_train[j][:, channel2]
+                        obs_test = plot_test[j][:, channel1] - plot_test[j][:, channel2]
+                        obs_generated = plot_samples[j][:, channel1] - plot_samples[j][:, channel2]
+                        plot_obs(pp=out,
+                                 obs_train=obs_train,
+                                 obs_test=obs_test,
+                                 obs_predict=obs_generated,
+                                 name=obs_name,
+                                 n_epochs=n_epochs,
+                                 n_jets=j + self.n_jets,
+                                 weight_samples=iterations)
+
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
             plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
-
     def plot_toy(self, samples = None, finished=False):
+        self.sigma_path = get(self.params, "sigma_path", None)
         os.makedirs(f"plots", exist_ok=True)
         if finished:
             path = f"plots/run{self.runs}"
@@ -390,8 +424,10 @@ class GenerativeModel(nn.Module):
                 obs_train = self.data_train[:,i]
                 obs_test = self.data_test[:,i]
                 obs_generated = samples[:,i]
+                # Get the name and the range of the observable
                 obs_name = self.obs_names[i]
                 obs_range = None if self.obs_ranges==None else self.obs_ranges[i]
+                # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,
                          obs_test=obs_test,
@@ -401,7 +437,7 @@ class GenerativeModel(nn.Module):
                          n_epochs=n_epochs,
                          n_jets=None,
                          weight_samples=iterations)
-        if get(self.params, "plot_sigma", False) and iterations > 1:
+        if get(self.params, "plot_sigma",False) and iterations > 1:
             with PdfPages(f"{path}/binned_sigma_{n_epochs}.pdf") as out:
                 for i in range(0, self.dim):
                     obs_generated = samples[:, i]
@@ -409,23 +445,32 @@ class GenerativeModel(nn.Module):
                     obs_name = self.obs_names[i]
                     obs_range = None if self.obs_ranges == None else self.obs_ranges[i]
                     # Create the plot
+                    if self.sigma_path is not None:
+                        save_path = self.sigma_path + f"_{i}"
+                    else:
+                        save_path = None
                     plot_binned_sigma(pp=out,
                              obs_predict=obs_generated,
                              name=obs_name,
                              range=obs_range,
                              n_epochs=n_epochs,
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             save_path=save_path)
 
-                if get(self.params, "toy_type", "ramp") == "gauss_sphere":
-                    R_gen, phi_gen = ToySimulator.getSpherical(samples)
-                    obs_name = "R"
-                    obs_range = [0, 2]
-                    plot_binned_sigma(pp=out,
-                                      obs_predict=R_gen,
-                                      name=obs_name,
-                                      range=obs_range,
-                                      n_epochs=n_epochs,
-                                      weight_samples=iterations)
+        if get(self.params, "plot_mu_sigma",False) and iterations > 1:
+            with PdfPages(f"{path}/mu_sigma_{n_epochs}.pdf") as out:
+                for i in range(0, self.dim):
+                    obs_generated = samples[:, i]
+                    # Get the name and the range of the observable
+                    obs_name = self.obs_names[i]
+                    obs_range = None if self.obs_ranges == None else self.obs_ranges[i]
+                    # Create the plot
+                    plot_mu_sigma(pp=out,
+                             obs_predict=obs_generated,
+                             name=obs_name,
+                             range=obs_range,
+                             n_epochs=n_epochs,
+                             weight_samples=iterations)
 
 
         if get(self.params, "toy_type", "ramp") == "gauss_sphere":
@@ -434,9 +479,21 @@ class GenerativeModel(nn.Module):
                 R_test, phi_test = ToySimulator.getSpherical(self.data_test)
                 R_gen, phi_gen = ToySimulator.getSpherical(samples)
                 obs_name = "R"
-                obs_range = [0,2]
+                obs_range = [0.5,1.5]
                 plot_obs(pp=out, obs_train=R_train, obs_test=R_test, obs_predict=R_gen,
                      name=obs_name, range=obs_range, weight_samples=iterations)
+                if get(self.params, "plot_sigma", False) and iterations > 1:
+                    if self.sigma_path is not None:
+                        save_path = self.sigma_path + f"_R"
+                    else:
+                        save_path = None
+                    plot_binned_sigma(pp=out,
+                                    obs_predict=R_gen,
+                                    name=obs_name,
+                                    range=obs_range,
+                                    n_epochs=n_epochs,
+                                    weight_samples=iterations,
+                                    save_path=save_path)
 
                 for i in range(self.dim-1):
                     obs_name=f"\phi_{i}"
@@ -465,7 +522,7 @@ class GenerativeModel(nn.Module):
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss)
+            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
 
     def toy_video(self, samples = None):
         n_epochs = self.epoch + get(self.params, "total_epochs", 0)

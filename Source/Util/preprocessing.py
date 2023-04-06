@@ -16,16 +16,17 @@ def preformat(data, params):
     :returns: Events in the (pT, phi, eta, mu) format of shape (n_events, 4*(2+n_jets))
     '''
     conditional = get(params, "conditional", False)
+    n_jets = get(params,"n_jets",2)
     if conditional:
-        events = EpppToPTPhiEta(data[:, :-1], reduce_data=False, include_masses=True)
+        events = EpppToPTPhiEta(data[:, 1:], reduce_data=False, include_masses=True)
     else:
         events = EpppToPTPhiEta(data, reduce_data=False, include_masses=True)
-        
+
     events[:, 5::4] = events[:, 5::4] - events[:,1,None]
     events[:, 1::4] = (events[:, 1::4] + np.pi) % (2*np.pi)- np.pi
 
     if conditional:
-        events = np.append(events, data[:,-1:], axis=1)
+        events = np.append(data[:,:1],events, axis=1)
 
     return events
 
@@ -42,7 +43,7 @@ def preprocess(data, params):
     n_jets = get(params, "n_jets", 2)
 
     if conditional:
-        events = data[:,:-1].copy()
+        events = data[:,1:].copy()
     else:
         events = data.copy()
 
@@ -74,6 +75,7 @@ def preprocess(data, params):
         u, s, vt = np.linalg.svd(events.T @ events / events.shape[0])
         events = events @ u
         events = events / np.sqrt(s)[None]
+
     else:
         u, s = None, None
 
@@ -83,8 +85,8 @@ def preprocess(data, params):
         bin_edges, bin_means = [None, None]
 
     if conditional and n_jets != 3:
-        condition = encode_condition(data[:, -1], n=n_jets)
-        events = np.append(events, condition, axis=1)
+        condition = encode_condition(data[:, 0], n=n_jets)
+        events = np.append(condition,events, axis=1)
 
     # make data torch.Tensor of correct type
     events = torch.from_numpy(events)
@@ -112,10 +114,10 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
     channels = params["channels"]
     conditional = get(params, "conditional", False)
     n_jets = get(params, "n_jets", 2)
-    
+
     if conditional and n_jets != 3:
         cut = 4 - n_jets
-        events = data[:, :-cut]
+        events = data[:, cut:]
     else:
         events = data
 
@@ -144,13 +146,12 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
         events[:, 0] = np.exp(events[:, 0])
         events[:, 4] = np.exp(events[:, 4])
         events[:, 8::4] = np.exp(events[:, 8::4]) + 20 - 1e-2
-
-        events[:, 3::4] = np.exp(events[:,3::4])
+        events[:, 3::4] = np.exp(events[:, 3::4])
 
     if conditional and n_jets != 3:
         cut = 4 - n_jets
-        condition = decode_condition(data[:, -cut:], n=n_jets)
-        events = np.append(events, condition, axis=1)
+        condition = decode_condition(data[:, :cut], n=n_jets)
+        events = np.append(condition, events, axis=1)
 
     return events
 

@@ -2,16 +2,36 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/deployment.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deployment.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Scripts/marginalizedLikelihood_grownUpSphere.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Scripts/marginalizedLikelihood_toy.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Scripts/paper_GMMtoy.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/Networks/attnet.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paper/toy_generate.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paper/toy_plot.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paper_generate.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paper_generate_plot.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paper_plot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/toy.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/toy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z1.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z2.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Models/binn.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/binn.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/autoregBinned.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/autoregBinned.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/autoregGMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/autoregGMM.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/ddpm.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ddpm.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/tbd.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/makeFilms.sh" beforeDir="false" afterPath="$PROJECT_DIR$/makeFilms.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mu_sigma_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/mu_sigma_plot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attnetBinned.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/attnetBinned.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attnetGMM.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/attnetGMM.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/datasets.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/datasets.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/physics.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/physics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/plots.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/plots.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/preprocessing.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/preprocessing.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/params/Z26c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z26c_TBD.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runfiles/script.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/experiment.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -142,7 +162,7 @@
       <workItem from="1679910954527" duration="1525000" />
       <workItem from="1680095760150" duration="870000" />
       <workItem from="1680097983694" duration="385000" />
-      <workItem from="1680100370258" duration="6437000" />
+      <workItem from="1680100370258" duration="38573000" />
     </task>
     <servers />
   </component>

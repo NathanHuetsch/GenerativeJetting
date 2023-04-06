@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/JetEncodeT"
-run_name : "100d_20k_betaPaper"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13_new"
+run_name : "lr0001_8k_noInit"
 redirect_console : True
 
 # #########
@@ -29,7 +29,7 @@ optimizer: Adam
 lr : 1.e-3
 batch_size : 8192
 weight_decay : 0
-betas : [0.9, 0.999]
+betas : [0.9, 0.99]
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 #eta_min: 1.e-6
@@ -42,15 +42,15 @@ validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 1000
-sample_every_n_samples: 1000000
+sample_every: 2000
+sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
 model: TBD
 trajectory: "linear_trajectory"
 encode_t: True
-encode_t_dim: 100
+encode_t_dim: 64
 #encode_t_scale: 10
 
 network: "Resnet"
@@ -81,6 +81,9 @@ n_samples : 1000000
 # # Plotting: #
 # #############
 plot : True
+plot_1d_differences: [[2,6],[2,10],[2,14],[6,10],[6,14],[10,14],
+                      [5,9],[5,13],[9,13]]
+#[2,18],[6,18],[10,18],[14,18],[5,17],[9,17],[13,17]
 #plot_channels : [9, 10, 13, 14]
 #plot_deltaR: True
 #plot_Deta_Dphi: True
