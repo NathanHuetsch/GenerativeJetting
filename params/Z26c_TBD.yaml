@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13_new"
-run_name : "lr0001_8k_noInit"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d_betaDist"
+run_name : "b11"
 redirect_console : True
 
 # #########
@@ -26,7 +26,7 @@ data_split: [0.6, 0, 0.4]
 conditional: False
 
 optimizer: Adam
-lr : 1.e-3
+lr : 5.e-4
 batch_size : 8192
 weight_decay : 0
 betas : [0.9, 0.99]
@@ -37,7 +37,7 @@ loss_type: "l2"
 C: 0
 multiple_t: False
 
-n_epochs : 20000
+n_epochs : 10000
 validate: False
 validate_every : 100
 
@@ -49,6 +49,9 @@ sample_every_n_samples: 100000
 # #################
 model: TBD
 trajectory: "linear_trajectory"
+beta_dist: True
+beta_dist_b: 1.1
+
 encode_t: True
 encode_t_dim: 64
 #encode_t_scale: 10
@@ -57,8 +60,9 @@ network: "Resnet"
 n_blocks : 1
 intermediate_dim: 1024
 layers_per_block: 8
-resid_pdrop: 0
+#normalization: "InstanceNorm1d"
 
+resid_pdrop: 0
 n_layers: 5
 n_head: 4
 
@@ -81,9 +85,6 @@ n_samples : 1000000
 # # Plotting: #
 # #############
 plot : True
-plot_1d_differences: [[2,6],[2,10],[2,14],[6,10],[6,14],[10,14],
-                      [5,9],[5,13],[9,13]]
-#[2,18],[6,18],[10,18],[14,18],[5,17],[9,17],[13,17]
 #plot_channels : [9, 10, 13, 14]
 #plot_deltaR: True
 #plot_Deta_Dphi: True

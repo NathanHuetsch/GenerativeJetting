@@ -1,7 +1,7 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/Paper/2dRamp_c3_2000e_10l30d"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/Paper/2dGauss_c2_2000e_4l_40d"
 run_name : "Run1"
 redirect_console : True
 
@@ -10,9 +10,9 @@ redirect_console : True
 # #########
 istoy: True
 load_dataset : True
-data_path: "/remote/gpu07/huetsch/data/2dRamp.npy"
+data_path: "/remote/gpu07/huetsch/data/2dGaussSphere.npy"
 n_data: 1000000
-toy_type: "ramp"
+toy_type: "gauss_sphere"
 n_dim : 2
 # ##############
 # # Training:  #
@@ -21,17 +21,17 @@ train: True
 log: True
 
 data_split: [0.6, 0, 0.4]
-batch_size : 10000
+batch_size : 5000
 
 optimizer: Adam
 betas : [0.9, 0.99]
 weight_decay : 0.0
 
-lr : 1.e-2
+lr : 5.e-3
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 2000
+n_epochs : 5000
 validate: False
 validate_every : 10
 
@@ -42,14 +42,14 @@ sample_every_n_samples: 100000
 # # Architecture: #
 # #################
 bayesian: 2
-C : 0.001
+C : 0.01
 iterations : 30
 
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 10
-intermediate_dim : 30
+layers_per_block : 4
+intermediate_dim : 40
 n_head: 2
 trajectory: "linear_trajectory"
 encode_t: False

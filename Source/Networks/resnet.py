@@ -53,11 +53,11 @@ class Resnet(nn.Module):
                 block[-1].mu_w.data *= 0
                 block[-1].bias.data *= 0
                 #block[-1].logsig2_w.data *= 10**(-5)
-        else:
-            # Initialize the weights in the last layer of each block as 0
-            for block in self.blocks:
-                block[-1].weight.data *= 0
-                block[-1].bias.data *= 0
+        #else:
+        #    # Initialize the weights in the last layer of each block as 0
+        #    for block in self.blocks:
+        #        block[-1].weight.data *= 0
+        #        block[-1].bias.data *= 0
 
     def make_block(self):
         """
@@ -74,7 +74,7 @@ class Resnet(nn.Module):
                 layers.append(bays_layer)
                 self.bayesian_layers.append(bays_layer)
                 if self.normalization is not None:
-                    layers.append(getattr(nn, self.normalization)())
+                    layers.append(getattr(nn, self.normalization)(self.intermediate_dim))
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
@@ -95,7 +95,7 @@ class Resnet(nn.Module):
                 layers.append(linear)
                 self.deter_layers.append(linear)
                 if self.normalization is not None:
-                    layers.append(getattr(nn, self.normalization)())
+                    layers.append(getattr(nn, self.normalization)(self.intermediate_dim))
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())

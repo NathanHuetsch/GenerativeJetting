@@ -31,8 +31,8 @@ class TBD(GenerativeModel):
         if self.beta_dist:
             self.beta_dist_a = get(self.params, "beta_dist_a", 1)
             self.beta_dist_b = get(self.params, "beta_dist_b", 0.7)
-            self.dist = torch.distributions.beta.Beta(concentration1=self.beta_dist_a,
-                                                      concentration0=self.beta_dist_b)
+            self.dist = torch.distributions.beta.Beta(concentration1=float(self.beta_dist_a),
+                                                      concentration0=float(self.beta_dist_b))
             print(f"Using beta distribution to sample t with params {self.beta_dist_a, self.beta_dist_b}")
         else:
             self.dist = torch.distributions.uniform.Uniform(low=0, high=1)
