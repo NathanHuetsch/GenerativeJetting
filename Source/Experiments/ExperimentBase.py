@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
-from Source.Models.ddpm import DDPM
+from Source.Models.ddpm_new import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
 from Source.Models.autoregNN import AutoRegNN
@@ -11,7 +11,7 @@ from Source.Models.autoregRQS import AutoRegRQS
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Util.lr_scheduler import OneCycleLR
 from Source.Util.datasets import Dataset
-from Source.Util.util import get_device, save_params, get, load_params
+from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
 import time
 from datetime import datetime
 import os, sys

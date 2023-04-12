@@ -14,8 +14,10 @@ class DDPM(GenerativeModel):
     def __init__(self, params):
         super().__init__(params)
 
+        #get DDPM-specific hyperparameters
         self.timesteps = get(self.params, "timesteps", 1000)
         self.beta_schedule = get(self.params, "beta_schedule", "linear")
+
         if self.beta_schedule == 'linear':
             self.register_buffer('betas', linear_beta_schedule(self.timesteps))
         elif self.beta_schedule == 'cosine':
@@ -160,7 +162,7 @@ class DDPM(GenerativeModel):
 
         for i in range(int(n_samples / batch_size) + 1):
             if self.conditional:
-                c = torch.from_numpy(condition[batch_size * i: batch_size * (i + 1)])
+                c = torch.from_numpy(condition[batch_size * i: batch_size * (i + 1)]).to(self.device)
             else:
                 c = None
             noise_i = torch.randn(self.timesteps, batch_size, self.dim).to(self.device)
