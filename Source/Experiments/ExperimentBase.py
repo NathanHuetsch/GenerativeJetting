@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
-from Source.Models.ddpm import DDPM
+from Source.Models.ddpm_new import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
 from matplotlib.backends.backend_pdf import PdfPages
