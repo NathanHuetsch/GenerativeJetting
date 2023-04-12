@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import os, time
 from torch.utils.tensorboard import SummaryWriter
-from Source.Util.util import get, get_device
+from Source.Util.util import get, get_device, magic_trafo, inverse_magic_trafo
 from Source.Util.preprocessing import undo_preprocessing
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
 from Source.Util.physics import get_M_ll
@@ -237,7 +237,7 @@ class GenerativeModel(nn.Module):
         plot_train = []
         plot_test = []
         plot_samples = []
-
+        weights = None
 
         if self.conditional and self.n_jets !=3:
             for i in range(self.n_jets, 4):
@@ -257,6 +257,19 @@ class GenerativeModel(nn.Module):
             plot_train.append(self.data_train)
             plot_test.append(self.data_test)
             plot_samples.append(samples)
+
+            if get(self.params, "magic_transformation", False):
+                if self.n_jets == 2:
+                    deltaR12 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+                    weights = inverse_magic_trafo(deltaR12)
+                elif self.n_jets == 3:
+                    deltaR12 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+                    deltaR13 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                    deltaR23 = delta_r(samples, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                    weights12 = inverse_magic_trafo(deltaR12)
+                    weights13 = inverse_magic_trafo(deltaR13)
+                    weights23 = inverse_magic_trafo(deltaR23)
+                    weights = weights12 * weights13 * weights23
 
         with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
             for j, _ in enumerate(plot_train):
@@ -278,7 +291,8 @@ class GenerativeModel(nn.Module):
                              range=obs_range,
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights)
 
         if all(c in self.params["plot_channels"] for c in [9, 10, 13, 14]):
             if get(self.params,"plot_deltaR", True):
@@ -296,7 +310,8 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights)
                         if self.n_jets == 3:
                             obs_name = "\Delta R_{j_1 j_3}"
                             obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
@@ -311,7 +326,8 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights)
                             obs_name = "\Delta R_{j_2 j_3}"
                             obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
                             obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
@@ -325,7 +341,8 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights)
 
             if get(self.params,"plot_Deta_Dphi", True):
                 with PdfPages(f"{path}/deta_dphi_jets_epoch_{n_epochs}.pdf") as out:
@@ -377,7 +394,8 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights)
                     
                     obs_name = "\Delta R_{l_1 j_1}"
                     obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
@@ -391,7 +409,8 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights)
                     
                     obs_name = "\Delta R_{l_2 j_1}"
                     obs_train = delta_r(plot_train[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
@@ -405,7 +424,9 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights)
+
                     if self.n_jets >= 2:
                         obs_name = "\Delta R_{l_1 j_2}"
                         obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
@@ -419,7 +440,8 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights)
 
                         obs_name = "\Delta R_{l_2 j_2}"
                         obs_train = delta_r(plot_train[j], idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
@@ -433,7 +455,8 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights)
 
                     if self.n_jets >= 3:
                         obs_name = "\Delta R_{l_1 j_3}"
@@ -448,7 +471,8 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights)
 
                         obs_name = "\Delta R_{l_2 j_3}"
                         obs_train = delta_r(plot_train[j], idx_phi1=5, idx_eta1=6, idx_phi2=17, idx_eta2=18)
@@ -462,7 +486,8 @@ class GenerativeModel(nn.Module):
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights)
 
 
         if get(self.params, "plot_Mll", True):
@@ -482,14 +507,15 @@ class GenerativeModel(nn.Module):
                              n_epochs=n_epochs,
                              range=obs_range,
                              n_jets=j+self.n_jets,
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights)
 
         plot_1d_differences = get(self.params, "plot_1d_differences", True)
         if plot_1d_differences:
             if self.n_jets == 1:
                 differences = [[2, 6], [2, 10], [6, 10], [5, 9]]
             elif self.n_jets == 2:
-                differences = [[2, 6], [2, 10], [2, 14], [6, 10], [6, 14], [10, 14], [5, 9], [5, 13], [9, 13]]
+                differences = [[2, 6], [2, 10], [2, 14], [6, 10], [6, 14], [10, 14], [5, 9], [5, 13], [9, 13], [1,5], [1,9], [1,13]]
             else:
                 differences = [[2, 6], [2, 10], [2, 14], [6, 10], [6, 14], [10, 14], [5, 9], [5, 13], [9, 13],
                                [2, 18], [6, 18], [10, 18], [14, 18], [5, 17], [9, 17], [13, 17]]
@@ -510,7 +536,8 @@ class GenerativeModel(nn.Module):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=j + self.n_jets,
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights)
 
 
         if get(self.params,"plot_loss", False):

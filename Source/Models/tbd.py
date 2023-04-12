@@ -45,6 +45,8 @@ class TBD(GenerativeModel):
         if self.t_factor !=0:
             print(f"t_factor is {self.t_factor}")
 
+        self.magic_transformation = get(self.params, "magic_transformation", False)
+
     def build_net(self):
         """
         Build the network
@@ -59,6 +61,10 @@ class TBD(GenerativeModel):
         """
         Calculate batch loss as described by Peter
         """
+
+        if self.magic_transformation:
+            weights = x[:, -1]
+            x = x[:, :-1]
 
         if self.conditional and self.n_jets == 1:
             condition = x[:, :3]
@@ -86,15 +92,19 @@ class TBD(GenerativeModel):
 
         self.net.kl = 0
         drift = self.net(x_t, t, condition)
-        if self.loss_type=="l2":
-            loss = torch.mean((drift - x_t_dot) ** 2 * torch.exp(self.t_factor * t))
-            self.regular_loss.append(loss.detach().cpu().numpy())
-            if self.C != 0:
-                kl_loss = self.C*self.net.kl / self.n_traindata
-                self.kl_loss.append(kl_loss.detach().cpu().numpy())
-                loss = loss + kl_loss
-        elif self.loss_type=="l1":
-            loss = torch.mean(torch.abs(drift-x_t_dot)) + self.C*self.net.kl / self.n_traindata
+
+        if self.magic_transformation:
+            loss = torch.mean((drift - x_t_dot) ** 2 * weights[:, None])/weights.sum()
+        else:
+            if self.loss_type=="l2":
+                loss = torch.mean((drift - x_t_dot) ** 2 * torch.exp(self.t_factor * t))
+                self.regular_loss.append(loss.detach().cpu().numpy())
+                if self.C != 0:
+                    kl_loss = self.C*self.net.kl / self.n_traindata
+                    self.kl_loss.append(kl_loss.detach().cpu().numpy())
+                    loss = loss + kl_loss
+            elif self.loss_type=="l1":
+                loss = torch.mean(torch.abs(drift-x_t_dot)) + self.C*self.net.kl / self.n_traindata
         return loss
 
     def sample_n(self, n_samples, prior_samples=None, con_depth=0):

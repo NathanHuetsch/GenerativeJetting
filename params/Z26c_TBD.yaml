@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/13d_betaDist"
-run_name : "b11"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/MagicTrafo"
+run_name : "Mid_2j_05betadist"
 redirect_console : True
 
 # #########
@@ -50,7 +50,8 @@ sample_every_n_samples: 100000
 model: TBD
 trajectory: "linear_trajectory"
 beta_dist: True
-beta_dist_b: 1.1
+beta_dist_b: 0.5
+magic_transformation: True
 
 encode_t: True
 encode_t_dim: 64
@@ -58,7 +59,7 @@ encode_t_dim: 64
 
 network: "Resnet"
 n_blocks : 1
-intermediate_dim: 1024
+intermediate_dim: 512
 layers_per_block: 8
 #normalization: "InstanceNorm1d"
 

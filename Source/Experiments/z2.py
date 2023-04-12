@@ -34,7 +34,6 @@ class Z2_Experiment(Experiment):
         It also makes some useful definitions
         """
         super().__init__(params)
-
         self.channels = get(self.params, "channels", None)
         self.n_jets = get(self.params, "n_jets", 2)
         if self.channels is None:
@@ -53,6 +52,8 @@ class Z2_Experiment(Experiment):
             if get(self.params, "plot_channels", None) is None:
                 self.plot_channels = self.channels
                 self.params["plot_channels"] = self.channels
+            else:
+                self.plot_channels = get(self.params, "plot_channels", None)
 
         self.starttime = time.time()
 

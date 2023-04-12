@@ -22,7 +22,8 @@ def preformat(data, params):
     else:
         events = EpppToPTPhiEta(data, reduce_data=False, include_masses=True)
 
-    events[:, 5::4] = events[:, 5::4] - events[:,1,None]
+    events[:, 5::4] = events[:, 5::4] - events[:, 1, None]
+    events[:, 1] = 0
     events[:, 1::4] = (events[:, 1::4] + np.pi) % (2*np.pi)- np.pi
 
     if conditional:

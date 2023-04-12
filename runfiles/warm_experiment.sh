@@ -14,5 +14,5 @@ module load cuda/11.7
 # cd into the project folder
 cd GenerativeJetting
 
-python run_Zn.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/13Top/TBD_6l_1024d_15kb_07beta8616" --train=False
+python run_Zn.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/AllPlottest/magicTrafoTest_normed1154" --train=False
 
