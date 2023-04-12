@@ -77,15 +77,8 @@ def cosine_beta_schedule(timesteps, s = 0.008):
     return torch.clip(betas, 0, 0.999)
 
 
-def magic_transformation(delta_R, R_minus=0.2, R_plus=1.5):
-
-    if delta_R < R_minus:
-        return 0
-    elif delta_R > R_plus:
-        return 1
-    else:
-        return (delta_R - R_minus)/(R_plus-R_minus)
-
-
-def mag_tra(delta_R, R_minus=0.2, R_plus=1.5):
+def magic_trafo(delta_R, R_minus=0.2, R_plus=1.5):
     return np.where(delta_R < R_plus, np.where(delta_R > R_minus, (delta_R - R_minus)/(R_plus - R_minus), 0.), 1.)
+
+def inverse_magic_trafo(delta_R, R_minus=0.2, R_plus=1.5):
+    return np.where(delta_R < R_plus, np.where(delta_R > 0.4, (R_plus - R_minus)/(delta_R - R_minus), 0.), 1.)

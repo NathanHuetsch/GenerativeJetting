@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Util.lr_scheduler import OneCycleLR
 from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
 from Source.Util.datasets import Dataset
-from Source.Util.util import get_device, save_params, get, load_params
+from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
 import time
 from datetime import datetime
 import sys
@@ -204,6 +204,28 @@ class Experiment:
 
             self.params["channels"] = channels
             self.params["n_data"] = n_data
+
+        self.magic_transformation = get(self.params, "magic_transformation", False)
+        if self.magic_transformation:
+            if n_jets == 2:
+                deltaR12 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+                self.event_weights = magic_trafo(deltaR12)
+            elif n_jets == 3:
+                deltaR12 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+                deltaR13 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                deltaR23 = delta_r(data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                weights12 = magic_trafo(deltaR12)
+                weights13 = magic_trafo(deltaR13)
+                weights23 = magic_trafo(deltaR23)
+                self.event_weights = weights12*weights13*weights23
+
+            data = torch.cat([data, torch.from_numpy(self.event_weights[:, None])], dim=1).float()
+            print(f"preprocess_data: Using magic transformation")
+
+        # Make sure the data is a torch.Tensor and move it to device
+        data = data.to(self.device)
+        print(f"preprocess_data: Moved data to {data.device}")
+
         return data, data_mean, data_std, data_u, data_s, bin_edges, bin_means, data_raw
 
     def build_model(self,p, prior_path=None, save_in_params=False):
