@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os, sys, time
+sys.path.append(os.getcwd()) #can we do better?
+from Source.Util.util import load_params
 from matplotlib.backends.backend_pdf import PdfPages
 import warnings
 
@@ -7,26 +10,46 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
-def plot(toy_type):
-    histograms = np.load(f"paper/toy/GMM_{toy_type}.npy")
+#ramp (GMM, Binned, NN), sphere (GMM, Binned, NN)
+yminAbsArr = [[0., 0., 0.], [0., 0., 0.]]
+ymaxAbsArr = [[.11, .11, .11], [.11, .11, .11]]
+yminRelArr = [[0., 0., 0.], [0., 0., 0.]]
+ymaxRelArr = [[.11, .11, .11], [.45, .45, .45]]
+
+def imodel(model_type):
+    if model_type == "AutoRegGMM":
+        return 0
+    elif model_type == "AutoRegBinned":
+        return 1
+    elif model_type == "AutoRegNN":
+        return 2
+
+def plot(path):
+    histograms = np.load(f"paper/toy/{path}.npy")
+    params = load_params(f"runs/{path}_1/paramfile.yaml")
+    toy_type = params["toy_type"]
+    model_type = params["model"]
     if toy_type == "ramp":
         name = "x_1"
         unit=None
-        yminAbs = 0.
-        ymaxAbs = .11
-        yminRel = 0.
-        ymaxRel = .11
+        yminAbs = yminAbsArr[0][imodel(model_type)]
+        ymaxAbs = ymaxAbsArr[0][imodel(model_type)]
+        yminRel = yminRelArr[0][imodel(model_type)]
+        ymaxRel = ymaxRelArr[0][imodel(model_type)]
     elif toy_type == "gauss_sphere":
         name = "R"
         unit=None
-        yminAbs = 0.
-        ymaxAbs = .11
-        yminRel = 0.
-        ymaxRel = .45
+        yminAbs = yminAbsArr[1][imodel(model_type)]
+        ymaxAbs = ymaxAbsArr[1][imodel(model_type)]
+        yminRel = yminRelArr[1][imodel(model_type)]
+        ymaxRel = ymaxRelArr[1][imodel(model_type)]
 
-    with warnings.catch_warnings() and PdfPages(f"paper/toy/GMM_{toy_type}.pdf") as pp:
+    with warnings.catch_warnings() and PdfPages(f"paper/toy/{path}.pdf") as pp:
         warnings.simplefilter("ignore", RuntimeWarning)
 
+        histograms[4,:,0] = np.mean(histograms[5:,:,1], axis=0)
+        histograms[4,:,1] = np.std(histograms[5:,:,1], axis=0)
+    
         bins = histograms[0,:,0]
         hists = [histograms[2,:,0], histograms[5,:,0], histograms[1,:,0]]
         hist_errors = [histograms[2,:,1], histograms[5,:,1], histograms[1,:,1]]
@@ -199,5 +222,9 @@ def plot(toy_type):
         plt.savefig(pp, format="pdf")
         plt.close()
 
-plot("ramp")
-plot("gauss_sphere")
+plot("paper_GMM_ramp2")
+plot("paper_GMM_sphere2")
+plot("paper_Binned_ramp")
+plot("paper_Binned_sphere2")
+plot("paper_NN_ramp")
+plot("paper_NN_sphere")

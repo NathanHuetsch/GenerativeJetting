@@ -54,18 +54,59 @@ class AutoRegGMM(GenerativeModel):
         :x: Training data in shape (batch_size, block_size)
         :returns: torch loss object
         """
-        x = torch.cat((self.n_jets*torch.ones(x.size(0), 1, device=self.device), x), dim=1)
+        if self.params["n_jets"] != "n":
+            x = torch.cat((self.n_jets*torch.ones(x.size(0), 1, device=self.device), x), dim=1)
         idx = x[:, :-1]
         targets = x[:, 1:]
 
-        mu, sigma, weights = self.net(idx)
-        mix = D.Categorical(weights)
-        comp = D.Normal(mu, sigma)
-        gmm = D.MixtureSameFamily(mix, comp)
+        try:
+            mu, sigma, weights = self.net(idx)    
+            mix = D.Categorical(weights)
+            comp = D.Normal(mu, sigma)
+            gmm = D.MixtureSameFamily(mix, comp)
+        except ValueError:
+            print(f"Caught ValueError while constructing GMM in epoch {self.epoch}, skipping this epoch")
+            return None
 
         # log Likelihood loss
-        loss = -gmm.log_prob(targets).mean()
-        self.regular_loss.append(-gmm.log_prob(targets).mean().detach().cpu().numpy())
+        loss = -gmm.log_prob(targets)
+
+        # mask out stuff for variable number of jets
+        
+        '''
+        if self.params["n_jets"] == "n":
+            #n_jets = x[0,0] #note: all elements of a batch have to be of same n_jets
+            n_jets = x[0,0] + 2
+            channels = self.params["channels"]
+            if (n_jets-1)<.1:
+                channels_out = np.array([12, 13, 14, 15, 16, 17, 18, 19])
+            elif (n_jets-2)<.1:
+                channels_out = np.array([16, 17, 18, 19])
+            elif (n_jets-3)<.1:
+                channels_out = np.array([])
+            idx_out = torch.Tensor(np.isin(channels, channels_out)).bool()
+            loss = loss[:,~idx_out]
+        loss = loss.mean()
+        '''
+        
+        if self.params["n_jets"] == "n":
+            nEntries = 0
+            channels_out = [np.array([12, 13, 14, 15, 16, 17, 18, 19]), np.array([16, 17, 18, 19]), np.array([])]
+            channels = self.params["channels"]
+            idx_out = [torch.Tensor(np.isin(channels, channels_out[i])).bool() for i in range(3)]
+            n_jets = [1,2,3]
+            #n_jets = [-1,0,1]
+            idx = [(x[:,0].int() == n_jets[i]).nonzero().squeeze() for i in range(3)]
+            loss_tot = torch.Tensor(1).to(self.device)
+            for i in range(3):
+                loss_i = loss[idx[i],:] #remove rows with wrong n_jets -> size (n_left, 17)
+                loss_i = loss_i[:,~idx_out[i]] #mask out zero-padded columns -> size (n_left, 9 or 13 or 17)
+                loss_tot += loss_i.sum()
+                nEntries += loss_i.flatten().size(0)
+            loss = loss_tot / nEntries
+        else:
+            loss = loss.mean()
+        self.regular_loss.append(loss.detach().cpu().numpy())
 
         # GMM weight regularization
         if self.l2_lambda > 0.:
@@ -74,8 +115,12 @@ class AutoRegGMM(GenerativeModel):
 
         # KL loss
         if self.bayesian or self.iterations > 1:
-            loss += self.net.KL() / len(self.data_train)
-            self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
+            if self.params["n_jets"] == "n":
+                loss += self.net.KL() / len(self.data_train) / nEntries
+                self.kl_loss.append( (self.net.KL() / len(self.data_train) / nEntries).detach().cpu().tolist())
+            else:
+                loss += self.net.KL() / len(self.data_train)
+                self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
 
         if getMore:
             logLikelihood = torch.sum(gmm.log_prob(targets), dim=-1)
@@ -90,18 +135,20 @@ class AutoRegGMM(GenerativeModel):
         :n_samples: Number of samples to be generated
         :returns: Generated samples in the shape (n_samples, block_size)
         """
-        if self.net.bayesian >= 1:
+        if self.net.bayesian != 0:
             self.net.map = get(self.params, "fix_mu", False)
+        if self.net.bayesian == 1 or self.net.bayesian == 2 or self.net.bayesian == 3:
             for i in range(self.net.n_blocks):
                 self.net.transformer.h[i].mlp.c_fc.random = None
                 self.net.transformer.h[i].mlp.c_proj.random = None
-        if self.net.bayesian >= 2:
+        if self.net.bayesian == 2 or self.net.bayesian == 3:
             for i in range(self.net.n_blocks):
                 self.net.transformer.h[i].attn.c_attn.random = None
                 self.net.transformer.h[i].attn.c_proj.random = None
-        if self.net.bayesian >= 3:
-            self.net.transformer.wte.random = None
+        if self.net.bayesian == 3 or self.net.bayesian == 4:
             self.net.lm_head.random = None
+        if self.net.bayesian == 3:
+            self.net.transformer.wte.random = None
         self.eval()
 
         n_batches = int(n_samples / self.batch_size_sample)+1
@@ -109,7 +156,8 @@ class AutoRegGMM(GenerativeModel):
         for i in range(n_batches):
             t0=time.time()
 
-            idx = self.n_jets * torch.ones(self.batch_size_sample, 1, dtype=torch.int, device=self.device).float()            
+            #idx = self.n_jets * torch.ones(self.batch_size_sample, 1, dtype=torch.int, device=self.device).float()
+            idx = self.n_jets * torch.ones(self.batch_size_sample, 1, device=self.device)
             for iBlock in range(self.block_size):
                 mu, sigma, weights = self.net(idx)
                 

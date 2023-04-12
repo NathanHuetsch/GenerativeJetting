@@ -1,5 +1,5 @@
 import os
-from Source.Experiments import z1,z2,z3
+from Source.Experiments import z1,z2,z3,zn
 from Source.Util.util import load_params, get
 from absl import app
 from absl import flags
@@ -102,8 +102,10 @@ def main(argv):
         experiment = z2.Z2_Experiment(params)
     elif n_jets == 3:
         experiment = z3.Z3_Experiment(params)
+    elif n_jets == "n":
+        experiment = zn.Zn_Experiment(params)
     else:
-        raise ValueError("n_jets must be either 1,2 or 3")
+        raise ValueError("n_jets must be either 1, 2, 3 or 'n'")
 
     # Run the experiment
     experiment.full_run()

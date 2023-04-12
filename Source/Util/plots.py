@@ -227,9 +227,11 @@ def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False, loss_log=T
     fig, axes = plt.subplots()
     axes.plot(y, total, label='total_loss')
     if regular and kl:
+        y = range(1, len(regular) + 1) #needed for unstable loss
         axes.plot(y, regular, label="regular loss")
         axes.plot(y, kl, label="kl loss")
     if regularizeGMM:
+        y = range(1, len(regularizeGMM) + 1) #needed for unstable loss
         axes.plot(y, regularizeGMM, label="GMM regularization")
 
     if loss_log:

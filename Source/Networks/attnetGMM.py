@@ -52,21 +52,32 @@ class attnetGMM(nn.Module):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
 
-    def forward(self, idx):
+    def forward(self, idx, out=False):
         device = idx.device
         b, t = idx.size()
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
 
+        if out or torch.any(torch.isnan(idx)):
+            print("Input gives ", idx)
+
         idx = idx.reshape(idx.size(0), idx.size(1), 1)
         tok_emb = self.transformer.wte(idx)        
         pos_emb = self.transformer.wpe(pos)
         x = self.transformer.drop(tok_emb + pos_emb)
+        if out or torch.any(torch.isnan(x)):
+            print("Token embedding gives nan")
+            print("Pos embedding gives nan")
+            print("Full embedding gives", x)
 
         for block in self.transformer.h:
             x = block(x)
+            if out or torch.any(torch.isnan(x)):
+                print("Transformer gives nan")
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x).reshape(idx.size(0), idx.size(1), self.n_gauss, 3)
+        if out or torch.any(torch.isnan(x)):
+            print("Last layer gives nan")
 
         mu = logits[:,:,:,0]
         sigma = torch.exp(logits[:,:,:,1]) #ensures positivity and slowly goes to zero

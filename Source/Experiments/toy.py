@@ -15,7 +15,7 @@ class Toy_Experiment(Experiment):
 
         super().__init__(params)
 
-        self.istoy = get(self.params,"istoy", True)
+        self.params["istoy"] = True
         self.n_data = get(self.params, "n_data", 1000000)
 
     def full_run(self):
@@ -84,14 +84,15 @@ class Toy_Experiment(Experiment):
             data_type = get(self.params, "data_type", "np")
             if data_type == "np":
                 self.data_raw = np.load(data_path)
+                self.dim = self.data_raw.shape[1]
                 print(f"load_data: Loaded data with shape {self.data_raw.shape} from ", data_path)
             else:
                 raise ValueError(f"load_data: Cannot load data from {data_path}")
         else:
-            self.data_raw = ToySimulator(self.params).data        
+            self.data_raw = ToySimulator(self.params).data
+            self.dim = self.data_raw.shape[1]
             print(f"load_data: Simulated data with shape {self.data_raw.shape} following a "
                   f"{self.dim}-dimensional {get(self.params, 'toy_type', 'ramp')} distribution")
-        self.dim = self.data_raw.shape[1]
         self.params["dim"] = self.dim
 
     def preprocess_data(self):
@@ -115,10 +116,8 @@ class Toy_Experiment(Experiment):
         The generate_samples method uses the trained or loaded model to generate samples.
         Currently, the sampling code is hidden as part of the model classes to keep the ExperimentClass shorter.
         All models have a sample_n_parallel() method, that performs the sampling.
-
         New model classes implemented in this framework must have a sample_n_parallel(n_samples) method.
         See documentation of ModelBase class for more guidelines on how to implement new model classes.
-
         Overwrite this method if a different way of sampling is needed.
         """
 
@@ -138,14 +137,12 @@ class Toy_Experiment(Experiment):
                 print(f"generate_samples: {i}.Starting generation of {n_samples} samples")
                 t0 = time.time()
                 sample = self.model.sample_n(n_samples)
-                if self.params["model"] == "AutoRegBinned":
-                    sample = undo_discretize(sample, self.params, self.bin_edges, self.bin_means)
                 t1 = time.time()
                 sampletime = t1 - t0
                 self.params["sampletime"] = sampletime
                 bay_samples.append(sample)
 
-                print(f"generate_samples {i}: Finished generation of {n_samples} samples after {sampletime:.2f} seconds")
+                print(f"generate_samples: {i}.Finished generation of {n_samples} samples after {sampletime} seconds")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
                     np.save(f"samples/samples_final_{i}.npy", sample)

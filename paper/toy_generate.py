@@ -7,19 +7,21 @@ from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
+from Source.Models.autoregNN import AutoRegNN
 from Source.Util.util import load_params, get_device
+from Source.Util.discretize import discretize, undo_discretize
 from Source.Experiments import toy
 from Source.Util.simulateToyData import ToySimulator
 
 import matplotlib.pyplot as plt
 
-paths_ramp = [f"runs/paper_rampv2_{i}/" for i in range(1, 11)]
-paths_sphere = [f"runs/paper_spherev2_{i}/" for i in range(1, 11)]
 device = get_device()
 
-def genHistograms(paths):
-    print(f"## Generating histograms for {paths} ##")
+def genHistograms(path):
+    print(f"## Generating histograms for {path} ##")
     t0 = time.time()
+
+    paths = [f"runs/{path}_{i}/" for i in range(1,11)]
     
     nbins = 60
     nBNN = 30
@@ -39,6 +41,7 @@ def genHistograms(paths):
         # load param dict
         params = load_params(paths[ipath] + "paramfile.yaml")
         params["device"] = device
+        params["dim"] = 2
         if params["toy_type"] == "ramp":
             params["data_path"] = "../data/2dRamp.npy"
         elif params["toy_type"] == "gauss_sphere":
@@ -49,20 +52,32 @@ def genHistograms(paths):
         state_dict = torch.load(paths[ipath]+"models/model_run0.pt", map_location=params["device"])
         model.load_state_dict(state_dict)
 
+        if params["toy_type"] == "ramp":
+            model.obs_ranges = [range_ramp, range_ramp]
+        elif params["toy_type"] == "gauss_sphere":
+            model.obs_ranges = [range_gauss_sphere, range_gauss_sphere]
+
         # load data
         # (could do this outside of the loop, we keep it in the loop to improve readability)
-        data = np.load(params["data_path"])
+        data_raw = np.load(params["data_path"])
+        if params["model"] == "AutoRegBinned":
+            data, bin_edges, bin_means = discretize(data_raw.copy(), params)
+        else:
+            data = data_raw
         data_split = params["data_split"]
         n_data = len(data)
         cut1 = int(n_data - data_split[0])
         cut2 = int(n_data * (data_split[0] + data_split[1]))
-        data_train = data[:cut1]
-        data_test = data[cut2:]
+        data_train = data_raw[:cut1]
+        data_test = data_raw[cut2:]
 
         # generate events
-        data_predict = np.zeros((0, data_train.shape[1]))
+        data_predict = np.zeros((0, data_raw.shape[1]))
         for _ in range(nBNN):
-            data_predict= np.append(data_predict, model.sample_n(n_samples), axis=0)
+            samples = model.sample_n(n_samples)
+            if params["model"] == "AutoRegBinned":
+                samples = undo_discretize(samples, params, bin_edges, bin_means)   
+            data_predict= np.append(data_predict, samples, axis=0)
     
         # compute component of interest
         def get_obs(data):
@@ -104,14 +119,10 @@ def genHistograms(paths):
     # compute
     histograms[3, :, 0] = dup_last(np.mean(histograms[5:, :-1, 0], axis=0)) #histogram means (for normalization)
     histograms[3, :, 1] = dup_last(1/nEnsemble * np.sum(histograms[5:, :-1, 1]**2, axis=0)**.5) #gaussian error propagation -> effective uncertainty (reduced!)
-    histograms[4, :, 0] = dup_last(np.mean(histograms[5:, :-1, 1], axis=0)) #mean of uncertainties (just to have it)
-    histograms[4, :, 1] = dup_last(np.std(histograms[5:, :-1, 1], axis=0)) #uncertainty on uncertainty
+    histograms[4, :, 0] = dup_last(np.mean(histograms[5:, :-1, 1], axis=0)) #mean of uncertainties (shown in right 2 plots)
+    histograms[4, :, 1] = dup_last(np.std(histograms[5:, :-1, 1], axis=0)) #uncertainty on uncertainty (shown in right 2 plots)
 
-    if params["model"]=="AutoRegGMM":
-        model_type = "GMM"
-    elif params["model"]=="AutoRegBinned":
-        model_type = "Binned"
-    np.save(f"paper/toy/{model_type}_{params['toy_type']}.npy", histograms)
+    np.save(f"paper/toy/{path}.npy", histograms)
 
     t1 = time.time()
     print(f"Total time consumption: {t1-t0:.2f}s = {(t1-t0)/60:.2f}min = {(t1-t0)/60**2:.2f}h")
@@ -120,8 +131,12 @@ if device=="cuda":
     sys.stdout = open("paper/toy/stdout.txt", "w", buffering=1)
     sys.stderr = open("paper/toy/stderr.txt", "w", buffering=1)
 
-genHistograms(paths_ramp)
-genHistograms(paths_sphere)
+genHistograms("paper_GMM_ramp2")
+genHistograms("paper_GMM_sphere2")
+genHistograms("paper_Binned_ramp")
+genHistograms("paper_Binned_sphere2")
+genHistograms("paper_NN_ramp")
+genHistograms("paper_NN_sphere")
 
 if device=="cuda":
     sys.stdout.close()

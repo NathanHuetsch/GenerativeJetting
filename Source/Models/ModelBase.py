@@ -63,7 +63,7 @@ class GenerativeModel(nn.Module):
         self.con_depth = get(self.params,'con_depth',0)
         self.batch_size = self.params["batch_size"]
         self.batch_size_sample = get(self.params, "batch_size_sample", self.batch_size)
-        self.istoy = get(self.params, "istoy", False)
+        self.istoy = self.params["istoy"]
         self.epoch = get(self.params, "total_epochs", 0)
         self.net = self.build_net()
         self.iterations = get(self.params,"iterations", 1)
@@ -115,6 +115,7 @@ class GenerativeModel(nn.Module):
                 if (self.epoch + 1) % self.sample_every == 0:
                     self.eval()
                     if not self.istoy:
+                        #iterate_periodically not implemented for jets
                         samples = self.sample_and_undo(self.sample_every_n_samples)
                         self.plot_samples(samples=samples)
                     else:

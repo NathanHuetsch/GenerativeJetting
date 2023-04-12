@@ -56,6 +56,8 @@ class AutoRegBinned(GenerativeModel):
         logits = self.net(idx)
 
         loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1), ignore_index=-1)
+        self.regular_loss.append(F.cross_entropy(logits.reshape(-1, logits.size(-1)),
+                                                 targets.reshape(-1), ignore_index=-1).detach().cpu().numpy())
 
         if self.bayesian:
             loss += self.net.KL() / len(self.data_train)
@@ -78,6 +80,18 @@ class AutoRegBinned(GenerativeModel):
         :n_jets: Number of jets to be generated (only relevant when training on multiple multiplicities at the same time)
         :returns: Generated samples in the shape (n_samples, block_size)
         """
+        if self.net.bayesian != 0:
+            self.net.map = get(self.params, "fix_mu", False)
+        if self.net.bayesian == 1 or self.net.bayesian == 2 or self.net.bayesian == 3:
+            for i in range(self.net.n_blocks):
+                self.net.transformer.h[i].mlp.c_fc.random = None
+                self.net.transformer.h[i].mlp.c_proj.random = None
+        if self.net.bayesian == 2 or self.net.bayesian == 3:
+            for i in range(self.net.n_blocks):
+                self.net.transformer.h[i].attn.c_attn.random = None
+                self.net.transformer.h[i].attn.c_proj.random = None
+        if self.net.bayesian == 3 or self.net.bayesian == 4:
+            self.net.lm_head.random = None            
         self.eval()
 
         n_batches = int(n_samples / self.batch_size)+1
