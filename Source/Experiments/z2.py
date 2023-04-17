@@ -10,7 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
 from Source.Util.datasets import Dataset
-from Source.Util.util import get_device, save_params, get, load_params
+from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
 from Source.Experiments.ExperimentBase import Experiment
 import time
 from datetime import datetime
@@ -34,6 +34,7 @@ class Z2_Experiment(Experiment):
         It also makes some useful definitions
         """
         super().__init__(params)
+
         self.channels = get(self.params, "channels", None)
         self.n_jets = get(self.params, "n_jets", 2)
         if self.channels is None:
@@ -48,6 +49,8 @@ class Z2_Experiment(Experiment):
             if get(self.params,"plot_channels",None) is None:
                 self.plot_channels = self.prior_channels + self.channels
                 self.params["plot_channels"] = self.plot_channels
+            else:
+                self.plot_channels = get(self.params,"plot_channels",None)
         else:
             if get(self.params, "plot_channels", None) is None:
                 self.plot_channels = self.channels
@@ -79,6 +82,12 @@ class Z2_Experiment(Experiment):
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.data_raw = \
                 self.preprocess_data(self.params, self.data_raw, save_in_params=True)
 
+        self.magic_transformation = get(self.params, "magic_transformation", False)
+        if self.magic_transformation:
+            deltaR12 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+            self.event_weights = magic_trafo(deltaR12)
+            self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)], dim=1).float()
+            print(f"preprocess_data: Using magic transformation")
         print(f"preprocess_data: input shape is {self.data.shape}")
         self.n_data = len(self.data)
 

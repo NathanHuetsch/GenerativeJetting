@@ -1,18 +1,18 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/MagicTrafo"
-run_name : "Mid_2j_05betadist"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/MagicTrafoBayesian3Jets"
+run_name : "512d8l_2pre_20k"
 redirect_console : True
 
 # #########
 # # Data: #
 # #########
-bayesian: 0
+bayesian: 2
 data_path : "/remote/gpu07/huetsch/data/z+njet_full.h5"
 data_type: np
-preprocess : 3
-n_jets: 2
+preprocess : 2
+n_jets: 3
 load_dataset : False
 #channels : [9, 10, 13, 14]
 #[0, 4, 8, 9, 10, 12, 13, 14]
@@ -26,7 +26,7 @@ data_split: [0.6, 0, 0.4]
 conditional: False
 
 optimizer: Adam
-lr : 5.e-4
+lr : 1.e-3
 batch_size : 8192
 weight_decay : 0
 betas : [0.9, 0.99]
@@ -34,10 +34,10 @@ use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 #eta_min: 1.e-6
 loss_type: "l2"
-C: 0
+C: 0.001
 multiple_t: False
 
-n_epochs : 10000
+n_epochs : 20000
 validate: False
 validate_every : 100
 
@@ -49,7 +49,7 @@ sample_every_n_samples: 100000
 # #################
 model: TBD
 trajectory: "linear_trajectory"
-beta_dist: True
+beta_dist: False
 beta_dist_b: 0.5
 magic_transformation: True
 

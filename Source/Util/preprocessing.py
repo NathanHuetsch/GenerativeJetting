@@ -151,7 +151,7 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
 
     if conditional and n_jets != 3:
         cut = 4 - n_jets
-        condition = decode_condition(data[:, :cut], n=n_jets)
+        condition = decode_condition(data[:, :cut], n=n_jets).reshape((-1, 1))
         events = np.append(condition, events, axis=1)
 
     return events

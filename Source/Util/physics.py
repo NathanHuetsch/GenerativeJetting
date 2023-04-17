@@ -41,7 +41,7 @@ def PTPhiEtaToEppp(events, masses, dim = 3):
 
     #E ** 2 = M ** 2 + P ** 2
     E = np.sqrt(masses ** 2 + px ** 2 + py ** 2 + pz ** 2)
-    events_out = np.empty((events.shape[0], 12))
+    events_out = np.empty((events.shape[0], events.shape[1])) #Note: Theo hat 12 instead of events.shape[1]
     events_out[:,0::4] = E
     events_out[:,1::4] = px
     events_out[:,2::4] = py

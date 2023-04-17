@@ -31,13 +31,14 @@ class Resnet(nn.Module):
         # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
             self.encode_t_scale = self.param.get("encode_t_scale", 30)
-            self.encode_t_dim = self.param.get("encode_t_dim", 4)
+            self.encode_t_dim = self.param.get("encode_t_dim", 64)
             self.embed = nn.Sequential(GaussianFourierProjection(embed_dim=self.encode_t_dim,
                                                                  scale=self.encode_t_scale),
                                        nn.Linear(self.encode_t_dim, self.encode_t_dim))
         else:
             self.encode_t_dim = 1
         if self.embed_condition:
+            self.encode_c_dim = self.param.get("encode_c_dim", 64)
             self.embed_c = nn.Sequential(nn.Linear(self.n_con+self.encode_t_dim,self.encode_c_dim),
                                          nn.Linear(self.encode_c_dim,self.encode_c_dim))
             self.encode_t_dim = 0

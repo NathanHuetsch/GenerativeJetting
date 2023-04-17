@@ -88,7 +88,7 @@ def discretize(data, params, n_jets=2):
     :n_jets: Number of jets in the generated events, required because this is the first condition
     :returns: Discretized data (bin indices), together with the bin means used to undo the discretization
     '''
-    n_bins = get(params, "n_bins", 100)
+    n_bins = get(params, "n_bins", int(params["n_head"])*int(params["n_per_head"]))
     batchsize_discretize = get(params, "batchsize_discretize", 100000)
     discretize = params["discretize"]
     
@@ -123,7 +123,7 @@ def undo_discretize(samples, params, bin_edges, bin_means):
     '''
     add_noise = params["add_noise"]
     discretize = params["discretize"]
-    n_bins = get(params, "n_bins", 100)
+    n_bins = get(params, "n_bins", int(params["n_head"])*int(params["n_per_head"]))
     
     samples_ret = np.zeros((np.shape(samples)[0], np.shape(samples)[1]-1), dtype="float")
     assert bin_means is not None, "undo_discretize: missing argument bin_means"

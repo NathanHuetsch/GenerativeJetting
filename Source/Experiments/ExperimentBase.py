@@ -70,7 +70,7 @@ class Experiment:
         self.warm_start_path = get(self.params, "warm_start_path", None)
         self.device = get(self.params, "device", get_device())
         self.batch_size = get(self.params, "batch_size", 1024)
-        self.data_split = get(self.params, "data_split", [0.55, 0.05, 0.4])
+        self.data_split = get(self.params, "data_split", [0.6, 0, 0.4])
         self.runs = get(self.params, "runs", 0)
         self.total_epochs = get(self.params, "total_epochs", 0)
         self.con_depth = get(self.params, "con_depth", 0)
@@ -137,7 +137,7 @@ class Experiment:
 
         Overwrite this method if other ways of reading in data are needed
         This method should place the data under self.data_raw
-                """
+        """
         # Read in the "data_path" parameter. Raise and error if it is not specified or does not exist
         data_path = get(self.params, "data_path", None)
         fraction = get(self.params,"fraction",None)
@@ -201,22 +201,6 @@ class Experiment:
             self.params["channels"] = channels
             self.params["n_data"] = n_data
 
-        self.magic_transformation = get(self.params, "magic_transformation", False)
-        if self.magic_transformation:
-            if n_jets == 2:
-                deltaR12 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-                self.event_weights = magic_trafo(deltaR12)
-            elif n_jets == 3:
-                deltaR12 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-                deltaR13 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
-                deltaR23 = delta_r(data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-                weights12 = magic_trafo(deltaR12)
-                weights13 = magic_trafo(deltaR13)
-                weights23 = magic_trafo(deltaR23)
-                self.event_weights = weights12*weights13*weights23
-
-            data = torch.cat([data, torch.from_numpy(self.event_weights[:, None])], dim=1).float()
-            print(f"preprocess_data: Using magic transformation")
 
         # Make sure the data is a torch.Tensor and move it to device
         data = data.to(self.device)

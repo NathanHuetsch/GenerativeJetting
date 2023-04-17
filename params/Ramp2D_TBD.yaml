@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/Paper/2dGauss_c2_2000e_4l_40d"
-run_name : "Run1"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/Paper40d4lGauss/40d4l"
+run_name : "7l40d"
 redirect_console : True
 
 # #########
@@ -21,13 +21,13 @@ train: True
 log: True
 
 data_split: [0.6, 0, 0.4]
-batch_size : 5000
+batch_size : 8192
 
 optimizer: Adam
 betas : [0.9, 0.99]
 weight_decay : 0.0
 
-lr : 5.e-3
+lr : 1.e-2
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
