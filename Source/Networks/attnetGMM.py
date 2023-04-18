@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 import math
 from torch.nn import functional as F
 from Source.Networks.vblinear import VBLinear
@@ -27,6 +28,7 @@ class attnetGMM(nn.Module):
             wte = VBLinear(1, self.intermediate_dim, self.prior_prec) \
                 if self.bayesian==3 else nn.Linear(1, self.intermediate_dim), 
             wpe = nn.Embedding(self.block_size, self.intermediate_dim),
+            wnjetse = nn.Embedding(3, self.intermediate_dim),
             drop = nn.Dropout(self.embd_pdrop),
             h = nn.ModuleList([TransformerBlock(params) for _ in range(self.n_blocks)]),
             ln_f = nn.LayerNorm(self.intermediate_dim),
@@ -52,11 +54,15 @@ class attnetGMM(nn.Module):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
 
-    def forward(self, idx, out=False):
+    def forward(self, idx, pos=None, n_jets=None, out=False):
         device = idx.device
         b, t = idx.size()
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
+        if type(pos) is None:
+            pos = torch.arange(0, t, dtype=torch.long).unsqueeze(0) # shape (1, t)
+        elif type(pos) is np.ndarray:
+            pos = torch.Tensor(pos).long()
+        pos = pos.to(device)
 
         if out or torch.any(torch.isnan(idx)):
             print("Input gives ", idx)
@@ -64,7 +70,12 @@ class attnetGMM(nn.Module):
         idx = idx.reshape(idx.size(0), idx.size(1), 1)
         tok_emb = self.transformer.wte(idx)        
         pos_emb = self.transformer.wpe(pos)
-        x = self.transformer.drop(tok_emb + pos_emb)
+        if n_jets == None:
+            n_jets_arr = (n_jets-1) * torch.ones(1, 1, dtype=torch.long).to(device)
+            njets_emb = self.transformer.wnjetse(n_jets_arr)
+            x = self.transformer.drop(tok_emb + pos_emb + njets_emb)
+        else:
+            x = self.transformer.drop(tok_emb + pos_emb)
         if out or torch.any(torch.isnan(x)):
             print("Token embedding gives nan")
             print("Pos embedding gives nan")

@@ -47,80 +47,36 @@ class AutoRegGMM(GenerativeModel):
         """Build the network"""
         return Source.Networks.attnetGMM(self.params).to(self.device)
     
-    def batch_loss(self, x, conditional=False, getMore=False):
+    def batch_loss(self, x, conditional=False, getMore=False, pos=None, n_jets = None):
         """
         Loss function for autoregressive model
         TBD: Implement conditional
         :x: Training data in shape (batch_size, block_size)
         :returns: torch loss object
         """
-        if self.params["n_jets"] != "n":
-            x = torch.cat((self.n_jets*torch.ones(x.size(0), 1, device=self.device), x), dim=1)
+        x = torch.cat((torch.zeros(x.size(0), 1, device=self.device), x), dim=1) #add start-of-sequence token
         idx = x[:, :-1]
         targets = x[:, 1:]
 
-        try:
-            mu, sigma, weights = self.net(idx)    
-            mix = D.Categorical(weights)
-            comp = D.Normal(mu, sigma)
-            gmm = D.MixtureSameFamily(mix, comp)
-        except ValueError:
-            print(f"Caught ValueError while constructing GMM in epoch {self.epoch}, skipping this epoch")
-            return None
-
+        mu, sigma, weights = self.net(idx, pos=pos, n_jets=n_jets)    
+        mix = D.Categorical(weights)
+        comp = D.Normal(mu, sigma)
+        gmm = D.MixtureSameFamily(mix, comp)
+        
         # log Likelihood loss
         loss = -gmm.log_prob(targets)
-
-        # mask out stuff for variable number of jets
-        
-        '''
-        if self.params["n_jets"] == "n":
-            #n_jets = x[0,0] #note: all elements of a batch have to be of same n_jets
-            n_jets = x[0,0] + 2
-            channels = self.params["channels"]
-            if (n_jets-1)<.1:
-                channels_out = np.array([12, 13, 14, 15, 16, 17, 18, 19])
-            elif (n_jets-2)<.1:
-                channels_out = np.array([16, 17, 18, 19])
-            elif (n_jets-3)<.1:
-                channels_out = np.array([])
-            idx_out = torch.Tensor(np.isin(channels, channels_out)).bool()
-            loss = loss[:,~idx_out]
         loss = loss.mean()
-        '''
-        
-        if self.params["n_jets"] == "n":
-            nEntries = 0
-            channels_out = [np.array([12, 13, 14, 15, 16, 17, 18, 19]), np.array([16, 17, 18, 19]), np.array([])]
-            channels = self.params["channels"]
-            idx_out = [torch.Tensor(np.isin(channels, channels_out[i])).bool() for i in range(3)]
-            n_jets = [1,2,3]
-            #n_jets = [-1,0,1]
-            idx = [(x[:,0].int() == n_jets[i]).nonzero().squeeze() for i in range(3)]
-            loss_tot = torch.Tensor(1).to(self.device)
-            for i in range(3):
-                loss_i = loss[idx[i],:] #remove rows with wrong n_jets -> size (n_left, 17)
-                loss_i = loss_i[:,~idx_out[i]] #mask out zero-padded columns -> size (n_left, 9 or 13 or 17)
-                loss_tot += loss_i.sum()
-                nEntries += loss_i.flatten().size(0)
-            loss = loss_tot / nEntries
-        else:
-            loss = loss.mean()
-        self.regular_loss.append(loss.detach().cpu().numpy())
+        #self.regular_loss.append(loss.detach().cpu().numpy())
 
         # GMM weight regularization
         if self.l2_lambda > 0.:
             loss -= self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))
-            self.regularizeGMM_loss.append( (-self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))).detach().cpu().tolist())
+            #self.regularizeGMM_loss.append( (-self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))).detach().cpu().tolist())
 
         # KL loss
         if self.bayesian or self.iterations > 1:
-            if self.params["n_jets"] == "n":
-                loss += self.net.KL() / len(self.data_train) / nEntries
-                self.kl_loss.append( (self.net.KL() / len(self.data_train) / nEntries).detach().cpu().tolist())
-            else:
-                loss += self.net.KL() / len(self.data_train)
-                self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
+            loss += self.net.KL() / len(self.data_train)
+            #self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
 
         if getMore:
             logLikelihood = torch.sum(gmm.log_prob(targets), dim=-1)
@@ -128,7 +84,7 @@ class AutoRegGMM(GenerativeModel):
         else:
             return loss
     
-    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0):
+    def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0, n_jets=None, pos=None):
         """
         Event generation for autoregressive model
         TBD: Implement conditional
@@ -152,14 +108,13 @@ class AutoRegGMM(GenerativeModel):
         self.eval()
 
         n_batches = int(n_samples / self.batch_size_sample)+1
-        sample= np.zeros((0, self.block_size), dtype="int")
+        sample= np.zeros((0, len(pos)), dtype="int")
         for i in range(n_batches):
             t0=time.time()
 
-            #idx = self.n_jets * torch.ones(self.batch_size_sample, 1, dtype=torch.int, device=self.device).float()
-            idx = self.n_jets * torch.ones(self.batch_size_sample, 1, device=self.device)
-            for iBlock in range(self.block_size):
-                mu, sigma, weights = self.net(idx)
+            idx = torch.zeros(self.batch_size_sample, 1, device=self.device)
+            for iBlock in range(len(pos)):
+                mu, sigma, weights = self.net(idx, n_jets=n_jets, pos=pos[:iBlock+1])
                 
                 mix = D.Categorical(weights[:,-1,:])
                 comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
@@ -176,46 +131,3 @@ class AutoRegGMM(GenerativeModel):
                 
         sample = sample[:n_samples]
         return sample
-
-    def sample_n_bonus(self, n_samples, xmin, xmax, conditional=False, prior_samples=None, con_depth=0, prec=1000):
-        '''
-        Variant of sample_n that returns not only the samples, but also the generate Gaussian
-        mixture pdf (probstotal) and the pdfs of all individual gaussians (probsindiv)
-        '''
-        assert n_samples <= self.batch_size_sample, "sample_n_bonus: Specified n_samples > batch_size. " \
-               "This is probably not intended, as this function should be used for visualization only."
-        
-        self.eval()
-
-        probstotal = np.zeros((n_samples, self.block_size, prec))                   # pdf of gaussian mixture
-        probsindiv = np.zeros((n_samples, self.block_size, self.n_gauss, prec))     # pdfs of individual gaussians
-        xs = np.zeros((self.block_size, prec))                                      # x-values of the pdfs
-        
-        idx = self.n_jets * torch.ones(self.batch_size_sample, 1, dtype=torch.int, device=self.device).float()
-        for idim in range(self.block_size):
-            mu, sigma, weights = self.net(idx)
-            
-            # generate distribution and next event (standard)                
-            mix = D.Categorical(weights[:,-1,:])
-            comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
-            gmm = D.MixtureSameFamily(mix, comp)
-            idx_next = gmm.sample_n(1).permute(1,0)
-            idx = torch.cat((idx, idx_next), dim=1)
-
-            # generate total pdf (using torch.distributions)
-            probs = torch.zeros(self.batch_size_sample, prec, dtype=torch.float, device=self.device)
-            vals = torch.linspace(xmin, xmax, prec)
-            for ix in range(prec):
-                x=vals[ix]
-                probs[:,ix] = torch.exp(gmm.log_prob(x))
-            probstotal[:,idim,:] = probs.detach().cpu().numpy()[:n_samples,:]
-            xs[idim,:] = vals.detach().cpu().numpy()
-
-            # generate individual pdfs (by hand)
-            for igauss in range(self.n_gauss):
-                for isample in range(n_samples):
-                    probsindiv[isample,idim,igauss,:] = weights[isample,idim,igauss].detach().cpu().numpy() \
-                                * stats.norm.pdf(xs[idim,:], loc=mu[isample,idim,igauss].detach().cpu().numpy(),
-                                        scale=sigma[isample,idim,igauss].detach().cpu().numpy())
-        sample = idx.detach().cpu().numpy()[:n_samples,:]
-        return sample, xs, probstotal, probsindiv

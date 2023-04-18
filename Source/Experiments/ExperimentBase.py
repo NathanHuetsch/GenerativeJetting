@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
-from Source.Models.ddpm_new import DDPM
+from Source.Models.ddpm import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
 from Source.Models.autoregNN import AutoRegNN
@@ -321,6 +321,8 @@ class Experiment:
 
             # Save the final model. Update the total amount of training epochs the model has been trained for
             torch.save(self.model.state_dict(), f"models/model_run{self.runs}.pt")
+            if self.params["model"] == "AutoRegNN":
+                torch.save(self.model.enet.state_dict(), f"models/enet_run{self.runs}.pt")
 
             self.params["total_epochs"] = self.total_epochs
             self.params["traintime"] = traintime

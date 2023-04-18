@@ -51,6 +51,9 @@ def genHistograms(path):
         model = eval(params["model"])(params, out=False)
         state_dict = torch.load(paths[ipath]+"models/model_run0.pt", map_location=params["device"])
         model.load_state_dict(state_dict)
+        if params["model"] == "AutoRegNN":
+            enet_state_dict = torch.load(paths[ipath] + "models/enet_run0.pt", map_location=params["device"])
+            model.enet.load_state_dict(enet_state_dict)
 
         if params["toy_type"] == "ramp":
             model.obs_ranges = [range_ramp, range_ramp]
@@ -131,12 +134,12 @@ if device=="cuda":
     sys.stdout = open("paper/toy/stdout.txt", "w", buffering=1)
     sys.stderr = open("paper/toy/stderr.txt", "w", buffering=1)
 
-genHistograms("paper_GMM_ramp2")
-genHistograms("paper_GMM_sphere2")
-genHistograms("paper_Binned_ramp")
-genHistograms("paper_Binned_sphere2")
-genHistograms("paper_NN_ramp")
-genHistograms("paper_NN_sphere")
+#genHistograms("paper_GMM_ramp2")
+#genHistograms("paper_GMM_sphere2")
+#genHistograms("paper_Binned_ramp")
+#genHistograms("paper_Binned_sphere2")
+#genHistograms("paper_NN_ramp2")
+genHistograms("paper_NN_sphere2")
 
 if device=="cuda":
     sys.stdout.close()

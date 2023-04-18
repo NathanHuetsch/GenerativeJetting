@@ -12,9 +12,10 @@ plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
 #ramp (GMM, Binned, NN), sphere (GMM, Binned, NN)
 yminAbsArr = [[0., 0., 0.], [0., 0., 0.]]
-ymaxAbsArr = [[.11, .11, .11], [.11, .11, .11]]
+ymaxAbsArr = [[.11, .11, .5], [.049, .09, .5]]
 yminRelArr = [[0., 0., 0.], [0., 0., 0.]]
-ymaxRelArr = [[.11, .11, .11], [.45, .45, .45]]
+ymaxRelArr = [[.09, .11, .2], [.2, .19, 1.]]
+iShowArr = [[5, 14, 11], [6, 5, 5]]
 
 def imodel(model_type):
     if model_type == "AutoRegGMM":
@@ -36,6 +37,7 @@ def plot(path):
         ymaxAbs = ymaxAbsArr[0][imodel(model_type)]
         yminRel = yminRelArr[0][imodel(model_type)]
         ymaxRel = ymaxRelArr[0][imodel(model_type)]
+        iShow = iShowArr[0][imodel(model_type)]
     elif toy_type == "gauss_sphere":
         name = "R"
         unit=None
@@ -43,16 +45,16 @@ def plot(path):
         ymaxAbs = ymaxAbsArr[1][imodel(model_type)]
         yminRel = yminRelArr[1][imodel(model_type)]
         ymaxRel = ymaxRelArr[1][imodel(model_type)]
+        iShow = iShowArr[1][imodel(model_type)]
 
     with warnings.catch_warnings() and PdfPages(f"paper/toy/{path}.pdf") as pp:
         warnings.simplefilter("ignore", RuntimeWarning)
-
-        histograms[4,:,0] = np.mean(histograms[5:,:,1], axis=0)
-        histograms[4,:,1] = np.std(histograms[5:,:,1], axis=0)
     
         bins = histograms[0,:,0]
-        hists = [histograms[2,:,0], histograms[5,:,0], histograms[1,:,0]]
-        hist_errors = [histograms[2,:,1], histograms[5,:,1], histograms[1,:,1]]
+        hists = [histograms[2,:,0], histograms[iShow,:,0], histograms[1,:,0]]
+        hist_errors = [histograms[2,:,1], histograms[iShow,:,1], histograms[1,:,1]]
+
+        print(histograms[5:,0,:])
         
         FONTSIZE = 14
         labels = ["True", "Model", "Train"]
@@ -222,9 +224,9 @@ def plot(path):
         plt.savefig(pp, format="pdf")
         plt.close()
 
-plot("paper_GMM_ramp2")
-plot("paper_GMM_sphere2")
-plot("paper_Binned_ramp")
-plot("paper_Binned_sphere2")
-plot("paper_NN_ramp")
-plot("paper_NN_sphere")
+#plot("paper_GMM_ramp2")
+#plot("paper_GMM_sphere2")
+#plot("paper_Binned_ramp")
+#plot("paper_Binned_sphere2")
+plot("paper_NN_ramp2")
+#plot("paper_NN_sphere2")
