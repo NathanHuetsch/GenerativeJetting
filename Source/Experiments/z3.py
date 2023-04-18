@@ -8,7 +8,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
 from Source.Util.datasets import Dataset
-from Source.Util.util import get_device, save_params, get, load_params
+from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
 from Source.Experiments.ExperimentBase import Experiment
 import time
 from datetime import datetime
@@ -89,6 +89,15 @@ class Z3_Experiment(Experiment):
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.data_raw = \
                 self.preprocess_data(self.params, self.data_raw, save_in_params=True)
+
+        self.magic_transformation = get(self.params, "magic_transformation", False)
+        if self.magic_transformation:
+            deltaR12 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+            deltaR13 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+            deltaR23 = delta_r(self.data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+            self.event_weights = magic_trafo(deltaR12)*magic_trafo(deltaR13)*magic_trafo(deltaR23)
+            self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)], dim=1).float()
+            print(f"preprocess_data: Using magic transformation")
 
         print(f"preprocess_data: input shape is {self.data.shape}")
         self.n_data = len(self.data)

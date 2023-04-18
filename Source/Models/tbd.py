@@ -47,6 +47,18 @@ class TBD(GenerativeModel):
 
         self.magic_transformation = get(self.params, "magic_transformation", False)
 
+        self.latent = get(self.params, "latent", "normal")
+        if self.latent == "normal":
+            print("Using latent normal")
+            self.latent = torch.distributions.normal.Normal(0, 1)
+        elif self.latent == "uniform":
+            print("Using latent uniform")
+            self.latent = torch.distributions.uniform.Uniform(low=0, high=1)
+
+        else:
+            print("Latent not recognised. Using normal")
+            self.latent = torch.distributions.normal.Normal(0, 1)
+
     def build_net(self):
         """
         Build the network
@@ -87,7 +99,8 @@ class TBD(GenerativeModel):
             condition = None
 
         t = self.dist.sample((x.size(0),1)).to(x.device)
-        x_0 = torch.randn_like(x)
+        #x_0 = torch.randn_like(x)
+        x_0 = self.latent.sample(x.size()).to(x.device)
         x_t, x_t_dot = self.trajectory(x_0, x, t)
 
         self.net.kl = 0
@@ -95,6 +108,11 @@ class TBD(GenerativeModel):
 
         if self.magic_transformation:
             loss = torch.mean((drift - x_t_dot) ** 2 * weights[:, None])/weights.sum()
+            self.regular_loss.append(loss.detach().cpu().numpy())
+            if self.C != 0:
+                kl_loss = self.C * self.net.kl / self.n_traindata
+                self.kl_loss.append(kl_loss.detach().cpu().numpy())
+                loss = loss + kl_loss
         else:
             if self.loss_type=="l2":
                 loss = torch.mean((drift - x_t_dot) ** 2 * torch.exp(self.t_factor * t))
@@ -118,7 +136,12 @@ class TBD(GenerativeModel):
                 bay_layer.random = None
         self.eval()
         batch_size = get(self.params, "batch_size", 8192)
-        x_T = np.random.randn(n_samples + batch_size, self.dim)
+        if self.latent == "normal":
+            x_T = np.random.randn(n_samples + batch_size, self.dim)
+        else:
+            x_T = np.random.uniform(low=0, high=1, size=(n_samples + batch_size, self.dim))
+        ##x_0 = self.latent.sample(x.size()).to(x.device)
+
 
         if self.conditional:
             if self.n_jets == 1 and con_depth == 0:
@@ -233,7 +256,10 @@ class TBD(GenerativeModel):
         t_frames = np.linspace(0, 1, n_frames)
 
         batch_size = get(self.params, "batch_size", 8192)
-        x_T = np.random.randn(n_samples + batch_size, self.dim)
+        if self.latent == "normal":
+            x_T = np.random.randn(n_samples + batch_size, self.dim)
+        else:
+            x_T = np.random.uniform(low=0, high=1, size=(n_samples + batch_size, self.dim))
 
         def f(t, x_t):
             x_t_torch = torch.Tensor(x_t).reshape((batch_size, self.dim)).to(self.device)

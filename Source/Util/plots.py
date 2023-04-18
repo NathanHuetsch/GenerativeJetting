@@ -137,9 +137,12 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
             axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
 
-
-            plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
-            plt.close()
+            if ".png" in str(pp):
+                plt.savefig(pp, bbox_inches="tight", pad_inches=0.05)
+                plt.close()
+            else:
+                plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
+                plt.close()
 
 
 def delta_phi(y, idx1, idx2):

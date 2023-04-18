@@ -301,7 +301,7 @@ class GenerativeModel(nn.Module):
                              weight_samples=iterations,
                              predict_weights=weights)
 
-        if get(self.params,"plot_deltaR", True):
+        if get(self.params,"plot_deltaR", True) and self.n_jets >= 2:
             with PdfPages(f"{path}/deltaR_jl_jm_epoch_{n_epochs}.pdf") as out:
                 for j, _ in enumerate(plot_train):
                     obs_name = "\Delta R_{j_1 j_2}"
@@ -351,7 +351,7 @@ class GenerativeModel(nn.Module):
                              weight_samples=iterations,
                              predict_weights=weights)
 
-        if get(self.params,"plot_Deta_Dphi", True):
+        if get(self.params,"plot_Deta_Dphi", True) and self.n_jets >= 2:
             with PdfPages(f"{path}/deta_dphi_jets_epoch_{n_epochs}.pdf") as out:
                 for j, _ in enumerate(plot_train):
                     plot_deta_dphi(pp=out,

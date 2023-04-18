@@ -104,6 +104,7 @@ class AttentionNet(nn.Module):
         self.normalization = self.param.get("normalization", None)
         self.activation = self.param.get("activation", "SiLU")
         self.conditional = self.param.get("conditional", False)
+        self.bayesian = self.param.get("bayesian", False)
 
         self.encode_t = self.param.get("encode_t", False)
 
@@ -122,15 +123,14 @@ class AttentionNet(nn.Module):
             TransformerBlock(param)
             for _ in range(self.n_blocks)])
 
-        self.up_project = nn.Linear(self.dim + self.encode_t_dim + self.n_con,
-                                    (self.dim + self.encode_t_dim + self.n_con) * self.intermediate_dim)
-        self.down_project = nn.Linear((self.dim + self.encode_t_dim + self.n_con) * self.intermediate_dim,
-                                      self.dim)
+        self.up_project = nn.Linear(1, self.intermediate_dim)
+        self.t_project = GaussianFourierProjection(embed_dim=self.intermediate_dim, scale=30)
+        self.down_project = nn.Linear(self.intermediate_dim, 1)
 
         self.apply(self._init_weights)
 
-        self.down_project.weight.data *= 0
-        self.down_project.bias.data *= 0
+        #self.down_project.weight.data *= 0
+        #self.down_project.bias.data *= 0
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
@@ -142,23 +142,22 @@ class AttentionNet(nn.Module):
             torch.nn.init.ones_(module.weight)
 
     def forward(self, x, t, condition=None):
-        """
-        forward method of our Resnet
-        """
-        if self.encode_t:
-            t = self.embed(t)
 
-        if self.conditional:
-            add_input = torch.cat([t, condition], 1)
-        else:
-            add_input = t
+        #if self.encode_t:
+        #    t = self.embed(t)
+        #if self.conditional:
+        #    add_input = torch.cat([t, condition], 1)
+        #else:
+        #    add_input = t
+        #x = x.reshape(x.size(0), x.size(1), 1)
 
-        x = self.up_project(torch.cat([x, add_input], 1)).reshape(-1, self.dim + self.encode_t_dim + self.n_con,
-                                                                  self.intermediate_dim)
+        add_input = self.t_project(t).unsqueeze(1)
+        x = self.up_project(x.unsqueeze(-1))
+
         for block in self.blocks[:-1]:
-            x = block(x) + x
-        x = self.blocks[-1](x) + x
-        x = self.down_project(x.reshape(-1, (self.dim + self.encode_t_dim + self.n_con) * self.intermediate_dim))
+            x = block(x+add_input) + x
+        x = self.blocks[-1](x+add_input)
+        x = self.down_project(x).squeeze()
         return x
 
 
