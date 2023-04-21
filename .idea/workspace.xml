@@ -2,14 +2,20 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/Source/Models/tbd_reloaded.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z1.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z2.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Experiments/z3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/tbd.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Networks/attention_net.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/attention_net.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Util/plots.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/plots.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/resnet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/paper_plot.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/params/Z26c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z26c_TBD.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_Zn.py" beforeDir="false" afterPath="$PROJECT_DIR$/run_Zn.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/runfiles/experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/experiment.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/warm_experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/warm_experiment.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,15 +70,15 @@
     &quot;WebServerToolWindowPanel.toolwindow.show.date&quot;: &quot;false&quot;,
     &quot;WebServerToolWindowPanel.toolwindow.show.permissions&quot;: &quot;false&quot;,
     &quot;WebServerToolWindowPanel.toolwindow.show.size&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting/params&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting/Source/Models&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;ssh.settings&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/Source/Models" />
       <recent name="$PROJECT_DIR$/params" />
       <recent name="$PROJECT_DIR$/Source/Networks" />
-      <recent name="$PROJECT_DIR$/Source/Models" />
       <recent name="$PROJECT_DIR$/runfiles" />
     </key>
   </component>
@@ -147,7 +153,8 @@
       <workItem from="1681112188958" duration="27000" />
       <workItem from="1681198603549" duration="59130000" />
       <workItem from="1681456369346" duration="12335000" />
-      <workItem from="1681717027390" duration="28829000" />
+      <workItem from="1681717027390" duration="82770000" />
+      <workItem from="1681996043546" duration="14349000" />
     </task>
     <servers />
   </component>

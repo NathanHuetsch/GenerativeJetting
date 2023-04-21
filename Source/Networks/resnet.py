@@ -14,6 +14,7 @@ class Resnet(nn.Module):
         self.n_blocks = param["n_blocks"]
         self.intermediate_dim = self.param["intermediate_dim"]
         self.dim = self.param["dim"]
+        self.out_dim = self.param.get("out_dim", self.dim)
         self.n_con = self.param["n_con"]
         self.layers_per_block = self.param["layers_per_block"]
         self.dropout = self.param.get("dropout", None)
@@ -37,13 +38,16 @@ class Resnet(nn.Module):
                                        nn.Linear(self.encode_t_dim, self.encode_t_dim))
         else:
             self.encode_t_dim = 1
+
         if self.embed_condition:
             self.encode_c_dim = self.param.get("encode_c_dim", 64)
-            self.embed_c = nn.Sequential(nn.Linear(self.n_con+self.encode_t_dim,self.encode_c_dim),
-                                         nn.Linear(self.encode_c_dim,self.encode_c_dim))
-            self.encode_t_dim = 0
+            self.embed_c = nn.Linear(self.n_con, self.encode_c_dim)
+            #self.embed_c = nn.Sequential(nn.Linear(self.n_con+self.encode_t_dim,self.encode_c_dim),
+            #                             nn.Linear(self.encode_c_dim,self.encode_c_dim))
+            #self.encode_t_dim = 0
         else:
             self.encode_c_dim = self.n_con
+
         # Build the Resnet blocks
         self.blocks = nn.ModuleList([
             self.make_block()
@@ -80,11 +84,11 @@ class Resnet(nn.Module):
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
             if self.bayesian > 1:
-                bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec)
+                bays_layer = VBLinear(self.intermediate_dim, self.out_dim, prior_prec=self.prior_prec)
                 layers.append(bays_layer)
                 self.bayesian_layers.append(bays_layer)
             else:
-                layers.append(nn.Linear(self.intermediate_dim, self.dim))
+                layers.append(nn.Linear(self.intermediate_dim, self.out_dim))
 
         else:
             linear = nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim)
@@ -101,7 +105,7 @@ class Resnet(nn.Module):
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
 
-            linear = nn.Linear(self.intermediate_dim, self.dim)
+            linear = nn.Linear(self.intermediate_dim, self.out_dim)
             layers.append(linear)
             self.deter_layers.append(linear)
 
@@ -116,9 +120,9 @@ class Resnet(nn.Module):
             t = self.embed(t)
 
         if self.conditional:
-            add_input = torch.cat([t, condition], 1)
             if self.embed_condition:
-                add_input = self.embed_c(add_input)
+                condition = self.embed_c(condition)
+            add_input = torch.cat([t, condition], 1)
         else:
             add_input = t
 

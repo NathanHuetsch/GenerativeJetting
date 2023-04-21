@@ -17,7 +17,7 @@ toy_type = sys.argv[2]
 data_split = 0.5
 
 
-data = np.load("/remote/gpu07/huetsch/data/2dRamp.npy")
+data = np.load("/remote/gpu07/huetsch/data/2dGaussSphere.npy")
 n_data = len(data)
 cut1 = int(n_data * data_split)
 cut2 = int(n_data * data_split)
@@ -28,8 +28,8 @@ mus = []
 sigmas = []
 for i in range(0,10):
     path_path = path + f"/run_0{i}/"
-    mu_path = path_path + "sigmamu_1_mu.npy"
-    sigma_path = path_path + "sigmamu_1_sigma.npy"
+    mu_path = path_path + "sigmamu_R_mu.npy"
+    sigma_path = path_path + "sigmamu_R_sigma.npy"
     mu = np.load(mu_path)
     sigma = np.load(sigma_path)
     mus.append(mu)
@@ -186,4 +186,4 @@ if toy_type == "gauss_sphere":
     R_train, _ = ToySimulator.getSpherical(data_train)
     R_test, _ = ToySimulator.getSpherical(data_test)
     plot_paper(f"{path}paper_plots.pdf", R_train, R_test, [mus,sigmas],
-               "R", ymaxAbs=.22, ymaxRel=.44, range=[0.5, 1.5])
+               "R", ymaxAbs=.05, ymaxRel=.5, range=[0.5, 1.5])

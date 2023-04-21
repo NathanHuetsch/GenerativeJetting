@@ -105,7 +105,7 @@ class AttentionNet(nn.Module):
         self.activation = self.param.get("activation", "SiLU")
         self.conditional = self.param.get("conditional", False)
         self.bayesian = self.param.get("bayesian", False)
-
+        self.device = self.param.get("device", get_device())
         self.encode_t = self.param.get("encode_t", False)
 
         # Use GaussianFourierProjection for the time if specified
@@ -126,6 +126,8 @@ class AttentionNet(nn.Module):
         self.up_project = nn.Linear(1, self.intermediate_dim)
         self.t_project = GaussianFourierProjection(embed_dim=self.intermediate_dim, scale=30)
         self.down_project = nn.Linear(self.intermediate_dim, 1)
+
+        self.pos_embed = nn.Embedding(self.dim, self.intermediate_dim)
 
         self.apply(self._init_weights)
 
@@ -153,10 +155,12 @@ class AttentionNet(nn.Module):
 
         add_input = self.t_project(t).unsqueeze(1)
         x = self.up_project(x.unsqueeze(-1))
+        pos = torch.arange(0, self.dim, device=self.device).unsqueeze(0)
+        pos_emb = self.pos_embed(pos)
 
         for block in self.blocks[:-1]:
-            x = block(x+add_input) + x
-        x = self.blocks[-1](x+add_input)
+            x = block(x+add_input+pos_emb) + x
+        x = self.blocks[-1](x+add_input+pos_emb)
         x = self.down_project(x).squeeze()
         return x
 

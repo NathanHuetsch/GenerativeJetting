@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/AttNetReloaded"
-run_name : "First_1b"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/MagicTrafo13Test"
+run_name : "bug?Testi"
 redirect_console : True
 
 # #########
@@ -28,7 +28,7 @@ conditional: False
 
 optimizer: Adam
 lr : 1.e-3
-batch_size : 8192
+batch_size : 16384
 weight_decay : 0
 betas : [0.9, 0.99]
 use_scheduler: True
@@ -52,16 +52,16 @@ model: TBD
 trajectory: "linear_trajectory"
 beta_dist: False
 beta_dist_b: 0.5
-magic_transformation: False
+magic_transformation: True
 
-encode_t: False
-encode_t_dim: 50
+encode_t: True
+encode_t_dim: 64
 #encode_t_scale: 10
 
-network: "AttentionNet"
-n_blocks : 1
-intermediate_dim: 64
-layers_per_block: 8
+#network: "AttentionNet"
+n_blocks : 2
+intermediate_dim: 128
+layers_per_block: 6
 #normalization: "InstanceNorm1d"
 
 resid_pdrop: 0
@@ -81,7 +81,7 @@ warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5interna
 # #############
 sample: True
 load_best_checkpoint: False
-n_samples : 1000000
+n_samples : 10000
 
 # #############
 # # Plotting: #

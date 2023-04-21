@@ -54,6 +54,8 @@ class Z3_Experiment(Experiment):
             if get(self.params, "plot_channels", None) is None:
                 self.plot_channels = self.channels
                 self.params["plot_channels"] = self.channels
+            else:
+                self.plot_channels = get(self.params, "plot_channels", None)
 
             self.n_con = 0
             self.params['n_con'] = self.n_con

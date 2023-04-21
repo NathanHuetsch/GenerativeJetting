@@ -254,7 +254,7 @@ class GenerativeModel(nn.Module):
                     if self.n_jets == 2:
                         deltaR12 = delta_r(plot_samples_jets, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                         weights = inverse_magic_trafo(deltaR12)
-
+                print(weights, weights.mean())
                 plot_weights.append(weights)
 
         else:
@@ -548,9 +548,12 @@ class GenerativeModel(nn.Module):
                                  predict_weights=weights)
 
 
-        if get(self.params,"plot_loss", False):
+        if get(self.params,"plot_loss", True):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
+            try:
+                plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
+            except:
+                print("plot_loss failed")
     def plot_toy(self, samples = None, finished=False):
         self.sigma_path = get(self.params, "sigma_path", None)
         os.makedirs(f"plots", exist_ok=True)

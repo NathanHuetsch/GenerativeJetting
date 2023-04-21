@@ -49,6 +49,7 @@ def define_flags():
     flags.DEFINE_boolean('save_samples', None, "Overwrite save_samples parameter in params")
     flags.DEFINE_boolean("redirect_console", None, "Overwrite redirect_console in params")
     flags.DEFINE_integer("con_depth", None, "Overwrite con_depth in params")
+    flags.DEFINE_float("rtol", None, "Overwrite rtol in params")
 
 
 def main(argv):
@@ -93,6 +94,9 @@ def main(argv):
 
     if FLAGS.con_depth is not None:
         params['con_depth'] = FLAGS.con_depth
+
+    if FLAGS.rtol is not None:
+        params["rtol"] = FLAGS.train
 
     # Instantiate the experiment class
     n_jets = get(params,"n_jets",2)
