@@ -14,5 +14,5 @@ module load cuda/11.7
 # cd into the project folder
 cd GenerativeJetting
 
-python run_Zn.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/Conditional/j2/NonBayesNonMT/debugTesti6423" --train=False --n_samples=1000000
+python run_Zn.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/Conditional/j2/BayesMagicTrafo/2b_512d_8l_C000017187"
 

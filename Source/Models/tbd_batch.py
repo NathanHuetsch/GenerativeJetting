@@ -13,15 +13,19 @@ class TBD(GenerativeModel):
     """
 
     def __init__(self, params):
+
+        self.loss_type = get(params, "loss_type", "l2")
+        assert self.loss_type in ["l1", "l2", "mle"], "Unknown loss type"
+        if self.loss_type == "mle":
+            print("Using MLE loss. Setting out_dim to 2*dim")
+            params["out_dim"] = 2*params["dim"]
+
         super().__init__(params)
-        trajectory = get(self.params, "trajectory", "linear_trajectory")
+        trajectory = get(self.params, "trajectory", "sine_cosine_trajectory")
         try:
             self.trajectory = getattr(Source.Models.tbd, trajectory)
         except AttributeError:
             raise NotImplementedError(f"build_model: Trajectory type {trajectory} not implemented")
-
-        self.loss_type = get(self.params, "loss_type", "l2")
-        assert self.loss_type in ["l1", "l2"], "Unknown loss type"
 
         self.C = get(self.params, "C", 1)
         if self.C != 1:
@@ -46,6 +50,9 @@ class TBD(GenerativeModel):
             print(f"t_factor is {self.t_factor}")
 
         self.magic_transformation = get(self.params, "magic_transformation", False)
+        if self.magic_transformation:
+            self.unweighted_loss = []
+            self.weightsum = []
 
         self.latent = get(self.params, "latent", "normal")
         if self.latent == "normal":
@@ -59,9 +66,11 @@ class TBD(GenerativeModel):
             print("Latent not recognised. Using normal")
             self.latent = torch.distributions.normal.Normal(0, 1)
 
-        self.x0_bs = get(self.params, "x0_bs", 25)
-        self.x1_bs = get(self.params, "x1_bs", 25)
-        self.t_bs = get(self.params, "t_bs", 10)
+        self.add_noise = get(self.params, "add_noise", 0)
+        if self.add_noise !=0:
+            print(f"adding noise of scale {self.add_noise}")
+
+        self.rtol = get(self.params, "rtol", 1.e-3)
 
     def build_net(self):
         """
@@ -98,13 +107,13 @@ class TBD(GenerativeModel):
             #condition = prior_model(condition)
             x = x[:, 13:]
 
-
         else:
             condition = None
 
         t = self.dist.sample((x.size(0),1)).to(x.device)
-        #x_0 = torch.randn_like(x)
         x_0 = self.latent.sample(x.size()).to(x.device)
+        if self.add_noise != 0:
+            x += torch.randn_like(x)*self.add_noise
         x_t, x_t_dot = self.trajectory(x_0, x, t)
 
         self.net.kl = 0
@@ -112,7 +121,11 @@ class TBD(GenerativeModel):
 
         if self.magic_transformation:
             loss = torch.mean((drift - x_t_dot) ** 2 * weights[:, None])/weights.sum()
+            #unweighted_loss = torch.mean((drift - x_t_dot)**2)
             self.regular_loss.append(loss.detach().cpu().numpy())
+            #self.unweighted_loss.append(unweighted_loss.detach().cpu().numpy())
+            #self.weightsum.append(weights.sum())
+            #print(loss.mean(), weights.mean())
             if self.C != 0:
                 kl_loss = self.C * self.net.kl / self.n_traindata
                 self.kl_loss.append(kl_loss.detach().cpu().numpy())
@@ -125,6 +138,20 @@ class TBD(GenerativeModel):
                     kl_loss = self.C*self.net.kl / self.n_traindata
                     self.kl_loss.append(kl_loss.detach().cpu().numpy())
                     loss = loss + kl_loss
+
+            elif self.loss_type == "mle":
+                mu, sigma = drift.chunk(2, dim=1)
+                sigma = torch.exp(sigma)
+                mse = (mu - x_t_dot) ** 2
+                mse = mse/(2*sigma**2)
+                log = torch.log(sigma)
+                loss = torch.mean(mse+log)
+                self.regular_loss.append(loss.detach().cpu().numpy())
+                if self.C != 0:
+                    kl_loss = self.C*self.net.kl / self.n_traindata
+                    self.kl_loss.append(kl_loss.detach().cpu().numpy())
+                    loss = loss + kl_loss
+
             elif self.loss_type=="l1":
                 loss = torch.mean(torch.abs(drift-x_t_dot)) + self.C*self.net.kl / self.n_traindata
         return loss
@@ -141,7 +168,6 @@ class TBD(GenerativeModel):
         self.eval()
         batch_size = get(self.params, "batch_size", 8192)
         x_T = self.latent.sample((n_samples + batch_size, self.dim))
-
 
         if self.conditional:
             if self.n_jets == 1 and con_depth == 0:
@@ -188,19 +214,27 @@ class TBD(GenerativeModel):
             with torch.no_grad():
                 if c is not None:
                     c_torch = torch.Tensor(c).reshape((batch_size, self.n_con)).to(self.device)
-                    f_t = self.net(x_t_torch, t_torch, c_torch).detach().cpu().numpy().flatten()
+                    f_t = self.net(x_t_torch, t_torch, c_torch)
                 else:
-                    f_t = self.net(x_t_torch, t_torch).detach().cpu().numpy().flatten()
-            return f_t
+                    f_t = self.net(x_t_torch, t_torch)
+
+                if self.loss_type == "mle":
+                    f_t, _ = f_t.chunk(2, dim=1)
+            return f_t.detach().cpu().numpy().flatten()
 
         events = []
+        function_calls = []
         with torch.no_grad():
             for i in range(int(n_samples / batch_size) + 1):
                 if self.conditional:
                     c = condition[batch_size * i: batch_size * (i + 1)].flatten()
                 else:
                     c = None
-                sol = solve_ivp(f, (0, 1), x_T[batch_size * i: batch_size * (i + 1)].flatten(), args=[c])
+                sol = solve_ivp(f,
+                                (0, 1),
+                                x_T[batch_size * i: batch_size * (i + 1)].flatten(),
+                                args=[c],
+                                rtol=self.rtol)
 
                 if self.conditional:
                     c = condition[batch_size * i: batch_size * (i + 1)]
@@ -214,8 +248,12 @@ class TBD(GenerativeModel):
                     s = sol.y[:, -1].reshape(batch_size, self.dim)
 
                 events.append(s)
+                function_calls.append(sol.nfev)
 
-
+        function_calls = np.array(function_calls)
+        self.params["function_calls_mean"] = float(function_calls.mean())
+        self.params["function_calls_std"] = float(function_calls.std())
+        self.params["function_calls_max"] = float(function_calls.max())
         return np.concatenate(events, axis=0)[:n_samples]
 
 

@@ -15,12 +15,20 @@ class Resnet(nn.Module):
         self.intermediate_dim = self.param["intermediate_dim"]
         self.dim = self.param["dim"]
         self.out_dim = self.param.get("out_dim", self.dim)
+        #self.block_out_dim = self.param.get("out_dim", self.out_dim)
         self.n_con = self.param["n_con"]
         self.layers_per_block = self.param["layers_per_block"]
         self.dropout = self.param.get("dropout", None)
         self.normalization = self.param.get("normalization", None)
         self.activation = self.param.get("activation", "SiLU")
         self.encode_t = self.param.get("encode_t", False)
+        self.encode_x = self.param.get("encode_x", False)
+        if self.encode_x:
+            self.block_out_dim = self.encode_x_dim = self.param.get("encode_x_dim", 64)
+            self.add_final = True
+        else:
+            self.block_out_dim = self.out_dim
+            self.add_final = False
         self.conditional = self.param.get("conditional", False)
         self.embed_condition = self.param.get("embed_condition",False)
         self.bayesian = self.param.get("bayesian", False)
@@ -42,16 +50,26 @@ class Resnet(nn.Module):
         if self.embed_condition:
             self.encode_c_dim = self.param.get("encode_c_dim", 64)
             self.embed_c = nn.Linear(self.n_con, self.encode_c_dim)
-            #self.embed_c = nn.Sequential(nn.Linear(self.n_con+self.encode_t_dim,self.encode_c_dim),
-            #                             nn.Linear(self.encode_c_dim,self.encode_c_dim))
-            #self.encode_t_dim = 0
         else:
             self.encode_c_dim = self.n_con
 
+        if self.encode_x:
+
+            self.embed_x = nn.Linear(self.dim, self.encode_x_dim)
+        else:
+            self.encode_x_dim = self.dim
         # Build the Resnet blocks
         self.blocks = nn.ModuleList([
             self.make_block()
             for _ in range(self.n_blocks)])
+
+        if self.add_final:
+            if self.bayesian == 0:
+                self.final = nn.Linear(self.block_out_dim, self.out_dim)
+                self.deter_layers.append(self.final)
+            else:
+                self.final = VBLinear(self.block_out_dim, self.out_dim, prior_prec=self.prior_prec)
+                self.bayesian_layers.append(self.final)
 
         if self.bayesian > 1:
             for block in self.blocks:
@@ -68,8 +86,8 @@ class Resnet(nn.Module):
         """
         Method to build the Resnet blocks with the defined specifications
         """
-        if self.bayesian:
-            bays_layer = VBLinear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim,
+        if self.bayesian > 1:
+            bays_layer = VBLinear(self.encode_x_dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim,
                                   prior_prec=self.prior_prec)
             layers = [bays_layer, nn.SiLU()]
             self.bayesian_layers.append(bays_layer)
@@ -83,15 +101,12 @@ class Resnet(nn.Module):
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
-            if self.bayesian > 1:
-                bays_layer = VBLinear(self.intermediate_dim, self.out_dim, prior_prec=self.prior_prec)
-                layers.append(bays_layer)
-                self.bayesian_layers.append(bays_layer)
-            else:
-                layers.append(nn.Linear(self.intermediate_dim, self.out_dim))
+            bays_layer = VBLinear(self.intermediate_dim, self.block_out_dim, prior_prec=self.prior_prec)
+            layers.append(bays_layer)
+            self.bayesian_layers.append(bays_layer)
 
         else:
-            linear = nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim)
+            linear = nn.Linear(self.encode_x_dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim)
             self.deter_layers.append(linear)
             layers = [linear, nn.SiLU()]
 
@@ -105,7 +120,7 @@ class Resnet(nn.Module):
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
 
-            linear = nn.Linear(self.intermediate_dim, self.out_dim)
+            linear = nn.Linear(self.intermediate_dim, self.block_out_dim)
             layers.append(linear)
             self.deter_layers.append(linear)
 
@@ -126,12 +141,19 @@ class Resnet(nn.Module):
         else:
             add_input = t
 
+        if self.encode_x:
+            x = self.embed_x(x)
+
         for bay_layer in self.bayesian_layers:
             bay_layer.map = self.map
 
         for block in self.blocks[:-1]:
             x = x + block(torch.cat([x, add_input], 1))
         x = self.blocks[-1](torch.cat([x, add_input], 1))
+
+        if self.add_final:
+            x = nn.SiLU()(x)
+            x = self.final(x)
 
         for bay_layer in self.bayesian_layers:
             self.kl += bay_layer.KL()

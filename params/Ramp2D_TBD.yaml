@@ -1,7 +1,7 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/Paper40d4lGauss/40d4l"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/Paper40d4lRampMLE/40d8l_0001C_5rtol"
 run_name : "7l40d"
 redirect_console : True
 
@@ -10,9 +10,9 @@ redirect_console : True
 # #########
 istoy: True
 load_dataset : True
-data_path: "/remote/gpu07/huetsch/data/2dGaussSphere.npy"
+data_path: "/remote/gpu07/huetsch/data/2dRamp.npy"
 n_data: 1000000
-toy_type: "gauss_sphere"
+toy_type: "ramp"
 n_dim : 2
 # ##############
 # # Training:  #
@@ -42,19 +42,20 @@ sample_every_n_samples: 100000
 # # Architecture: #
 # #################
 bayesian: 2
-C : 0.01
+C : 0.001
 iterations : 30
 
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 4
+layers_per_block : 8
 intermediate_dim : 40
 n_head: 2
 trajectory: "linear_trajectory"
 encode_t: False
 encode_t_dim: 4
 encode_t_scale: 10
+loss_type: "mle"
 
 # #################
 # # Loading/saving: #
@@ -69,6 +70,7 @@ sample: True
 load_best_checkpoint: False
 n_samples : 1000000
 save_samples: False
+rtol: 1.e-5
 
 # #############
 # # Plotting: #
@@ -78,3 +80,4 @@ plot_sigma : True
 plot_mu_sigma: True
 plot_loss : True
 sigma_path: sigmamu
+iterate_periodically : True

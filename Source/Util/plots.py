@@ -230,12 +230,12 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
 def plot_loss(pp,total, regular=False, kl=False, regularizeGMM=False, loss_log=True):
     y = range(1, len(total) + 1)
     fig, axes = plt.subplots()
-    axes.plot(y, total, label='total_loss')
+    axes.plot(y[5:], total[5:], label='total_loss')
     if regular and kl:
-        axes.plot(y, regular, label="regular loss")
-        axes.plot(y, kl, label="kl loss")
+        axes.plot(y[5:], regular[5:], label="regular loss")
+        axes.plot(y[5:], kl[5:], label="kl loss")
     if regularizeGMM:
-        axes.plot(y, regularizeGMM, label="GMM regularization")
+        axes.plot(y[5:], regularizeGMM[5:], label="GMM regularization")
 
     if loss_log:
         axes.set_yscale("log")
@@ -298,9 +298,12 @@ def plot_binned_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, wei
     plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                fontsize=FONTSIZE)
 
-
-    plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
-    plt.close()
+    if ".png" in str(pp):
+        plt.savefig(pp, bbox_inches="tight", pad_inches=0.05)
+        plt.close()
+    else:
+        plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
+        plt.close()
 
 
 def plot_mu_sigma(pp, obs_predict, name, bins=60, range=None, unit=None, weight_samples=1,

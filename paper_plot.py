@@ -146,7 +146,8 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
                             dup_last(hist_errors[1] + std) * scales[1], facecolor=colors[1],
                             alpha=0.3, step="post")
 
-        axs[0].set_ylim(0.01, ymaxAbs)
+        axs[0].set_ylim(0, ymaxAbs)
+        axs[0].set_yticks([0, 0.01, 0.02, 0.03, 0.04, 0.05])
 
         #plt.savefig(pp, format="pdf")
         #plt.close()
@@ -168,6 +169,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
                          alpha=0.3, step="post")
 
         axs[1].set_ylim(0., ymaxRel)
+        axs[1].set_yticks([0, 0.1, 0.2, 0.3, 0.4])
 
         fig2.align_labels()
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),

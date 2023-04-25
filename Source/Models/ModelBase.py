@@ -254,7 +254,6 @@ class GenerativeModel(nn.Module):
                     if self.n_jets == 2:
                         deltaR12 = delta_r(plot_samples_jets, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                         weights = inverse_magic_trafo(deltaR12)
-                print(weights, weights.mean())
                 plot_weights.append(weights)
 
         else:
