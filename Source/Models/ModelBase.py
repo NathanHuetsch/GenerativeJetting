@@ -114,6 +114,8 @@ class GenerativeModel(nn.Module):
 
             if self.sample_periodically:
                 if (self.epoch + 1) % self.sample_every == 0:
+                    sample_t0 = time.time()
+                    print(f"Doing intermediate sampling at epoch {self.epoch}")
                     self.eval()
                     if not self.istoy:
                         samples = self.sample_and_undo(self.sample_every_n_samples, prior_model=prior_model,
@@ -129,7 +131,8 @@ class GenerativeModel(nn.Module):
 
                         samples = np.concatenate(bay_samples)
                         self.plot_toy(samples=samples)
-
+                    sample_t1 = time.time()
+                    print(f"Finished intermediate sampling at epoch {self.epoch} after {sample_t1 - sample_t0} seconds")
             if get(self.params,"save_periodically",False):
                 if (self.epoch + 1) % get(self.params,"save_every",10) == 0 or self.epoch==0:
                     torch.save(self.state_dict(), f"models/model_epoch_{e+1}.pt")
