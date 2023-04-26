@@ -268,7 +268,7 @@ class GenerativeModel(nn.Module):
                 if self.n_jets == 2:
                     deltaR12 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                     weights = inverse_magic_trafo(deltaR12)
-                elif self.n_jets == 3:
+                elif self.n_jets == 3 and not self.conditional:
                     deltaR12 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                     deltaR13 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
                     deltaR23 = delta_r(samples, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
@@ -276,6 +276,16 @@ class GenerativeModel(nn.Module):
                     weights13 = inverse_magic_trafo(deltaR13)
                     weights23 = inverse_magic_trafo(deltaR23)
                     weights = weights12 * weights13 * weights23
+
+                elif self.n_jets == 3 and self.conditional:
+                    deltaR13 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                    deltaR23 = delta_r(samples, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                    weights13 = inverse_magic_trafo(deltaR13)
+                    weights23 = inverse_magic_trafo(deltaR23)
+                    weights = weights13 * weights23
+
+                    print(weights)
+                    print(weights.mean())
 
             plot_weights.append(weights)
 

@@ -63,6 +63,9 @@ class Resnet(nn.Module):
             self.make_block()
             for _ in range(self.n_blocks)])
 
+        if self.bayesian == 1:
+            self.add_final = True
+
         if self.add_final:
             if self.bayesian == 0:
                 self.final = nn.Linear(self.block_out_dim, self.out_dim)

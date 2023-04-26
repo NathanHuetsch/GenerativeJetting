@@ -3,7 +3,11 @@
   <component name="ChangeListManager">
     <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runfiles/warm_experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/warm_experiment.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z2.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/resnet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/experiment.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,24 +52,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.highlight.mappings&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.highlight.symlinks&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.show.date&quot;: &quot;false&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.show.permissions&quot;: &quot;false&quot;,
-    &quot;WebServerToolWindowPanel.toolwindow.show.size&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting/Source/Models&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;ssh.settings&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "true",
+    "WebServerToolWindowPanel.toolwindow.highlight.mappings": "true",
+    "WebServerToolWindowPanel.toolwindow.highlight.symlinks": "true",
+    "WebServerToolWindowPanel.toolwindow.show.date": "false",
+    "WebServerToolWindowPanel.toolwindow.show.permissions": "false",
+    "WebServerToolWindowPanel.toolwindow.show.size": "false",
+    "last_opened_file_path": "/Users/huetsch/Desktop/GenerativeJetting/params",
+    "settings.editor.selected.configurable": "ssh.settings"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/Source/Models" />
       <recent name="$PROJECT_DIR$/params" />
+      <recent name="$PROJECT_DIR$/Source/Models" />
       <recent name="$PROJECT_DIR$/Source/Networks" />
       <recent name="$PROJECT_DIR$/runfiles" />
     </key>
@@ -142,7 +146,7 @@
       <workItem from="1681198603549" duration="59130000" />
       <workItem from="1681456369346" duration="12335000" />
       <workItem from="1681717027390" duration="82770000" />
-      <workItem from="1681996043546" duration="83270000" />
+      <workItem from="1681996043546" duration="90272000" />
     </task>
     <servers />
   </component>

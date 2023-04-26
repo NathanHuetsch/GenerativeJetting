@@ -25,6 +25,6 @@ module load cuda/11.7
 cd GenerativeJetting
 
 # Run the actual python script with necessary parameters
-python run_Zn.py /remote/gpu07/huetsch/GenerativeJetting/params/Conditional_j2.yaml
+python run_Zn.py /remote/gpu07/huetsch/GenerativeJetting/params/Conditional_j3.yaml
 #python run_Zn.py /remote/gpu07/huetsch/GenerativeJetting/params/Z26c_TBD.yaml
 

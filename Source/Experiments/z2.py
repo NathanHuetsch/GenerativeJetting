@@ -68,35 +68,23 @@ class Z2_Experiment(Experiment):
 
         if self.conditional:
             self.prior_raw = self.z_1
-            print(self.prior_raw.shape)
             self.prior_data, self.prior_mean, self.prior_std, self.prior_u, self.prior_s, self.prior_bin_edges, self.prior_bin_means, self.prior_raw = \
                 self.preprocess_data(self.prior_params,self.prior_raw, save_in_params=False,conditional=True)
-            print(self.prior_raw.shape, self.prior_data.shape)
             self.prior_data = self.prior_data[self.prior_data[:,0]!=1]
             self.prior_raw = self.prior_raw[self.prior_raw[:,0]!=1]
-            print(self.prior_raw.shape, self.prior_data.shape)
             self.new_data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.new_raw = \
                 self.preprocess_data(self.params, self.data_raw, conditional=True)
-            print(self.new_data.shape)
-            print(self.new_raw.shape)
 
             self.data = torch.concat([self.prior_data[:,1:12], self.new_data[:,2:]], dim=1)
             self.data_raw = np.concatenate([self.prior_raw[:,:13], self.new_raw[:,13:]], axis=1)
-
-            print(self.data.shape)
-            print(self.data_raw.shape)
 
             self.magic_transformation = get(self.params, "magic_transformation", False)
             if self.magic_transformation:
                 deltaR12 = delta_r(self.data_raw[:, 1:], idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                 self.event_weights = magic_trafo(deltaR12)
-                print(self.event_weights.shape)
                 self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)],
                                       dim=1).float()
                 print(f"preprocess_data: Using magic transformation")
-
-                print(self.event_weights)
-                print(self.event_weights.mean())
 
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.data_raw = \
@@ -106,12 +94,8 @@ class Z2_Experiment(Experiment):
             if self.magic_transformation:
                 deltaR12 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                 self.event_weights = magic_trafo(deltaR12)
-                print(self.event_weights.shape)
                 self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)], dim=1).float()
                 print(f"preprocess_data: Using magic transformation")
-
-                print(self.event_weights)
-                print(self.event_weights.mean())
 
         print(f"preprocess_data: input shape is {self.data.shape}")
         self.n_data = len(self.data)

@@ -50,6 +50,8 @@ class Z3_Experiment(Experiment):
             if get(self.params,"plot_channels",None) is None:
                 self.plot_channels = self.prior_prior_channels + self.prior_channels + self.channels
                 self.params["plot_channels"] = self.plot_channels
+            else:
+                self.plot_channels = get(self.params, "plot_channels", None)
         else:
             if get(self.params, "plot_channels", None) is None:
                 self.plot_channels = self.channels
@@ -87,19 +89,33 @@ class Z3_Experiment(Experiment):
 
             self.data = torch.concat([self.prior_prior_data[:,3:12], self.prior_data[:,2:6],self.new_data], dim=1)
             self.data_raw = np.concatenate([self.prior_prior_raw[:,1:13], self.prior_raw[:,13:17], self.new_raw[:,17:]], axis=1)
-
+            print(self.prior_prior_data.shape)
+            print(self.prior_data.shape)
+            print(self.new_data.shape)
+            print(self.data.shape)
+            self.magic_transformation = get(self.params, "magic_transformation", False)
+            if self.magic_transformation:
+                deltaR13 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                deltaR23 = delta_r(self.data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                self.event_weights = magic_trafo(deltaR13)*magic_trafo(deltaR23)
+                print(self.event_weights)
+                print(self.event_weights.mean())
+                self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)],
+                                      dim=1).float()
+                print(f"preprocess_data: Using magic transformation")
+                print(self.data.shape)
         else:
             self.data, self.data_mean, self.data_std, self.data_u, self.data_s, self.data_bin_edges, self.data_bin_means, self.data_raw = \
                 self.preprocess_data(self.params, self.data_raw, save_in_params=True)
 
-        self.magic_transformation = get(self.params, "magic_transformation", False)
-        if self.magic_transformation:
-            deltaR12 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-            deltaR13 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
-            deltaR23 = delta_r(self.data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-            self.event_weights = magic_trafo(deltaR12)*magic_trafo(deltaR13)*magic_trafo(deltaR23)
-            self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)], dim=1).float()
-            print(f"preprocess_data: Using magic transformation")
+            self.magic_transformation = get(self.params, "magic_transformation", False)
+            if self.magic_transformation:
+                deltaR12 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+                deltaR13 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                deltaR23 = delta_r(self.data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                self.event_weights = magic_trafo(deltaR12)*magic_trafo(deltaR13)*magic_trafo(deltaR23)
+                self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)], dim=1).float()
+                print(f"preprocess_data: Using magic transformation")
 
         print(f"preprocess_data: input shape is {self.data.shape}")
         self.n_data = len(self.data)
