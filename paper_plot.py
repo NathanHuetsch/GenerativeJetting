@@ -14,15 +14,14 @@ from Source.Experiments import toy
 
 path = sys.argv[1]
 toy_type = sys.argv[2]
-data_split = 0.5
+data_split = 0.6
 
 
 data = np.load("/remote/gpu05/palacios/data/2dGaussSphere.npy")
 n_data = len(data)
 cut1 = int(n_data * data_split)
-cut2 = int(n_data * data_split)
 data_train = data[:cut1]
-data_test = data[cut2:]
+data_test = data[cut1:]
 
 mus = []
 sigmas = []
@@ -125,6 +124,10 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
         axs[2].set_ylabel(r"$\delta [\%]$", fontsize=FONTSIZE)
 
+        axs[0].tick_params(axis="both", labelsize=FONTSIZE)
+        axs[1].tick_params(axis="both", labelsize=FONTSIZE)
+        axs[2].tick_params(axis="both", labelsize=FONTSIZE)
+
         plt.savefig(pp, format="pdf")
         plt.close()
 
@@ -169,6 +172,9 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         axs[1].set_ylim(0., ymaxRel)
 
+        axs[0].tick_params(axis="both", labelsize=FONTSIZE)
+        axs[1].tick_params(axis="both", labelsize=FONTSIZE)
+
         fig2.align_labels()
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
@@ -180,10 +186,10 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 # %%
 if toy_type == "ramp":
     plot_paper(f"{path}paper_plots.pdf", data_train[:, 1], data_test[:, 1],
-               [mus,sigmas], "x_1", ymaxAbs=.2, ymaxRel=.2, range=[.1, .9])
+               [mus,sigmas], "x_1", ymaxAbs=.2, ymaxRel=.19, range=[.1, .9])
 
 if toy_type == "gauss_sphere":
     R_train, _ = ToySimulator.getSpherical(data_train)
     R_test, _ = ToySimulator.getSpherical(data_test)
     plot_paper(f"{path}paper_plots.pdf", R_train, R_test, [mus,sigmas],
-               "R", ymaxAbs=.22, ymaxRel=.44, range=[0.5, 1.5])
+               "R", ymaxAbs=.2, ymaxRel=.44, range=[0.5, 1.5])
