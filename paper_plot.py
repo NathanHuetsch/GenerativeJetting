@@ -17,7 +17,7 @@ toy_type = sys.argv[2]
 data_split = 0.6
 
 
-data = np.load("/remote/gpu05/palacios/data/2dGaussSphere.npy")
+data = np.load("/remote/gpu05/palacios/data/2dRamp.npy")
 n_data = len(data)
 cut1 = int(n_data * data_split)
 data_train = data[:cut1]
@@ -27,8 +27,8 @@ mus = []
 sigmas = []
 for i in range(0,10):
     path_path = path + f"DDPM_base_{i}/"
-    mu_path = path_path + "run_R_mu.npy"
-    sigma_path = path_path + "run_R_sigma.npy"
+    mu_path = path_path + "run_1_mu.npy"
+    sigma_path = path_path + "run_1_sigma.npy"
     mu = np.load(mu_path)
     sigma = np.load(sigma_path)
     mus.append(mu)
@@ -55,7 +55,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         FONTSIZE = 14
         labels = ["True", "Model", "Train"]
-        colors = ["#e41a1c", "#3b528b", "#1a8507"]
+        colors = ["#3b528b","#A52A2A", "#1a8507"]
         dup_last = lambda a: np.append(a, a[-1])
 
         fig1, axs = plt.subplots(3, 1, sharex=True,
@@ -112,6 +112,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         axs[1].axhline(y=0.8, c="black", ls="dotted", lw=0.5)
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
+        plt.xlim((range[0] + 0.01, range[1] - 0.01))
 
         axs[2].set_ylim((0.05, 20))
         axs[2].set_yscale("log")
@@ -178,6 +179,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         fig2.align_labels()
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
+        plt.xlim((range[0] + 0.01, range[1] - 0.01))
 
         plt.savefig(pp, format="pdf")
         plt.close()
