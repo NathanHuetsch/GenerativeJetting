@@ -34,7 +34,7 @@ def corner_text(ax, text,horizontal_pos,vertical_pos, fontsize):
 
 
 def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_samples=1,
-               predict_weights=None, unit=None, range=None, error_range=None, n_jets=None):
+               predict_weights=None, unit=None, range=None, error_range=None, n_jets=None, y_ticks=None):
 
     y_t, bins = np.histogram(obs_test, bins=bins, range=range)
     y_tr, _ = np.histogram(obs_train, bins=bins)
@@ -56,14 +56,14 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
     integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
     scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
-    FONTSIZE = 14
+    FONTSIZE = 16
     labels = ["True", "Model", "Train"]
-    colors = ["#3b528b","#A52A2A", "#1a8507"]
+    colors = ["black","#A52A2A", "#0343DE"]
     dup_last = lambda a: np.append(a, a[-1])
 
     fig1, axs = plt.subplots(3, 1, sharex=True,
-                                 gridspec_kw={"height_ratios": [4, 1, 1], "hspace": 0.00})
-    fig1.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
+                                 gridspec_kw={"height_ratios": [3, 1, 1], "hspace": 0.00})
+    fig1.tight_layout(pad=0.5, w_pad=0.5, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
 
     for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                  labels, colors):
@@ -111,7 +111,7 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
 
     axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{True}}$",
                           fontsize=FONTSIZE)
-    #axs[1].set_yticks([0.95, 1, 1.05])
+    axs[1].set_yticks(y_ticks)
     axs[1].set_ylim(error_range)
     axs[1].axhline(y=1, c="black", ls="--", lw=0.7)
     axs[1].axhline(y=1.2, c="black", ls="dotted", lw=0.5)
@@ -144,6 +144,9 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
 
 
 path = sys.argv[1]
+load_samples = sys.argv[2]
+
+print(f"load samples set to {load_samples}")
 
 params = load_params(os.path.join(path, "paramfile.yaml"))
 
@@ -156,7 +159,7 @@ params['plot_loss'] = False
 
 params["plot"] = False
 params['iterations'] = 10
-params['n_samples'] = 3000000
+params['n_samples'] = 1000000
 #params['iterations'] = 10
 params['batch_size_sample'] = 50000
 params['save_samples'] = True
@@ -173,7 +176,19 @@ elif n_jets == 3:
 else:
     experiment = None
 
-experiment.full_run()
+if load_samples:
+    params["sample"] = False
+    experiment.full_run()
+    samples = []
+
+    for i in range(0,10):
+        samples.append(np.load(path+f"samples/samples_final_{i}.npy"))
+
+    experiment.samples = np.concatenate(samples)
+else:
+    params["sample"] = True
+    experiment.full_run()
+
 plot_train = []
 plot_test = []
 plot_samples = []
@@ -232,11 +247,12 @@ if n_jets == 1:
                  name=obs_name,
                  range=obs_range,
                  weight_samples=experiment.model.iterations,
-                 error_range=[0.76,1.27],
-                 n_jets=1)
+                 error_range=[0.76,1.26],
+                 n_jets=1,
+                 y_ticks=[0.85,1,1.15])
 
         obs_name = "M_{\mu \mu}"
-        obs_range = [77, 107]
+        obs_range = [79, 104]
         data_train = get_M_ll(plot_train[0])
         data_test = get_M_ll(plot_test[0])
         data_generated = get_M_ll(plot_samples[0])
@@ -246,11 +262,12 @@ if n_jets == 1:
                  obs_predict=data_generated,
                  name=obs_name,
                  range=obs_range,
-                 bins=30,
+                 bins=60,
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
-                 error_range=[0.91,1.12],
-                 n_jets=1)
+                 error_range=[0.71,1.29],
+                 n_jets=1,
+                 y_ticks=[0.8,1,1.2])
 
 if n_jets == 2:
     with PdfPages(f"{path}/paper_plots.pdf") as out:
@@ -269,8 +286,9 @@ if n_jets == 2:
                  name=obs_name,
                  range=obs_range,
                  weight_samples=experiment.model.iterations,
-                 error_range=[0.76,1.27],
-                n_jets=2)
+                 error_range=[0.76,1.24],
+                 n_jets=2,
+                 y_ticks=[0.8,1,1.2])
 
         obs_name = "\Delta R_{j_1 j_2}"
         obs_train = delta_r(plot_train[0])
@@ -282,12 +300,13 @@ if n_jets == 2:
                  obs_test=obs_test,
                  obs_predict=obs_generated,
                  name=obs_name,
-                 range=[0, 8.1],
-                 bins= 40,
+                 range=[0, 8],
+                 bins= 55,
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
-                 error_range= [0.51,1.52],
-                 n_jets=2)
+                 error_range = [0.5,1.5],
+                 n_jets=2,
+                 y_ticks=[0.75,1,1.25])
 
 if n_jets == 3:
     with PdfPages(f"{path}/paper_plots.pdf") as out:
@@ -301,12 +320,13 @@ if n_jets == 3:
                  obs_test=obs_test,
                  obs_predict=obs_generated,
                  name=obs_name,
-                 range=[0, 8.1],
-                 bins=40,
+                 range=[0, 8],
+                 bins=55,
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
-                 error_range = [0.51,1.52],
-                 n_jets=3)
+                 error_range = [0.5,1.5],
+                 n_jets=3,
+                 y_ticks=[0.75,1,1.25])
         obs_name = "\Delta R_{j_2 j_3}"
         obs_train = delta_r(plot_train[0], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
         obs_test = delta_r(plot_test[0], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
@@ -317,12 +337,13 @@ if n_jets == 3:
                  obs_test=obs_test,
                  obs_predict=obs_generated,
                  name=obs_name,
-                 range=[0, 8.1],
-                 bins = 40,
+                 range=[0, 8],
+                 bins=55,
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
-                 error_range = [0.51,1.52],
-                 n_jets=3)
+                 error_range = [0.5,1.5],
+                 n_jets=3,
+                 y_ticks=[0.75,1,1.25])
 
 
 

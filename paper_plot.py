@@ -17,7 +17,7 @@ toy_type = sys.argv[2]
 data_split = 0.6
 
 
-data = np.load("/remote/gpu05/palacios/data/2dRamp.npy")
+data = np.load("/remote/gpu05/palacios/data/2dGaussSphere.npy")
 n_data = len(data)
 cut1 = int(n_data * data_split)
 data_train = data[:cut1]
@@ -27,8 +27,8 @@ mus = []
 sigmas = []
 for i in range(0,10):
     path_path = path + f"DDPM_base_{i}/"
-    mu_path = path_path + "run_1_mu.npy"
-    sigma_path = path_path + "run_1_sigma.npy"
+    mu_path = path_path + "run_R_mu.npy"
+    sigma_path = path_path + "run_R_sigma.npy"
     mu = np.load(mu_path)
     sigma = np.load(sigma_path)
     mus.append(mu)
@@ -53,14 +53,14 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
         scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
-        FONTSIZE = 14
+        FONTSIZE = 16
         labels = ["True", "Model", "Train"]
-        colors = ["#3b528b","#A52A2A", "#1a8507"]
+        colors = ["black","#A52A2A", "#0343DE"]
         dup_last = lambda a: np.append(a, a[-1])
 
         fig1, axs = plt.subplots(3, 1, sharex=True,
                                  gridspec_kw={"height_ratios": [4, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
+        fig1.tight_layout(pad=0.5, w_pad=0.5, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
 
         for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                  labels, colors):
@@ -134,9 +134,9 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         fig2, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1, 1], "hspace": 0.00})
         #fig2, axs = plt.subplots(1, 1)
-        fig2.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
+        fig2.tight_layout(pad=0.5, w_pad=0.5, h_pad=1.0, rect=(0.07, 0.06, 0.99, 0.95))
 
-        axs[0].set_ylabel("Absolute uncertainty", fontsize=FONTSIZE)
+        axs[0].set_ylabel("Absolute uncertainty", fontsize=FONTSIZE-1, loc="top")
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
         #               fontsize=FONTSIZE)
 
@@ -158,7 +158,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         #fig3, axs = plt.subplots(1, 1)
         #fig3.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
 
-        axs[1].set_ylabel("Relative uncertainty", fontsize=FONTSIZE)
+        axs[1].set_ylabel("Relative uncertainty", fontsize=FONTSIZE-1, loc="bottom")
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
         #               fontsize=FONTSIZE)
 
