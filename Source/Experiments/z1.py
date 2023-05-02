@@ -47,6 +47,8 @@ class Z1_Experiment(Experiment):
         if get(self.params, "plot_channels", None) is None:
             self.plot_channels = self.channels
             self.params["plot_channels"] = self.plot_channels
+        else:
+            self.plot_channels = get(self.params, "plot_channels", None)
 
         self.starttime = time.time()
 

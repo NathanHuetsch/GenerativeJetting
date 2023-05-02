@@ -47,6 +47,8 @@ class DDPM(GenerativeModel):
         if self.C != 1:
             print(f"C is {self.C}")
 
+        self.magic_transformation = get(self.params, "magic_transformation", False)
+
         self.to(self.device)
     def build_net(self):
         """
@@ -72,6 +74,10 @@ class DDPM(GenerativeModel):
     def batch_loss(self, x):
 
         self.net.map = False
+
+        if self.magic_transformation:
+            weights = x[:, -1]
+            x = x[:, :-1]
 
         if self.conditional and self.n_jets == 1:
             condition = x[:, :3]
@@ -100,11 +106,15 @@ class DDPM(GenerativeModel):
         #xT = torch.empty(size=x.size(), device=self.device)
         #for i in range(x.size(0)):
         #    xT[i] = self.xT_from_x0_and_noise(x[i], t[i], noise[i])
-        model_pred = self.net(xT.float(), t.float(), condition)
+        model_pred = self.net(xT.float(), t, condition)
         c = self.get_relative_factor(t)
-        loss = F.mse_loss(c*model_pred, c*noise) + self.C*self.net.kl / (len(self.data_train)*T)
 
-        self.regular_loss.append(F.mse_loss(c*model_pred, c*noise).detach().cpu().numpy())
+        if self.magic_transformation:
+            loss = torch.mean(c*(model_pred - noise) ** 2 * weights[:, None])/weights.sum()
+            self.regular_loss.append(loss.detach().cpu().numpy())
+        else:
+            loss = F.mse_loss(c*model_pred, c*noise) + self.C*self.net.kl / (len(self.data_train)*T)
+            self.regular_loss.append(F.mse_loss(c*model_pred, c*noise).detach().cpu().numpy())
         try:
             self.kl_loss.append((self.C*self.net.kl / (len(self.data_train)*T)).detach().cpu().numpy())
         except:
@@ -170,7 +180,7 @@ class DDPM(GenerativeModel):
             for t in reversed(range(self.timesteps)):
                 z = noise_i[t] if t > 0 else 0
                 with torch.no_grad():
-                    model_pred = self.net(x, t*torch.ones_like(x[:, [0]]), c).detach()
+                    model_pred = self.net(x, t*torch.ones_like(x[:, [0]],dtype=torch.int), c).detach()
                 x = self.mu_tilde_t(x, t, model_pred) + self.sigmas[t] * z
 
             if self.conditional and self.n_jets == 1:

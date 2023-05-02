@@ -14,39 +14,72 @@ class Resnet(nn.Module):
         self.n_blocks = param["n_blocks"]
         self.intermediate_dim = self.param["intermediate_dim"]
         self.dim = self.param["dim"]
+        self.out_dim = self.param.get("out_dim", self.dim)
+        #self.block_out_dim = self.param.get("out_dim", self.out_dim)
         self.n_con = self.param["n_con"]
         self.layers_per_block = self.param["layers_per_block"]
         self.dropout = self.param.get("dropout", None)
         self.normalization = self.param.get("normalization", None)
         self.activation = self.param.get("activation", "SiLU")
         self.encode_t = self.param.get("encode_t", False)
+        self.encode_x = self.param.get("encode_x", False)
+        if self.encode_x:
+            self.block_out_dim = self.encode_x_dim = self.param.get("encode_x_dim", 32)
+            self.add_final = True
+        else:
+            self.block_out_dim = self.out_dim
+            self.add_final = False
         self.conditional = self.param.get("conditional", False)
-        self.embed_condition = self.param.get("embed_condition",False)
+        self.encode_c = self.param.get("encode_c",False)
         self.bayesian = self.param.get("bayesian", False)
         self.bayesian_layers = []
         self.deter_layers = []
         self.prior_prec = self.param.get("prior_prec", 1.0)
         self.map = False
+        self.learn_sigma = self.param.get("learn_sigma", False)
+        self.timesteps = self.param.get("timesteps",1000)
 
         # Use GaussianFourierProjection for the time if specified
         if self.encode_t:
             self.encode_t_scale = self.param.get("encode_t_scale", 30)
-            self.encode_t_dim = self.param.get("encode_t_dim", 4)
-            self.embed = nn.Sequential(GaussianFourierProjection(embed_dim=self.encode_t_dim,
+            self.encode_t_dim = self.param.get("encode_t_dim", 64)
+            if self.param.get("encode_t_type","Gauss") == "Gauss":
+                self.embed = nn.Sequential(GaussianFourierProjection(embed_dim=self.encode_t_dim,
                                                                  scale=self.encode_t_scale),
                                        nn.Linear(self.encode_t_dim, self.encode_t_dim))
+            elif self.param.get("encode_t_type","Gauss") == "Embedding":
+                self.embed = nn.Sequential(nn.Embedding(self.timesteps,self.encode_t_dim), nn.Linear(self.encode_t_dim,
+                                                                                                     self.encode_t_dim))
+
         else:
             self.encode_t_dim = 1
-        if self.embed_condition:
-            self.embed_c = nn.Sequential(nn.Linear(self.n_con+self.encode_t_dim,self.encode_c_dim),
-                                         nn.Linear(self.encode_c_dim,self.encode_c_dim))
-            self.encode_t_dim = 0
+        if self.encode_c:
+            self.encode_c_dim = self.param.get("encode_c_dim", 32)
+            self.embed_c = nn.Linear(self.n_con, self.encode_c_dim)
         else:
             self.encode_c_dim = self.n_con
         # Build the Resnet blocks
+        if self.encode_x:
+            self.embed_x = nn.Linear(self.dim, self.encode_x_dim)
+        else:
+            self.encode_x_dim = self.dim
+
+        if self.learn_sigma == True:
+            self.out_dim = 2*self.dim
+        else:
+            self.out_dim = self.dim
+
         self.blocks = nn.ModuleList([
             self.make_block()
             for _ in range(self.n_blocks)])
+
+        if self.add_final:
+            if self.bayesian == 0:
+                self.final = nn.Linear(self.block_out_dim, self.out_dim)
+                self.deter_layers.append(self.final)
+            else:
+                self.final = VBLinear(self.block_out_dim, self.out_dim, prior_prec=self.prior_prec)
+                self.bayesian_layers.append(self.final)
 
         if self.bayesian > 1:
             for block in self.blocks:
@@ -63,8 +96,8 @@ class Resnet(nn.Module):
         """
         Method to build the Resnet blocks with the defined specifications
         """
-        if self.bayesian:
-            bays_layer = VBLinear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim,
+        if self.bayesian > 1:
+            bays_layer = VBLinear(self.encode_x_dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim,
                                   prior_prec=self.prior_prec)
             layers = [bays_layer, nn.SiLU()]
             self.bayesian_layers.append(bays_layer)
@@ -74,19 +107,16 @@ class Resnet(nn.Module):
                 layers.append(bays_layer)
                 self.bayesian_layers.append(bays_layer)
                 if self.normalization is not None:
-                    layers.append(getattr(nn, self.normalization)())
+                    layers.append(getattr(nn, self.normalization)(self.intermediate_dim))
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
-            if self.bayesian > 1:
-                bays_layer = VBLinear(self.intermediate_dim, self.dim,prior_prec=self.prior_prec)
-                layers.append(bays_layer)
-                self.bayesian_layers.append(bays_layer)
-            else:
-                layers.append(nn.Linear(self.intermediate_dim, self.dim))
+            bays_layer = VBLinear(self.intermediate_dim, self.block_out_dim, prior_prec=self.prior_prec)
+            layers.append(bays_layer)
+            self.bayesian_layers.append(bays_layer)
 
         else:
-            linear = nn.Linear(self.dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim)
+            linear = nn.Linear(self.encode_x_dim + self.encode_c_dim + self.encode_t_dim, self.intermediate_dim)
             self.deter_layers.append(linear)
             layers = [linear, nn.SiLU()]
 
@@ -95,12 +125,12 @@ class Resnet(nn.Module):
                 layers.append(linear)
                 self.deter_layers.append(linear)
                 if self.normalization is not None:
-                    layers.append(getattr(nn, self.normalization)())
+                    layers.append(getattr(nn, self.normalization)(self.intermediate_dim))
                 if self.dropout is not None:
                     layers.append(nn.Dropout(p=self.dropout))
                 layers.append(getattr(nn, self.activation)())
 
-            linear = nn.Linear(self.intermediate_dim, self.dim)
+            linear = nn.Linear(self.intermediate_dim, self.block_out_dim)
             layers.append(linear)
             self.deter_layers.append(linear)
 
@@ -113,13 +143,21 @@ class Resnet(nn.Module):
         self.kl = 0
         if self.encode_t:
             t = self.embed(t)
+            if self.param.get("encode_t_type","Gauss") == "Embedding":
+                t = torch.squeeze(t)
+
+        t = t.float()
+
 
         if self.conditional:
+            if self.encode_c:
+                condition = self.embed_c(condition)
             add_input = torch.cat([t, condition], 1)
-            if self.embed_condition:
-                add_input = self.embed_c(add_input)
         else:
             add_input = t
+
+        if self.encode_x:
+            x = self.embed_x(x)
 
         for bay_layer in self.bayesian_layers:
             bay_layer.map = self.map
@@ -127,6 +165,10 @@ class Resnet(nn.Module):
         for block in self.blocks[:-1]:
             x = x + block(torch.cat([x, add_input], 1))
         x = self.blocks[-1](torch.cat([x, add_input], 1))
+
+        if self.add_final:
+            x = nn.SiLU()(x)
+            x = self.final(x)
 
         for bay_layer in self.bayesian_layers:
             self.kl += bay_layer.KL()

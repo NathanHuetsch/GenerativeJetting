@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
-from Source.Models.ddpm_new import DDPM
+from Source.Models.ddpm import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
 from matplotlib.backends.backend_pdf import PdfPages
@@ -79,6 +79,7 @@ class Experiment:
         self.prior_prior_model = None
         self.iterations = get(self.params, "iterations", 1)
         self.bayesian = get(self.params, "bayesian", False)
+        self.balance = get(self.params, "balance", False)
 
 
         self.starttime = time.time()
@@ -194,10 +195,6 @@ class Experiment:
         # Quick optional check whether preprocessing works as intended (data_raw = data_raw2?)
         # data_raw2 = undo_preprocessing(data, data_mean, data_std, data_u, data_s, bin_edges, bin_means, p)
 
-        # Make sure the data is a torch.Tensor and move it to device
-        data = data.to(self.device)
-        print(f"preprocess_data: Moved data to {data.device}")
-
         if save_in_params:
             if get(p, "dim", None) is None:
                 self.params["dim"] = len(channels)
@@ -205,22 +202,6 @@ class Experiment:
             self.params["channels"] = channels
             self.params["n_data"] = n_data
 
-        self.magic_transformation = get(self.params, "magic_transformation", False)
-        if self.magic_transformation:
-            if n_jets == 2:
-                deltaR12 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-                self.event_weights = magic_trafo(deltaR12)
-            elif n_jets == 3:
-                deltaR12 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-                deltaR13 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
-                deltaR23 = delta_r(data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-                weights12 = magic_trafo(deltaR12)
-                weights13 = magic_trafo(deltaR13)
-                weights23 = magic_trafo(deltaR23)
-                self.event_weights = weights12*weights13*weights23
-
-            data = torch.cat([data, torch.from_numpy(self.event_weights[:, None])], dim=1).float()
-            print(f"preprocess_data: Using magic transformation")
 
         # Make sure the data is a torch.Tensor and move it to device
         data = data.to(self.device)
@@ -328,8 +309,9 @@ class Experiment:
 
         cut1 = int(n_data * self.data_split[0])
         cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
-        self.model.data_train = self.data_raw[:cut1]
-        self.model.data_test = self.data_raw[cut2:]
+        self.model.data_train_raw = self.data_raw[:cut1]
+        self.model.data_test_raw = self.data_raw[cut2:]
+        self.model.data_train = self.data[:cut1]
 
         if train:
             # Read in the "batch_size" parameter and calculate the cuts between traindata, valdata and testdata
@@ -350,7 +332,12 @@ class Experiment:
                 f"build_dataloaders: Built dataloaders with data_split {self.data_split} and batch_size {self.batch_size}")
 
             use_scheduler = get(self.params, "use_scheduler", False)
+
             if use_scheduler:
+                if self.conditional and self.balance:
+                    trainloader_length = int(np.ceil(len(self.data_raw[self.data_raw[:,0]==3])*3/self.batch_size))
+                else:
+                    trainloader_length = len(self.model.train_loader)
                 lr_scheduler = get(self.params, "lr_scheduler", "OneCycle")
                 if lr_scheduler == "OneCycle":
                     lr = get(self.params, "lr", 0.0001)
@@ -359,14 +346,14 @@ class Experiment:
                         self.model.optimizer,
                         lr * 10,
                         epochs=n_epochs,
-                        steps_per_epoch=len(self.model.train_loader))
+                        steps_per_epoch= trainloader_length)
                     print("build_dataloaders: Using one-cycle lr scheduler")
                 elif lr_scheduler == "CosineAnnealing":
                     n_epochs = get(self.params, "n_epochs", 100)
                     eta_min = get(self.params, "eta_min", 0)
                     self.model.scheduler = CosineAnnealingLR(
                         optimizer=self.model.optimizer,
-                        T_max=n_epochs*len(self.model.train_loader),
+                        T_max=n_epochs*trainloader_length,
                         eta_min=eta_min
                     )
                     print(f"build_dataloaders: Using CosineAnnealing lr scheduler with eta_min {eta_min}")

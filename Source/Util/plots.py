@@ -154,7 +154,9 @@ def delta_eta(y, idx1, idx2):
 
 
 def delta_r(y,  idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14):
-    return np.sqrt(delta_phi(y, idx_phi1, idx_phi2)**2 + delta_eta(y, idx_eta1, idx_eta2)**2)
+    dphi = delta_phi(y, idx_phi1, idx_phi2)
+    deta = delta_eta(y, idx_eta1, idx_eta2)
+    return np.sqrt(dphi**2 + deta**2)
 
 
 def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1=9, idx_eta1=10, idx_phi2=13,

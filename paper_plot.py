@@ -60,7 +60,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         fig1, axs = plt.subplots(3, 1, sharex=True,
                                  gridspec_kw={"height_ratios": [4, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0.5, w_pad=0.5, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
+        fig1.tight_layout(pad=0.7, w_pad=0.7, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
 
         for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                  labels, colors):
@@ -103,7 +103,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         axs[0].legend(loc="upper left", frameon=False, fontsize=FONTSIZE)
         axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
-        axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{True}}$",
+        axs[1].set_ylabel(r"$\frac{\mathrm{DDPM}}{\mathrm{True}}$",
                           fontsize=FONTSIZE)
         axs[1].set_yticks([0.95, 1, 1.05])
         axs[1].set_ylim([0.9, 1.1])
