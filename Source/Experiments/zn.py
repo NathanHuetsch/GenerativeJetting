@@ -8,8 +8,7 @@ from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, pl
 from Source.Util.physics import get_M_ll
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Experiments.jet import Jet_Experiment
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from Source.Util.lr_scheduler import OneCycleLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, OneCycleLR
 import os, sys, time, random
 
 class Zn_Experiment(Jet_Experiment):
@@ -61,15 +60,28 @@ class Zn_Experiment(Jet_Experiment):
             print(f"preprocess_data: channels {channels}")
         else:
             print(f"preprocess_data: channels {channels} specified.")
-        self.params["dim"] = max(channels)+1
 
-        channels_3jet = np.array(self.params["channels"], dtype="int")
-        channels_1jet = channels_3jet[~np.isin(channels_3jet, np.array([1, 3, 7, 12, 13, 14, 15, 16, 17, 18, 19])).astype("bool")]
-        channels_2jet = channels_3jet[~np.isin(channels_3jet, np.array([1, 3, 7, 16, 17, 18, 19])).astype("bool")]
-        self.channels_njet = [channels_1jet, channels_2jet, channels_3jet]
+        channels_3jet_raw = np.array(self.params["channels"], dtype="int")
+        channels_1jet_raw = channels_3jet_raw[~np.isin(channels_3jet_raw, np.array([1, 3, 7, 12, 13, 14, 15, 16, 17, 18, 19])).astype("bool")]
+        channels_2jet_raw = channels_3jet_raw[~np.isin(channels_3jet_raw, np.array([1, 3, 7, 16, 17, 18, 19])).astype("bool")]
+        self.channels_njet_raw = [channels_1jet_raw, channels_2jet_raw, channels_3jet_raw] #used for preprocessing
+        
+        channels_1jet = np.arange(0, 9)
+        channels_2jet = np.arange(9, 9+13)
+        channels_3jet = np.arange(9+13, 9+13+17)
+
+        # embed n_jets seperately
+        self.params["dim"] = max(channels)+1
+        self.n_jets = [1, 2, 3]
+        self.channels_njet = self.channels_njet_raw #used for positional embedding
+
+        # combined n_jets and positional embedding
+        #self.params["dim"] = 9+13+17
+        #self.n_jets = [None, None, None]
+        #self.channels_njet = [channels_1jet, channels_2jet, channels_3jet]
 
         def preprocess_for_njets(data_raw, n_jets, p):
-            p["channels"] = self.channels_njet[n_jets-1]
+            p["channels"] = self.channels_njet_raw[n_jets-1]
             
             data_raw = preformat(data_raw, p)
             data, data_mean, data_std, data_u, data_s, bin_edges, bin_means = preprocess(data_raw, p)
@@ -208,9 +220,14 @@ class Zn_Experiment(Jet_Experiment):
         for batch_id, x in enumerate(self.model.train_loader):
             x1, x2, x3 = x
             self.model.optimizer.zero_grad()
-            loss1 = self.model.batch_loss(x1, n_jets=1, pos=self.channels_njet[0])
-            loss2 = self.model.batch_loss(x2, n_jets=2, pos=self.channels_njet[1])
-            loss3 = self.model.batch_loss(x3, n_jets=3, pos=self.channels_njet[2])
+            try:
+                loss1 = self.model.batch_loss(x1, n_jets=self.n_jets[0], pos=self.channels_njet[0])
+                loss2 = self.model.batch_loss(x2, n_jets=self.n_jets[1], pos=self.channels_njet[1])
+                loss3 = self.model.batch_loss(x3, n_jets=self.n_jets[2], pos=self.channels_njet[2])
+            except ValueError:
+                print(f"ValueError in epoch {self.model.epoch}, batch {batch_id}. ")
+                print(f"last few losses in this epoch: {train_losses[:-20]}")
+                continue
             loss = (loss1 * 17/9 + loss2 * 17/13 + loss3)/3 #do a proper mean
 
             if np.isfinite(loss.item()): 
@@ -261,21 +278,21 @@ class Zn_Experiment(Jet_Experiment):
             print("generate_samples: sample set to False")
 
     def sample_and_undo(self, n_samples):
-        samples_1 = self.model.sample_n(n_samples, n_jets=1, pos=self.channels_njet[0])
+        samples_1 = self.model.sample_n(n_samples, n_jets=self.n_jets[0], pos=self.channels_njet[0])
         p = self.params.copy()
-        p["channels"] = self.channels_njet[0]
+        p["channels"] = self.channels_njet_raw[0]
         samples_1 = undo_preprocessing(samples_1, self.data_mean_1, self.data_std_1, self.data_u_1,
                                        self.data_s_1, self.bin_edges_1, self.bin_means_1, p)
 
-        samples_2 = self.model.sample_n(n_samples, n_jets=2, pos=self.channels_njet[1])
+        samples_2 = self.model.sample_n(n_samples, n_jets=self.n_jets[1], pos=self.channels_njet[1])
         p = self.params.copy()
-        p["channels"] = self.channels_njet[1]
+        p["channels"] = self.channels_njet_raw[1]
         samples_2 = undo_preprocessing(samples_2, self.data_mean_2, self.data_std_2, self.data_u_2,
                                        self.data_s_2, self.bin_edges_2, self.bin_means_2, p)
 
-        samples_3 = self.model.sample_n(n_samples, n_jets=3, pos=self.channels_njet[2])
+        samples_3 = self.model.sample_n(n_samples, n_jets=self.n_jets[2], pos=self.channels_njet[2])
         p = self.params.copy()
-        p["channels"] = self.channels_njet[2] #technically change nothing (but want to keep things symmetric)
+        p["channels"] = self.channels_njet_raw[2] #technically change nothing (but want to keep things symmetric)
         samples_3 = undo_preprocessing(samples_3, self.data_mean_3, self.data_std_3, self.data_u_3,
                                        self.data_s_3, self.bin_edges_3, self.bin_means_3, p)
 
@@ -314,18 +331,19 @@ class Zn_Experiment(Jet_Experiment):
         plot_test_3 = self.data_test_3
         plot_samples_3 = samples_3
 
-        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
-            for n_jets in [1,2,3]:
-                plot_channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
-                for _, channel in enumerate(plot_channels):
-                    obs_train = eval(f"plot_train_{n_jets}")[:, channel]
-                    obs_test = eval(f"plot_test_{n_jets}")[:, channel]
-                    obs_generated = eval(f"plot_samples_{n_jets}")[:, channel]
-                    # Get the name and the range of the observable
-                    obs_name = self.obs_names[channel]
-                    obs_range = self.obs_ranges[channel]
-                    # Create the plot
-                    plot_obs(pp=out,
+        if get(self.params,"plot_1d", True):
+            with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
+                for n_jets in [1,2,3]:
+                    plot_channels = np.array([i for i in range(n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
+                    for _, channel in enumerate(plot_channels):
+                        obs_train = eval(f"plot_train_{n_jets}")[:, channel]
+                        obs_test = eval(f"plot_test_{n_jets}")[:, channel]
+                        obs_generated = eval(f"plot_samples_{n_jets}")[:, channel]
+                        # Get the name and the range of the observable
+                        obs_name = self.obs_names[channel]
+                        obs_range = self.obs_ranges[channel]
+                        # Create the plot
+                        plot_obs(pp=out,
                              obs_train=obs_train,
                              obs_test=obs_test,
                              obs_predict=obs_generated,
@@ -760,6 +778,7 @@ class Conditional_Jet_Dataset(Dataset):
         # (reduced size, they are randomly redefined in each epoch)
         self.data_1_eff = data_1[:self.lenghts[-1]]
         self.data_2_eff = data_2[:self.lenghts[-1]]
+        self.data_3_eff = data_3 #take the full thing
 
     def __len__(self):
         return self.lenghts[-1]
@@ -767,7 +786,7 @@ class Conditional_Jet_Dataset(Dataset):
     def __getitem__(self, index):
         x1 = self.data_1_eff[index]
         x2 = self.data_2_eff[index]
-        x3 = self.data_3[index]
+        x3 = self.data_3_eff[index]
         return (x1, x2, x3)
 
 class Conditional_Jet_DataLoader(DataLoader):
@@ -775,12 +794,13 @@ class Conditional_Jet_DataLoader(DataLoader):
         super().__init__(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory, drop_last=drop_last)
         
     def __iter__(self):
-        # recreate effective datasets 1 and 2
-        # (so that they have same size as 3)
-        #idx1 = torch.randperm(self.dataset.lenghts[0])[:self.dataset.lenghts[-1]]
-        #self.dataset.data_1_eff = self.dataset.data_1[idx1]
-        #idx2 = torch.randperm(self.dataset.lenghts[1])[:self.dataset.lenghts[-1]]
-        #self.dataset.data_2_eff = self.dataset.data_2[idx2]
+        # recreate effective datasets 1 and 2 (so that they have same size as 3)
+        idx1 = torch.randperm(self.dataset.lenghts[0])[:self.dataset.lenghts[-1]]
+        self.dataset.data_1_eff = self.dataset.data_1[idx1]
+        idx2 = torch.randperm(self.dataset.lenghts[1])[:self.dataset.lenghts[-1]]
+        self.dataset.data_2_eff = self.dataset.data_2[idx2]
+        #idx3 = torch.randperm(self.dataset.lenghts[2]) #take the full thing
+        #self.dataset.data_3_eff = self.dataset.data_3[idx3] #dont need this
 
-        # then just return the mother iteraretor
+        # then just return the mother iterator
         return super().__iter__()

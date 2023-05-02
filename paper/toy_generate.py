@@ -17,15 +17,19 @@ import matplotlib.pyplot as plt
 
 device = get_device()
 
-def genHistograms(path):
+def genHistograms(path, nModels=10):
+    if device=="cuda":
+        sys.stdout = open(f"paper/toy/stdout_{path}.txt", "w", buffering=1)
+        sys.stderr = open(f"paper/toy/stderr_{path}.txt", "w", buffering=1)
+        
     print(f"## Generating histograms for {path} ##")
     t0 = time.time()
 
-    paths = [f"runs/{path}_{i}/" for i in range(1,11)]
+    paths = [f"runs/{path}_{i}/" for i in range(1,1+nModels)]
     
     nbins = 60
     nBNN = 30
-    n_samples = 1000000
+    n_samples = 600000
     nEnsemble = len(paths)
     #range_ramp = [-0.1, 1.1]
     range_ramp = [0.1, 0.9]
@@ -69,7 +73,7 @@ def genHistograms(path):
             data = data_raw
         data_split = params["data_split"]
         n_data = len(data)
-        cut1 = int(n_data - data_split[0])
+        cut1 = int(n_data * data_split[0])
         cut2 = int(n_data * (data_split[0] + data_split[1]))
         data_train = data_raw[:cut1]
         data_test = data_raw[cut2:]
@@ -91,6 +95,8 @@ def genHistograms(path):
         obs_train = get_obs(data_train)
         obs_test = get_obs(data_test)
         obs_predict = get_obs(data_predict)
+
+        print(obs_train[:10])
 
         range_toy = range_ramp if params["toy_type"]=="ramp" else range_gauss_sphere
         # generate histograms for training and test data
@@ -118,7 +124,6 @@ def genHistograms(path):
         histograms[5+ipath, :, 0] = dup_last(hists[1] * scales[1])
         histograms[5+ipath, :, 1] = dup_last(hist_errors[1] * scales[1])
 
-
     # compute
     histograms[3, :, 0] = dup_last(np.mean(histograms[5:, :-1, 0], axis=0)) #histogram means (for normalization)
     histograms[3, :, 1] = dup_last(1/nEnsemble * np.sum(histograms[5:, :-1, 1]**2, axis=0)**.5) #gaussian error propagation -> effective uncertainty (reduced!)
@@ -130,17 +135,13 @@ def genHistograms(path):
     t1 = time.time()
     print(f"Total time consumption: {t1-t0:.2f}s = {(t1-t0)/60:.2f}min = {(t1-t0)/60**2:.2f}h")
 
-if device=="cuda":
-    sys.stdout = open("paper/toy/stdout.txt", "w", buffering=1)
-    sys.stderr = open("paper/toy/stderr.txt", "w", buffering=1)
+    if device=="cuda":
+        sys.stdout.close()
+        sys.stderr.close()
 
-#genHistograms("paper_GMM_ramp2")
-#genHistograms("paper_GMM_sphere2")
-#genHistograms("paper_Binned_ramp")
-#genHistograms("paper_Binned_sphere2")
+genHistograms("paper_GMM_ramp4")
+#genHistograms("paper_GMM_sphere5")
+#genHistograms("paper_Binned_ramp4")
+#genHistograms("paper_Binned_sphere4")
 #genHistograms("paper_NN_ramp2")
-genHistograms("paper_NN_sphere2")
-
-if device=="cuda":
-    sys.stdout.close()
-    sys.stderr.close()
+#genHistograms("paper_NN_sphere2")

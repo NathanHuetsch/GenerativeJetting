@@ -137,6 +137,8 @@ class Toy_Experiment(Experiment):
                 print(f"generate_samples: {i}.Starting generation of {n_samples} samples")
                 t0 = time.time()
                 sample = self.model.sample_n(n_samples)
+                if self.params["model"] == "AutoRegBinned":
+                    sample = undo_discretize(sample, self.params, self.bin_edges, self.bin_means)
                 t1 = time.time()
                 sampletime = t1 - t0
                 self.params["sampletime"] = sampletime

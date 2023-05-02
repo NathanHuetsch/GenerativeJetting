@@ -107,14 +107,19 @@ class AutoRegGMM(GenerativeModel):
             self.net.transformer.wte.random = None
         self.eval()
 
+        if type(pos) is np.ndarray:
+            nElements = len(pos) #could be smaller than self.block_size
+        else:
+            nElements = self.block_size
+
         n_batches = int(n_samples / self.batch_size_sample)+1
-        sample= np.zeros((0, len(pos)), dtype="int")
+        sample= np.zeros((0, nElements), dtype="int")
         for i in range(n_batches):
             t0=time.time()
 
             idx = torch.zeros(self.batch_size_sample, 1, device=self.device)
-            for iBlock in range(len(pos)):
-                mu, sigma, weights = self.net(idx, n_jets=n_jets, pos=pos[:iBlock+1])
+            for iBlock in range(nElements):
+                mu, sigma, weights = self.net(idx, n_jets=n_jets, pos=pos[:iBlock+1] if type(pos) is np.ndarray else None)
                 
                 mix = D.Categorical(weights[:,-1,:])
                 comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])

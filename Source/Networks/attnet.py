@@ -45,8 +45,8 @@ class CausalSelfAttention(nn.Module):
         if not self.allowflash:
             self.register_buffer("bias", torch.tril(torch.ones(self.block_size, self.block_size))
                                      .view(1, 1, self.block_size, self.block_size))
-        
-        self.attn_dropout = nn.Dropout(self.attn_pdrop)
+            self.attn_dropout = nn.Dropout(self.attn_pdrop)
+            
         self.resid_dropout = nn.Dropout(self.resid_pdrop)
 
     def forward(self, x):
@@ -74,6 +74,25 @@ class CausalSelfAttention(nn.Module):
         # output projection
         y = self.resid_dropout(self.c_proj(y))
         return y
+    
+    def getAttentionMatrix(self, x):
+        B, T, C = x.size() # batch size, sequence length, embedding dimensionality (intermediate_dim)
+
+        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+        q, k ,v  = self.c_attn(x).split(self.intermediate_dim, dim=2)
+        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+
+        assert not self.allowflash, "getAttentionMatrix: Have allowflash=True, but can only access attention matrix with allowflash=False."
+        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
+        # manual implementation of attention
+        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+        att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+        att = F.softmax(att, dim=-1)
+        att = self.attn_dropout(att)
+        
+        return att
 
     def KL(self):
         if self.bayesian==2 or self.bayesian==3:

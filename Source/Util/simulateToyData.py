@@ -81,7 +81,9 @@ class ToySimulator:
         while np.shape(samples)[0] < self.n_data:
             x = np.random.uniform(low=xmin, high=xmax, size=(batch_size, n_dim))
             def p(x):
-                return 1/(2*np.pi*sigma**2)**(n_dim/2) * np.exp(-(np.sum(x**2, axis=1)**.5-mu)**2 / (2*sigma**2))
+                jac = 1. #would have to use getSpherical and then check n-sphere on wikipedia
+                normal = np.exp(-(np.sum(x**2, axis=1)**.5-mu)**2 / (2*sigma**2)) #normalization is constant -> does not matter
+                return normal / jac
             px = p(x)
             y = np.random.uniform(low=0., high=np.max(px), size=batch_size)
             idx = np.where(y < px)[0]

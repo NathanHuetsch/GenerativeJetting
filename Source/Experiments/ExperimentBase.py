@@ -8,14 +8,13 @@ from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
 from Source.Models.autoregNN import AutoRegNN
 from Source.Models.autoregRQS import AutoRegRQS
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from Source.Util.lr_scheduler import OneCycleLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, OneCycleLR
 from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
 import time
 from datetime import datetime
 import os, sys
-from torch.optim import Adam, AdamW
+from torch.optim import Adam, AdamW, SGD, RAdam
 
 
 class Experiment:
@@ -189,9 +188,6 @@ class Experiment:
     def build_optimizer(self):
         """
         The build_optimizer method gets the necessary parameters and builds the training optimizer.
-        Currently only vanilla Adam is implemented.
-        TODO: Implement SGD
-        TODO: Implement LR scheduling
 
         Overwrite or extend this method if a different optimizer is needed.
         The method should place the optimizer under self.model.optimizer
@@ -201,22 +197,31 @@ class Experiment:
         train = get(self.params, "train", True)
         if train:
             # Read in the "optimizer" parameter and build the specified optimizer
-            # TODO: Not very nice
             optim = get(self.params, "optimizer", None)
             if optim is None:
                 optim = "Adam"
                 print(f"build_optimizer: optimizer not specified. Defaulting to {optim}")
 
-            if optim == "Adam" or optim == "AdamW":
+            if optim == "Adam" or optim == "AdamW" or optim == "SGD" or optim == "RAdam":
                 lr = get(self.params, "lr", 0.0001)
                 betas = get(self.params, "betas", [0.9, 0.999])
                 weight_decay = get(self.params, "weight_decay", 0)
+                amsgrad=get(self.params, "adam_amsgrad", False)
+                eps=get(self.params, "adam_eps", 1.e-8)
                 if optim == "Adam":
                     self.model.optimizer = \
-                        Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+                        Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay,
+                             amsgrad=amsgrad, eps=eps)
                 elif optim == "AdamW":
                     self.model.optimizer = \
-                        AdamW(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+                        AdamW(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay,
+                             amsgrad=amsgrad, eps=eps)
+                elif optim == "RAdam":
+                    self.model.optimizer = \
+                        RAdam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay, eps=eps)
+                elif optim == "SGD":
+                    self.model.optimizer = \
+                        SGD(self.model.parameters(), lr=lr) #could also use momentum and damping
                 print(
                     f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
             else:

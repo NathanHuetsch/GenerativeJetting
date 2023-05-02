@@ -12,10 +12,10 @@ plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
 #ramp (GMM, Binned, NN), sphere (GMM, Binned, NN)
 yminAbsArr = [[0., 0., 0.], [0., 0., 0.]]
-ymaxAbsArr = [[.11, .11, .5], [.049, .09, .5]]
+ymaxAbsArr = [[.065, .039, .5], [.029, .024, .5]]
 yminRelArr = [[0., 0., 0.], [0., 0., 0.]]
-ymaxRelArr = [[.09, .11, .2], [.2, .19, 1.]]
-iShowArr = [[5, 14, 11], [6, 5, 5]]
+ymaxRelArr = [[.055, .039, .2], [.085, .055, 1.]]
+iShowArr = [[5, 5, 11], [5, 5, 5]]
 
 def imodel(model_type):
     if model_type == "AutoRegGMM":
@@ -53,8 +53,6 @@ def plot(path):
         bins = histograms[0,:,0]
         hists = [histograms[2,:,0], histograms[iShow,:,0], histograms[1,:,0]]
         hist_errors = [histograms[2,:,1], histograms[iShow,:,1], histograms[1,:,1]]
-
-        print(histograms[5:,0,:])
         
         FONTSIZE = 14
         labels = ["True", "Model", "Train"]
@@ -189,13 +187,14 @@ def plot(path):
         #abs_unc = histograms[3,:,1]
         abs_unc = histograms[4,:,0]
         abs_unc_unc = histograms[4,:,1]
-        abs_unc_i = histograms[5:, :, 1]
+        abs_unc_i = histograms[5:,:,1]
     
         axs.step(bins, abs_unc, color=colors[1], linewidth=1.0, where="post")
         axs.step(bins, abs_unc + abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.step(bins, abs_unc - abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.fill_between(bins, abs_unc + abs_unc_unc, abs_unc-+ abs_unc_unc,
                          step="post", alpha=.3, facecolor=colors[1])
+        axs.step(bins, hist_errors[2], linewidth=1.0, where="post", color=colors[2])
         #for i in range(len(histograms[:,0,1])-5):
         #    axs.step(bins, abs_unc_i[i, :], color="orange", linewidth=1.0, where="post")
         axs.set_ylim(yminAbs, ymaxAbs)
@@ -217,6 +216,7 @@ def plot(path):
         axs.step(bins, rel_unc - rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.fill_between(bins, rel_unc + rel_unc_unc, rel_unc - rel_unc_unc,
                          color=colors[1], alpha=0.3, step="post")
+        axs.step(bins, hist_errors[2] / hists[2], linewidth=1.0, where="post", color=colors[2])
         #for i in range(len(histograms[:,0,1])-5):
         #    axs.step(bins, rel_unc_i[i, :], color="orange", linewidth=1.0, where="post")
         axs.set_ylim(yminRel, ymaxRel)
@@ -224,9 +224,9 @@ def plot(path):
         plt.savefig(pp, format="pdf")
         plt.close()
 
-#plot("paper_GMM_ramp2")
-#plot("paper_GMM_sphere2")
-#plot("paper_Binned_ramp")
-#plot("paper_Binned_sphere2")
-plot("paper_NN_ramp2")
+plot("paper_GMM_ramp4")
+plot("paper_GMM_sphere5")
+plot("paper_Binned_ramp4")
+plot("paper_Binned_sphere4")
+#plot("paper_NN_ramp2")
 #plot("paper_NN_sphere2")

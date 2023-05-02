@@ -28,7 +28,7 @@ class attnetGMM(nn.Module):
             wte = VBLinear(1, self.intermediate_dim, self.prior_prec) \
                 if self.bayesian==3 else nn.Linear(1, self.intermediate_dim), 
             wpe = nn.Embedding(self.block_size, self.intermediate_dim),
-            wnjetse = nn.Embedding(3, self.intermediate_dim),
+            wnjetse = nn.Embedding(3, self.intermediate_dim), #should be not commented out for njet
             drop = nn.Dropout(self.embd_pdrop),
             h = nn.ModuleList([TransformerBlock(params) for _ in range(self.n_blocks)]),
             ln_f = nn.LayerNorm(self.intermediate_dim),
@@ -54,42 +54,29 @@ class attnetGMM(nn.Module):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
 
-    def forward(self, idx, pos=None, n_jets=None, out=False):
+    def forward(self, idx, pos=None, n_jets=None):
         device = idx.device
         b, t = idx.size()
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
-        if type(pos) is None:
-            pos = torch.arange(0, t, dtype=torch.long).unsqueeze(0) # shape (1, t)
-        elif type(pos) is np.ndarray:
+        if type(pos) is np.ndarray:
             pos = torch.Tensor(pos).long()
-        pos = pos.to(device)
-
-        if out or torch.any(torch.isnan(idx)):
-            print("Input gives ", idx)
+            pos = pos.to(device)
+        else: #pos is None
+            pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
 
         idx = idx.reshape(idx.size(0), idx.size(1), 1)
         tok_emb = self.transformer.wte(idx)        
         pos_emb = self.transformer.wpe(pos)
-        if n_jets == None:
+        if type(n_jets) is int:
             n_jets_arr = (n_jets-1) * torch.ones(1, 1, dtype=torch.long).to(device)
             njets_emb = self.transformer.wnjetse(n_jets_arr)
             x = self.transformer.drop(tok_emb + pos_emb + njets_emb)
-        else:
+        else: #type is None
             x = self.transformer.drop(tok_emb + pos_emb)
-        if out or torch.any(torch.isnan(x)):
-            print("Token embedding gives nan")
-            print("Pos embedding gives nan")
-            print("Full embedding gives", x)
-
         for block in self.transformer.h:
             x = block(x)
-            if out or torch.any(torch.isnan(x)):
-                print("Transformer gives nan")
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x).reshape(idx.size(0), idx.size(1), self.n_gauss, 3)
-        if out or torch.any(torch.isnan(x)):
-            print("Last layer gives nan")
-
         mu = logits[:,:,:,0]
         sigma = torch.exp(logits[:,:,:,1]) #ensures positivity and slowly goes to zero
         weights = F.softmax(logits[:,:,:,2], dim=-1) #ensures normalization
