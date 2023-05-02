@@ -57,7 +57,7 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
     scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
     FONTSIZE = 16
-    labels = ["True", "Model", "Train"]
+    labels = ["True", "DDPM", "Train"]
     colors = ["black","#A52A2A", "#0343DE"]
     dup_last = lambda a: np.append(a, a[-1])
 
