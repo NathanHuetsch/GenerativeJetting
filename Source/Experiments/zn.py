@@ -90,11 +90,11 @@ class Zn_Experiment(Jet_Experiment):
             return data_raw, data, data_mean, data_std, data_u, data_s, bin_edges, bin_means
 
         self.data_raw_1, self.data_1, self.data_mean_1, self.data_std_1, self.data_u_1, self.data_s_1, \
-                     self.bin_edges_1, self.bin_means_1 = preprocess_for_njets(self.z_1, 1, self.params)
+                     self.bin_edges_1, self.bin_means_1 = preprocess_for_njets(self.z_1, 1, self.params.copy()) #need copies of params to not actually change it
         self.data_raw_2, self.data_2, self.data_mean_2, self.data_std_2, self.data_u_2, self.data_s_2, \
-                     self.bin_edges_2, self.bin_means_2 = preprocess_for_njets(self.z_2, 2, self.params)
+                     self.bin_edges_2, self.bin_means_2 = preprocess_for_njets(self.z_2, 2, self.params.copy())
         self.data_raw_3, self.data_3, self.data_mean_3, self.data_std_3, self.data_u_3, self.data_s_3, \
-                     self.bin_edges_3, self.bin_means_3 = preprocess_for_njets(self.z_3, 3, self.params)
+                     self.bin_edges_3, self.bin_means_3 = preprocess_for_njets(self.z_3, 3, self.params.copy())
 
     def build_dataloaders(self):
         train = get(self.params, "train", True)

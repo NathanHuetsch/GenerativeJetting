@@ -10,10 +10,7 @@ from Source.Models.autoregBinned import AutoRegBinned
 from Source.Models.autoregNN import AutoRegNN
 from Source.Util.util import load_params, get_device
 from Source.Util.discretize import discretize, undo_discretize
-from Source.Experiments import toy
 from Source.Util.simulateToyData import ToySimulator
-
-import matplotlib.pyplot as plt
 
 device = get_device()
 

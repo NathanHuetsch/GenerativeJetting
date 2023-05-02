@@ -1,21 +1,32 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import os, sys, time
 sys.path.append(os.getcwd()) #can we do better?
 from Source.Util.util import load_params
+
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
 import warnings
+import matplotlib.font_manager as font_manager
 
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
-plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
+### setup matplotlib
+font_dir = ['paper/bitstream-charter-ttf/Charter/']
+for font in font_manager.findSystemFonts(font_dir):
+    font_manager.fontManager.addfont(font)
+mpl.font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
+
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.serif"] = "Charter"
+plt.rcParams["text.usetex"] = True
+plt.rcParams['text.latex.preamble'] = r'\usepackage[bitstream-charter]{mathdesign} \usepackage{amsmath}'
 
 #ramp (GMM, Binned, NN), sphere (GMM, Binned, NN)
 yminAbsArr = [[0., 0., 0.], [0., 0., 0.]]
 ymaxAbsArr = [[.065, .039, .5], [.029, .024, .5]]
 yminRelArr = [[0., 0., 0.], [0., 0., 0.]]
-ymaxRelArr = [[.055, .039, .2], [.085, .055, 1.]]
-iShowArr = [[5, 5, 11], [5, 5, 5]]
+ymaxRelArr = [[.055, .039, .2], [.075, .055, 1.]]
+iShowArr = [[5, 5, 5], [5, 5, 5]]
+model_name = "jetGPT"
 
 def imodel(model_type):
     if model_type == "AutoRegGMM":
@@ -30,6 +41,7 @@ def plot(path):
     params = load_params(f"runs/{path}_1/paramfile.yaml")
     toy_type = params["toy_type"]
     model_type = params["model"]
+    
     if toy_type == "ramp":
         name = "x_1"
         unit=None
@@ -54,13 +66,14 @@ def plot(path):
         hists = [histograms[2,:,0], histograms[iShow,:,0], histograms[1,:,0]]
         hist_errors = [histograms[2,:,1], histograms[iShow,:,1], histograms[1,:,1]]
         
-        FONTSIZE = 14
-        labels = ["True", "Model", "Train"]
-        colors = ["#e41a1c", "#3b528b", "#1a8507"]
+        FONTSIZE = 16
+        TICKLABELSIZE = 14
+        labels = ["True", model_name, "Train"]
+        colors = ["black","#A52A2A", "#0343DE"]
 
         fig1, axs = plt.subplots(3, 1, sharex=True,
                                  gridspec_kw={"height_ratios": [4, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
+        fig1.tight_layout(pad=0., rect=(0.08, 0.08, 1., 1.))
 
         for y, y_err, label, color in zip(hists, hist_errors, labels, colors):
 
@@ -102,7 +115,7 @@ def plot(path):
         axs[0].legend(loc="upper left", frameon=False, fontsize=FONTSIZE)
         axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
-        axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{True}}$",
+        axs[1].set_ylabel(r"$\frac{\mathrm{%s}}{\mathrm{True}}$" % model_name,
                           fontsize=FONTSIZE)
         axs[1].set_yticks([0.95, 1, 1.05])
         axs[1].set_ylim([0.9, 1.1])
@@ -123,68 +136,22 @@ def plot(path):
         axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
         axs[2].set_ylabel(r"$\delta [\%]$", fontsize=FONTSIZE)
 
-        plt.savefig(pp, format="pdf")
-        plt.close()
-
-        '''
-        fig2, axs = plt.subplots(1, 1)
-        fig2.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
-
-        axs.set_ylabel("Absolute uncertainty", fontsize=FONTSIZE)
-        axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
-                       fontsize=FONTSIZE)
-
-        abs_unc = histograms[3,:,1]
-        #abs_unc = histograms[4,:,0]
-        abs_unc_unc = histograms[4,:,1]
-        abs_unc_i = histograms[5:, :, 1]
-    
-        axs.step(bins, abs_unc, color=colors[1], linewidth=1.0, where="post")
-        axs.step(bins, abs_unc + abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
-        axs.step(bins, abs_unc - abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
-        axs.fill_between(bins, abs_unc + abs_unc_unc, abs_unc-+ abs_unc_unc,
-                         step="post", alpha=.3, facecolor=colors[1])
-        for i in range(len(histograms[:,0,1])-5):
-            axs.step(bins, abs_unc_i[i, :], color="orange", linewidth=1.0, where="post")
-        axs.set_ylim(yminAbs, ymaxAbs)
+        axs[0].tick_params(axis="both", labelsize=TICKLABELSIZE)
+        axs[1].tick_params(axis="both", labelsize=TICKLABELSIZE)
+        axs[2].tick_params(axis="both", labelsize=TICKLABELSIZE)
 
         plt.savefig(pp, format="pdf")
         plt.close()
-
-        fig3, axs = plt.subplots(1, 1)
-        fig3.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
-
-        axs.set_ylabel("Relative uncertainty", fontsize=FONTSIZE)
-        axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
-                       fontsize=FONTSIZE)
-
-        rel_unc = histograms[3,:,1] / histograms[3,:,0]
-        #rel_unc = histograms[4,:,0] / histograms[3,:,0]
-        rel_unc[np.isnan(rel_unc)] = 0.
-        rel_unc_unc = histograms[4,:,1] / histograms[3,:,0]
-        rel_unc_unc[np.isnan(rel_unc_unc)] = 0.
-        rel_unc_i = histograms[5:,:,1] / histograms[5:,:,0]
-        
-        axs.step(bins, rel_unc, color=colors[1], linewidth=1.0, where="post")
-        axs.step(bins, rel_unc + rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
-        axs.step(bins, rel_unc - rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
-        axs.fill_between(bins, rel_unc + rel_unc_unc, rel_unc - rel_unc_unc,
-                         color=colors[1], alpha=0.3, step="post")
-        for i in range(len(histograms[:,0,1])-5):
-            axs.step(bins, rel_unc_i[i, :], color="orange", linewidth=1.0, where="post")
-        axs.set_ylim(yminRel, ymaxRel)
-        '''
 
         fig2, ax = plt.subplots(2,1, sharex=True, gridspec_kw={"height_ratios": [1,1], "hspace": 0.})
+        fig2.tight_layout(pad=0., rect=(0.08, 0.08, 1., 1.))
         
         axs = ax[0]
-        fig2.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
 
-        axs.set_ylabel("Absolute uncertainty", fontsize=FONTSIZE)
+        axs.set_ylabel("Absolute unc.", fontsize=FONTSIZE)
         axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                        fontsize=FONTSIZE)
 
-        #abs_unc = histograms[3,:,1]
         abs_unc = histograms[4,:,0]
         abs_unc_unc = histograms[4,:,1]
         abs_unc_i = histograms[5:,:,1]
@@ -200,11 +167,10 @@ def plot(path):
         axs.set_ylim(yminAbs, ymaxAbs)
 
         axs = ax[1]
-        axs.set_ylabel("Relative uncertainty", fontsize=FONTSIZE)
+        axs.set_ylabel("Relative unc.", fontsize=FONTSIZE)
         axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                        fontsize=FONTSIZE)
 
-        #rel_unc = histograms[3,:,1] / histograms[3,:,0]
         rel_unc = histograms[4,:,0] / histograms[3,:,0]
         rel_unc[np.isnan(rel_unc)] = 0.
         rel_unc_unc = histograms[4,:,1] / histograms[3,:,0]
@@ -220,6 +186,9 @@ def plot(path):
         #for i in range(len(histograms[:,0,1])-5):
         #    axs.step(bins, rel_unc_i[i, :], color="orange", linewidth=1.0, where="post")
         axs.set_ylim(yminRel, ymaxRel)
+
+        ax[0].tick_params(axis="both", labelsize=TICKLABELSIZE)
+        ax[1].tick_params(axis="both", labelsize=TICKLABELSIZE)
 
         plt.savefig(pp, format="pdf")
         plt.close()
