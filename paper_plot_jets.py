@@ -247,9 +247,9 @@ if n_jets == 1:
                  name=obs_name,
                  range=obs_range,
                  weight_samples=experiment.model.iterations,
-                 error_range=[0.76,1.26],
+                 error_range=[0.71,1.29],
                  n_jets=1,
-                 y_ticks=[0.85,1,1.15])
+                 y_ticks=[0.8,1,1.2])
 
         obs_name = "M_{\mu \mu}"
         obs_range = [79, 104]
@@ -286,7 +286,7 @@ if n_jets == 2:
                  name=obs_name,
                  range=obs_range,
                  weight_samples=experiment.model.iterations,
-                 error_range=[0.76,1.24],
+                 error_range=[0.71,1.29],
                  n_jets=2,
                  y_ticks=[0.8,1,1.2])
 
@@ -304,9 +304,9 @@ if n_jets == 2:
                  bins= 55,
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
-                 error_range = [0.5,1.5],
+                 error_range = [0.71,1.29],
                  n_jets=2,
-                 y_ticks=[0.75,1,1.25])
+                 y_ticks=[0.8,1,1.2])
 
 if n_jets == 3:
     with PdfPages(f"{path}/paper_plots.pdf") as out:
@@ -324,9 +324,9 @@ if n_jets == 3:
                  bins=55,
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
-                 error_range = [0.5,1.5],
+                 error_range = [0.71,1.29],
                  n_jets=3,
-                 y_ticks=[0.75,1,1.25])
+                 y_ticks=[0.8,1,1.2])
         obs_name = "\Delta R_{j_2 j_3}"
         obs_train = delta_r(plot_train[0], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
         obs_test = delta_r(plot_test[0], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
@@ -341,9 +341,9 @@ if n_jets == 3:
                  bins=55,
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
-                 error_range = [0.5,1.5],
+                 error_range = [0.71,1.29],
                  n_jets=3,
-                 y_ticks=[0.75,1,1.25])
+                 y_ticks=[0.8,1,1.2])
 
 
 
