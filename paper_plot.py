@@ -10,6 +10,17 @@ from Source.Models.autoregBinned import AutoRegBinned
 from Source.Util.simulateToyData import ToySimulator
 from Source.Util.util import load_params, get, get_device
 from Source.Experiments import toy
+import matplotlib as mpl
+import matplotlib.font_manager as font_manager
+font_dir = ['paper/bitstream-charter-ttf/Charter/']
+for font in font_manager.findSystemFonts(font_dir):
+    font_manager.fontManager.addfont(font)
+mpl.font_manager.findSystemFonts(fontpaths='scipostphys-matplotlib', fontext='ttf')
+
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.serif"] = "Charter"
+plt.rcParams["text.usetex"] = True
+plt.rcParams['text.latex.preamble'] = r'\usepackage[bitstream-charter]{mathdesign} \usepackage{amsmath}'
 
 
 path = sys.argv[1]
@@ -60,7 +71,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         fig1, axs = plt.subplots(3, 1, sharex=True,
                                  gridspec_kw={"height_ratios": [4, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0.7, w_pad=0.7, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
+        fig1.tight_layout(pad=0.9, w_pad=0.9, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
 
         for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                  labels, colors):
@@ -105,11 +116,12 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         axs[1].set_ylabel(r"$\frac{\mathrm{DDPM}}{\mathrm{True}}$",
                           fontsize=FONTSIZE)
-        axs[1].set_yticks([0.95, 1, 1.05])
+        y_ticks = [0.95, 1, 1.05]
+        axs[1].set_yticks(y_ticks)
         axs[1].set_ylim([0.9, 1.1])
-        axs[1].axhline(y=1, c="black", ls="--", lw=0.7)
-        axs[1].axhline(y=1.2, c="black", ls="dotted", lw=0.5)
-        axs[1].axhline(y=0.8, c="black", ls="dotted", lw=0.5)
+        axs[1].axhline(y=y_ticks[1], c="black", ls="--", lw=0.7)
+        axs[1].axhline(y=y_ticks[2], c="black", ls="dotted", lw=0.5)
+        axs[1].axhline(y=y_ticks[0], c="black", ls="dotted", lw=0.5)
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
         plt.xlim((range[0] + 0.01, range[1] - 0.01))

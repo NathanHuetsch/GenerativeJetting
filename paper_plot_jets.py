@@ -12,6 +12,17 @@ from Source.Util.util import get, get_device, magic_trafo, inverse_magic_trafo, 
 from Source.Experiments import z1,z2,z3
 from Source.Util.plots import plot_obs, delta_r
 from Source.Util.physics import get_M_ll
+import matplotlib as mpl
+import matplotlib.font_manager as font_manager
+font_dir = ['paper/bitstream-charter-ttf/Charter/']
+for font in font_manager.findSystemFonts(font_dir):
+    font_manager.fontManager.addfont(font)
+mpl.font_manager.findSystemFonts(fontpaths='scipostphys-matplotlib', fontext='ttf')
+
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.serif"] = "Charter"
+plt.rcParams["text.usetex"] = True
+plt.rcParams['text.latex.preamble'] = r'\usepackage[bitstream-charter]{mathdesign} \usepackage{amsmath}'
 
 
 def corner_text(ax, text,horizontal_pos,vertical_pos, fontsize):
@@ -63,7 +74,7 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
 
     fig1, axs = plt.subplots(3, 1, sharex=True,
                                  gridspec_kw={"height_ratios": [3, 1, 1], "hspace": 0.00})
-    fig1.tight_layout(pad=0.5, w_pad=0.5, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
+    fig1.tight_layout(pad=0.6, w_pad=0.5, h_pad=0.6, rect=(0.07, 0.06, 0.99, 0.95))
 
     for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                  labels, colors):
@@ -113,9 +124,9 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
                           fontsize=FONTSIZE)
     axs[1].set_yticks(y_ticks)
     axs[1].set_ylim(error_range)
-    axs[1].axhline(y=1, c="black", ls="--", lw=0.7)
-    axs[1].axhline(y=1.2, c="black", ls="dotted", lw=0.5)
-    axs[1].axhline(y=0.8, c="black", ls="dotted", lw=0.5)
+    axs[1].axhline(y=y_ticks[1], c="black", ls="--", lw=0.7)
+    axs[1].axhline(y=y_ticks[2], c="black", ls="dotted", lw=0.5)
+    axs[1].axhline(y=y_ticks[0], c="black", ls="dotted", lw=0.5)
     plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
 
@@ -136,7 +147,7 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
     axs[1].tick_params(axis="both", labelsize=FONTSIZE)
     axs[2].tick_params(axis="both", labelsize=FONTSIZE)
 
-    corner_text(axs[0],f"Z+{n_jets} exclusive",horizontal_pos="right",vertical_pos="top", fontsize=FONTSIZE)
+    corner_text(axs[0],f"Z+{n_jets} jet exclusive",horizontal_pos="right",vertical_pos="top", fontsize=FONTSIZE)
 
     plt.savefig(pp, format="pdf")
     plt.close()
