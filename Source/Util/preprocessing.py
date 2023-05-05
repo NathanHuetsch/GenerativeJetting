@@ -43,6 +43,7 @@ def preprocess(data, params):
     channels = params["channels"]
     conditional = get(params, "conditional", False)
     n_jets = get(params, "n_jets", 2)
+    channels_periodic = get(params, "channels_periodic", [])
 
     if conditional:
         events = data[:,1:].copy()
@@ -59,7 +60,8 @@ def preprocess(data, params):
         events[:,3::4] = np.log(events[:,3::4])
 
         # apply artanh transform to phi
-        events[:, 1::4] = np.arctanh(events[:, 1::4]/np.pi)
+        if len(channels_periodic) == 0:
+            events[:, 1::4] = np.arctanh(events[:, 1::4]/np.pi)
 
     # discard unwanted channels
     events = events[:, channels]
@@ -68,6 +70,9 @@ def preprocess(data, params):
     if preprocess>=2:
         events_mean = events.mean(0, keepdims=True)
         events_std = events.std(0, keepdims=True)
+        if len(channels_periodic) != 0:
+            idx_periodic = np.arange(len(channels))[np.isin(channels, channels_periodic)]
+            events_std[:, idx_periodic] = 1.
         events = (events - events_mean) / events_std
     else:
         events_mean, events_std = None, None
@@ -115,6 +120,7 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
     channels = params["channels"]
     conditional = get(params, "conditional", False)
     n_jets = get(params, "n_jets", 2)
+    channels_periodic = get(params, "channels_periodic", [])
     
     if conditional and n_jets != 3:
         cut = 4 - n_jets
@@ -141,7 +147,8 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
 
     if preprocess>=1:
         # undo atanh transform
-        events[:,1::4] = np.tanh(events[:, 1::4]) * np.pi
+        if len(channels_periodic) == 0:
+            events[:,1::4] = np.tanh(events[:, 1::4]) * np.pi
 
         # undo log transform
         events[:, 0] = np.exp(events[:, 0])

@@ -148,21 +148,15 @@ class GenerativeModel(nn.Module):
 
             loss = self.batch_loss(x)
 
-            #loss_m = self.train_losses[-1000:].mean()
-            #loss_s = self.train_losses[-1000:].std()
+            #print(self.net.transformer.h[0].attn.c_attn.weight[:1,:1])
+            print(self.enet.layers[0].weight[:1,:1])
 
             if np.isfinite(loss.item()): # and (abs(loss.item() - loss_m) / loss_s < 5 or len(self.train_losses_epoch) == 0):
                 loss.backward()
                 self.optimizer.step()
                 train_losses = np.append(train_losses, loss.item())
-                if self.log:
-                    self.logger.add_scalar("train_losses", train_losses[-1], self.epoch*self.n_trainbatches + batch_id)
-
                 if self.use_scheduler:
                     self.scheduler.step()
-                    if self.log:
-                        self.logger.add_scalar("learning_rate", self.scheduler.get_last_lr()[0],
-                                               self.epoch * self.n_trainbatches + batch_id)
 
             else:
                 print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}")

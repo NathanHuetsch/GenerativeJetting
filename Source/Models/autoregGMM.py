@@ -15,6 +15,9 @@ class AutoRegGMM(GenerativeModel):
     """
 
     def __init__(self, params, out=True):
+        self.magic_transformation = get(params, "magic_transformation", False)
+        self.channels_periodic = np.array(get(params, "channels_periodic", [])) #only works for encode_njet=factorize
+        
         self.bayesian = get(params, "bayesian", 0)
         n_blocks = get(params, "n_blocks", None)
         assert n_blocks is not None, "build_model: n_blocks not specified"
@@ -54,18 +57,44 @@ class AutoRegGMM(GenerativeModel):
         :x: Training data in shape (batch_size, block_size)
         :returns: torch loss object
         """
+        #print(pos, n_jets)
+        if self.magic_transformation: #only works with encode_njet = factorize
+            weights_magic = x[:,-1]
+            x = x[:,:-1]
+            
         x = torch.cat((torch.zeros(x.size(0), 1, device=self.device), x), dim=1) #add start-of-sequence token
         idx = x[:, :-1]
         targets = x[:, 1:]
 
-        mu, sigma, weights = self.net(idx, pos=pos, n_jets=n_jets)    
-        mix = D.Categorical(weights)
-        comp = D.Normal(mu, sigma)
-        gmm = D.MixtureSameFamily(mix, comp)
+        mu, sigma, weights = self.net(idx, pos=pos, n_jets=n_jets)
+
+        if len(self.channels_periodic) == 0: #only build GMM
+            mix = D.Categorical(weights)
+            comp = D.Normal(mu, sigma)
+            gmm = D.MixtureSameFamily(mix, comp)
+            
+            loss = -gmm.log_prob(targets)
+        else:
+            idx_periodic = np.isin(pos, self.channels_periodic)
+
+            mix_vm = D.Categorical(weights[:,idx_periodic,:]) #build von Mises mixture for periodic variables
+            comp_vm = D.von_mises.VonMises(mu[:,idx_periodic,:], sigma[:,idx_periodic,:])
+            vm = D.MixtureSameFamily(mix_vm, comp_vm)
+            loss_vm = -vm.log_prob(targets[:,idx_periodic])
+            
+            mix_gmm = D.Categorical(weights[:,~idx_periodic,:]) #build gaussian mixture for non-periodic variables
+            comp_gmm = D.Normal(mu[:,~idx_periodic,:], sigma[:,~idx_periodic,:])
+            gmm = D.MixtureSameFamily(mix_gmm, comp_gmm)
+            loss_gmm = -gmm.log_prob(targets[:,~idx_periodic])
+
+            loss = torch.zeros_like(targets, device=self.device)
+            loss[:,idx_periodic] = loss_vm
+            loss[:,~idx_periodic] = loss_gmm
         
         # log Likelihood loss
-        loss = -gmm.log_prob(targets)
-        loss = loss.mean()
+        if self.magic_transformation:
+            loss *= weights_magic[:,None] / weights_magic.mean()
+        loss = loss.sum(dim=1).mean(dim=0) #sum over components to get single-event likelihoods, then average over those
         #self.regular_loss.append(loss.detach().cpu().numpy())
 
         # GMM weight regularization
@@ -119,12 +148,23 @@ class AutoRegGMM(GenerativeModel):
 
             idx = torch.zeros(self.batch_size_sample, 1, device=self.device)
             for iBlock in range(nElements):
-                mu, sigma, weights = self.net(idx, n_jets=n_jets, pos=pos[:iBlock+1] if type(pos) is np.ndarray else None)
+                mu, sigma, weights = self.net(idx, n_jets=n_jets, pos=pos[:iBlock+1] if
+                                              type(pos) is np.ndarray else None)
+
+                #print(pos[:iBlock+1], pos[iBlock], mu.size())
                 
                 mix = D.Categorical(weights[:,-1,:])
-                comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
+                if len(self.channels_periodic) == 0:
+                    comp = D.Normal(mu[:,-1,:], sigma[:,-1,:]) #use gaussian mixture
+                else:
+                    is_periodic = np.isin(pos[iBlock], self.channels_periodic)
+                    if is_periodic:
+                        comp = D.von_mises.VonMises(mu[:,-1,:], sigma[:,-1,:]) #use von_mises mixture
+                    else:
+                        comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
                 gmm = D.MixtureSameFamily(mix, comp)
                 idx_next = gmm.sample((1,)).permute(1,0)
+                        
 
                 idx = torch.cat((idx, idx_next), dim=1)
             sample = np.append(sample, idx[:,1:].detach().cpu().numpy(), axis=0)
@@ -133,6 +173,6 @@ class AutoRegGMM(GenerativeModel):
                 t1=time.time()
                 dtEst = (t1-t0)*n_batches
                 print(f"Sampling time estimate: {dtEst:.2f} s = {dtEst/60:.2f} min")
-                
+    
         sample = sample[:n_samples]
         return sample

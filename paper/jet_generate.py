@@ -60,4 +60,4 @@ def genHistograms(path, nModels=10):
         sys.stdout.close()
         sys.stderr.close()
 
-genHistograms("AutoRegGMMcond_4342")
+genHistograms("AutoRegGMMcond_6435")

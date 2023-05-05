@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from Source.Util.datasets import Dataset
-from Source.Util.util import get_device, save_params, get, load_params
+from Source.Util.util import get_device, save_params, get, load_params, magic_trafo, inverse_magic_trafo
 from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
 from Source.Util.physics import get_M_ll
@@ -69,16 +69,17 @@ class Zn_Experiment(Jet_Experiment):
         channels_1jet = np.arange(0, 9)
         channels_2jet = np.arange(9, 9+13)
         channels_3jet = np.arange(9+13, 9+13+17)
-
-        # embed n_jets seperately
-        self.params["dim"] = max(channels)+1
-        self.n_jets = [1, 2, 3]
-        self.channels_njet = self.channels_njet_raw #used for positional embedding
-
-        # combined n_jets and positional embedding
-        #self.params["dim"] = 9+13+17
-        #self.n_jets = [None, None, None]
-        #self.channels_njet = [channels_1jet, channels_2jet, channels_3jet]
+        
+        encode_njet = get(self.params, "encode_njet", "factorize")
+        self.magic_transformation = get(self.params, "magic_transformation", False)
+        if encode_njet == "factorize": # embed n_jets seperately
+            self.params["dim"] = max(channels)+1
+            self.n_jets = [1, 2, 3]
+            self.channels_njet = self.channels_njet_raw #used for positional embedding
+        elif encode_njet == "joint": # combined n_jets and positional embedding
+            self.params["dim"] = 9+13+17
+            self.n_jets = [None, None, None]
+            self.channels_njet = [channels_1jet, channels_2jet, channels_3jet]
 
         def preprocess_for_njets(data_raw, n_jets, p):
             p["channels"] = self.channels_njet_raw[n_jets-1]
@@ -86,6 +87,23 @@ class Zn_Experiment(Jet_Experiment):
             data_raw = preformat(data_raw, p)
             data, data_mean, data_std, data_u, data_s, bin_edges, bin_means = preprocess(data_raw, p)
 
+            if self.magic_transformation:
+                if n_jets == 1:
+                    weights = np.ones(data.shape[0])
+                    data = torch.cat([data, torch.from_numpy(weights[:,None])], dim=1).float()
+            
+                if n_jets == 2:
+                    deltaR12 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+                    weights = magic_trafo(deltaR12)
+                    data = torch.cat([data, torch.from_numpy(weights[:,None])], dim=1).float()
+                
+                if n_jets == 3:
+                    deltaR12 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+                    deltaR13 = delta_r(data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                    deltaR23 = delta_r(data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+                    weights = magic_trafo(deltaR12) * magic_trafo(deltaR13) * magic_trafo(deltaR23)
+                    data = torch.cat([data, torch.from_numpy(weights[:,None])], dim=1).float()
+                
             data = data.to(self.device)
             return data_raw, data, data_mean, data_std, data_u, data_s, bin_edges, bin_means
 
@@ -219,16 +237,21 @@ class Zn_Experiment(Jet_Experiment):
         train_losses = np.array([])
         for batch_id, x in enumerate(self.model.train_loader):
             x1, x2, x3 = x
+            if get(self.params, "weight_datasets", False):
+                fac2jet = int(len(self.data_train_2)/len(self.data_train_1)*len(x1))
+                fac3jet = int(len(self.data_train_3)/len(self.data_train_1)*len(x1))
+                x2 = x2[:fac2jet,:]
+                x3 = x3[:fac3jet,:]
+                
             self.model.optimizer.zero_grad()
-            try:
-                loss1 = self.model.batch_loss(x1, n_jets=self.n_jets[0], pos=self.channels_njet[0])
-                loss2 = self.model.batch_loss(x2, n_jets=self.n_jets[1], pos=self.channels_njet[1])
-                loss3 = self.model.batch_loss(x3, n_jets=self.n_jets[2], pos=self.channels_njet[2])
-            except ValueError:
-                print(f"ValueError in epoch {self.model.epoch}, batch {batch_id}. ")
-                print(f"last few losses in this epoch: {train_losses[:-20]}")
-                continue
-            loss = (loss1 * 17/9 + loss2 * 17/13 + loss3)/3 #do a proper mean
+            loss1 = self.model.batch_loss(x1, n_jets=self.n_jets[0], pos=self.channels_njet[0])
+            loss2 = self.model.batch_loss(x2, n_jets=self.n_jets[1], pos=self.channels_njet[1])
+            loss3 = self.model.batch_loss(x3, n_jets=self.n_jets[2], pos=self.channels_njet[2])
+
+            if get(self.params, "weight_loss", True):
+                loss = (loss1 * 17/9 + loss2 * 17/13 + loss3)/3 #reweight the losses to make all multiplicities equally important, irrespective of the differences
+            else:
+                loss = (loss1 + loss2 + loss3)/3 #multiplicities differently important                 
 
             if np.isfinite(loss.item()): 
                 loss.backward()
@@ -330,6 +353,19 @@ class Zn_Experiment(Jet_Experiment):
         plot_train_3 = self.data_train_3
         plot_test_3 = self.data_test_3
         plot_samples_3 = samples_3
+        
+        if self.magic_transformation:
+            weights_1 = None
+            
+            deltaR12 = delta_r(plot_samples_2, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+            weights_2 = inverse_magic_trafo(deltaR12)
+            
+            deltaR12 = delta_r(plot_samples_3, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
+            deltaR13 = delta_r(plot_samples_3, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+            deltaR23 = delta_r(plot_samples_3, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+            weights_3 = inverse_magic_trafo(deltaR12) * inverse_magic_trafo(deltaR13) * inverse_magic_trafo(deltaR23)
+        else:
+            weights_1, weights_2, weights_3 = None, None, None
 
         if get(self.params,"plot_1d", True):
             with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
@@ -351,7 +387,8 @@ class Zn_Experiment(Jet_Experiment):
                              range=obs_range,
                              n_epochs=n_epochs,
                              n_jets=n_jets,
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=eval(f"weights_{n_jets}"))
 
 
         if get(self.params,"plot_deltaR", True):
@@ -368,7 +405,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=2,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_2)
 
                 obs_name = "\Delta R_{j_1 j_2}"
                 obs_train = delta_r(plot_train_3)
@@ -382,7 +420,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=3,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_3)
                 
                 obs_name = "\Delta R_{j_1 j_3}"
                 obs_train = delta_r(plot_train_3, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
@@ -397,7 +436,8 @@ class Zn_Experiment(Jet_Experiment):
                                  n_epochs=n_epochs,
                                  n_jets=3,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_3)
 
                 obs_name = "\Delta R_{j_2 j_3}"
                 obs_train = delta_r(plot_train_3, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
@@ -412,7 +452,8 @@ class Zn_Experiment(Jet_Experiment):
                                  n_epochs=n_epochs,
                                  n_jets=3,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_3)
 
 
         if get(self.params,"plot_Deta_Dphi", True):
@@ -469,7 +510,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=1,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_1)
 
                 obs_name = "\Delta R_{l_1 j_1}"
                 obs_train = delta_r(plot_train_1, idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
@@ -483,7 +525,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=1,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_1)
 
                 obs_name = "\Delta R_{l_2 j_1}"
                 obs_train = delta_r(plot_train_1, idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
@@ -497,7 +540,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=1,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_1)
 
                 # 2-jet
                 obs_name = "\Delta R_{l_1 l_2}"
@@ -512,7 +556,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=2,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_2)
 
                 obs_name = "\Delta R_{l_1 j_1}"
                 obs_train = delta_r(plot_train_2, idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
@@ -526,7 +571,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=2,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_2)
 
                 obs_name = "\Delta R_{l_2 j_1}"
                 obs_train = delta_r(plot_train_2, idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
@@ -540,7 +586,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=2,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_2)
 
                 obs_name = "\Delta R_{l_1 j_2}"
                 obs_train = delta_r(plot_train_2, idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
@@ -554,7 +601,8 @@ class Zn_Experiment(Jet_Experiment):
                                  n_epochs=n_epochs,
                                  n_jets=2,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                             predict_weights=weights_2)
 
                 obs_name = "\Delta R_{l_2 j_2}"
                 obs_train = delta_r(plot_train_2, idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
@@ -568,7 +616,8 @@ class Zn_Experiment(Jet_Experiment):
                                  n_epochs=n_epochs,
                                  n_jets=2,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                             predict_weights=weights_2)
 
                 # 3-jet
                 obs_name = "\Delta R_{l_1 l_2}"
@@ -583,7 +632,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=3,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_3)
 
                 obs_name = "\Delta R_{l_1 j_1}"
                 obs_train = delta_r(plot_train_3, idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
@@ -597,7 +647,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=3,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_3)
 
                 obs_name = "\Delta R_{l_2 j_1}"
                 obs_train = delta_r(plot_train_3, idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
@@ -611,7 +662,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              n_jets=3,
                              range=[0, 8],
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=weights_3)
 
                 obs_name = "\Delta R_{l_1 j_2}"
                 obs_train = delta_r(plot_train_3, idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
@@ -625,7 +677,8 @@ class Zn_Experiment(Jet_Experiment):
                                  n_epochs=n_epochs,
                                  n_jets=3,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_3)
 
                 obs_name = "\Delta R_{l_2 j_2}"
                 obs_train = delta_r(plot_train_3, idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
@@ -639,7 +692,8 @@ class Zn_Experiment(Jet_Experiment):
                                  n_epochs=n_epochs,
                                  n_jets=3,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_3)
                 
                 obs_name = "\Delta R_{l_1 j_3}"
                 obs_train = delta_r(plot_train_3, idx_phi1=1, idx_eta1=2, idx_phi2=17, idx_eta2=18)
@@ -653,7 +707,8 @@ class Zn_Experiment(Jet_Experiment):
                                  n_epochs=n_epochs,
                                  n_jets=3,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_3)
 
                 obs_name = "\Delta R_{l_2 j_3}"
                 obs_train = delta_r(plot_train_3, idx_phi1=5, idx_eta1=6, idx_phi2=17, idx_eta2=18)
@@ -667,7 +722,8 @@ class Zn_Experiment(Jet_Experiment):
                                  n_epochs=n_epochs,
                                  n_jets=3,
                                  range=[0, 8],
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_3)
 
         if get(self.params, "plot_Mll", False):
             with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:        
@@ -685,7 +741,8 @@ class Zn_Experiment(Jet_Experiment):
                              n_epochs=n_epochs,
                              range=obs_range,
                              n_jets=n_jets,
-                             weight_samples=iterations)
+                             weight_samples=iterations,
+                             predict_weights=eval(f"weights_{n_jets}"))
 
         plot_1d_differences = get(self.params, "plot_1d_differences", True)
         if plot_1d_differences:
@@ -707,7 +764,8 @@ class Zn_Experiment(Jet_Experiment):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=1,
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_1)
                 # 2-jet
                 differences = [[2, 6], [2, 10], [2, 14], [6, 10], [6, 14], [10, 14], [5, 9], [5, 13], [9, 13], [1,5], [1,9], [1,13]]
                 for channels in differences:
@@ -725,7 +783,8 @@ class Zn_Experiment(Jet_Experiment):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=1,
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_2)
                 # 3-jet
                 differences = [[2, 6], [2, 10], [2, 14], [6, 10], [6, 14], [10, 14], [5, 9], [5, 13], [9, 13],
                                [2, 18], [6, 18], [10, 18], [14, 18], [5, 17], [9, 17], [13, 17]]
@@ -744,7 +803,8 @@ class Zn_Experiment(Jet_Experiment):
                                  name=obs_name,
                                  n_epochs=n_epochs,
                                  n_jets=3,
-                                 weight_samples=iterations)
+                                 weight_samples=iterations,
+                                 predict_weights=weights_3)
 
         if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"

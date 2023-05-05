@@ -22,11 +22,11 @@ plt.rcParams['text.latex.preamble'] = r'\usepackage[bitstream-charter]{mathdesig
 
 #ramp (GMM, Binned, NN), sphere (GMM, Binned, NN)
 yminAbsArr = [[0., 0., 0.], [0., 0., 0.]]
-ymaxAbsArr = [[.065, .039, .5], [.029, .024, .5]]
+ymaxAbsArr = [[.065, .039, .5], [.034, .024, .5]]
 yminRelArr = [[0., 0., 0.], [0., 0., 0.]]
 ymaxRelArr = [[.055, .039, .2], [.075, .055, 1.]]
 iShowArr = [[5, 5, 5], [5, 5, 5]]
-model_name = "jetGPT"
+model_name = "AT"
 
 def imodel(model_type):
     if model_type == "AutoRegGMM":
@@ -43,13 +43,14 @@ def plot(path):
     model_type = params["model"]
     
     if toy_type == "ramp":
-        name = "x_1"
+        name = "x_2"
         unit=None
         yminAbs = yminAbsArr[0][imodel(model_type)]
         ymaxAbs = ymaxAbsArr[0][imodel(model_type)]
         yminRel = yminRelArr[0][imodel(model_type)]
         ymaxRel = ymaxRelArr[0][imodel(model_type)]
         iShow = iShowArr[0][imodel(model_type)]
+        x_range = [.1,.9]
     elif toy_type == "gauss_sphere":
         name = "R"
         unit=None
@@ -58,6 +59,7 @@ def plot(path):
         yminRel = yminRelArr[1][imodel(model_type)]
         ymaxRel = ymaxRelArr[1][imodel(model_type)]
         iShow = iShowArr[1][imodel(model_type)]
+        x_range = [.5, 1.5]
 
     with warnings.catch_warnings() and PdfPages(f"paper/toy/{path}.pdf") as pp:
         warnings.simplefilter("ignore", RuntimeWarning)
@@ -66,14 +68,14 @@ def plot(path):
         hists = [histograms[2,:,0], histograms[iShow,:,0], histograms[1,:,0]]
         hist_errors = [histograms[2,:,1], histograms[iShow,:,1], histograms[1,:,1]]
         
-        FONTSIZE = 16
-        TICKLABELSIZE = 14
+        FONTSIZE = 22
+        TICKLABELSIZE = 18
         labels = ["True", model_name, "Train"]
         colors = ["black","#A52A2A", "#0343DE"]
 
-        fig1, axs = plt.subplots(3, 1, sharex=True,
-                                 gridspec_kw={"height_ratios": [4, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0., rect=(0.08, 0.08, 1., 1.))
+        fig1, axs = plt.subplots(3, 1, sharex=True, figsize=(7,5),
+                                 gridspec_kw={"height_ratios": [3, 1, 1], "hspace": 0.00})
+        fig1.tight_layout(pad=0., rect=(0.1, 0.1, 1., 1.))
 
         for y, y_err, label, color in zip(hists, hist_errors, labels, colors):
 
@@ -120,8 +122,8 @@ def plot(path):
         axs[1].set_yticks([0.95, 1, 1.05])
         axs[1].set_ylim([0.9, 1.1])
         axs[1].axhline(y=1, c="black", ls="--", lw=0.7)
-        axs[1].axhline(y=1.2, c="black", ls="dotted", lw=0.5)
-        axs[1].axhline(y=0.8, c="black", ls="dotted", lw=0.5)
+        axs[1].axhline(y=1.05, c="black", ls="dotted", lw=0.5)
+        axs[1].axhline(y=0.95, c="black", ls="dotted", lw=0.5)
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
 
@@ -136,6 +138,8 @@ def plot(path):
         axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
         axs[2].set_ylabel(r"$\delta [\%]$", fontsize=FONTSIZE)
 
+        axs[0].set_xlim(x_range)
+
         axs[0].tick_params(axis="both", labelsize=TICKLABELSIZE)
         axs[1].tick_params(axis="both", labelsize=TICKLABELSIZE)
         axs[2].tick_params(axis="both", labelsize=TICKLABELSIZE)
@@ -143,8 +147,9 @@ def plot(path):
         plt.savefig(pp, format="pdf")
         plt.close()
 
-        fig2, ax = plt.subplots(2,1, sharex=True, gridspec_kw={"height_ratios": [1,1], "hspace": 0.})
-        fig2.tight_layout(pad=0., rect=(0.08, 0.08, 1., 1.))
+        fig2, ax = plt.subplots(2,1, sharex=True, figsize=(7,5),
+                                gridspec_kw={"height_ratios": [1,1], "hspace": 0.})
+        fig2.tight_layout(pad=0., rect=(0.1, 0.1, 1., 1.))
         
         axs = ax[0]
 
@@ -156,15 +161,16 @@ def plot(path):
         abs_unc_unc = histograms[4,:,1]
         abs_unc_i = histograms[5:,:,1]
     
-        axs.step(bins, abs_unc, color=colors[1], linewidth=1.0, where="post")
+        axs.step(bins, abs_unc, color=colors[1], linewidth=1.0, where="post", label=labels[1])
         axs.step(bins, abs_unc + abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.step(bins, abs_unc - abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.fill_between(bins, abs_unc + abs_unc_unc, abs_unc-+ abs_unc_unc,
                          step="post", alpha=.3, facecolor=colors[1])
-        axs.step(bins, hist_errors[2], linewidth=1.0, where="post", color=colors[2])
+        axs.step(bins, hist_errors[2], linewidth=1.0, where="post", color=colors[2], label=labels[2])
         #for i in range(len(histograms[:,0,1])-5):
         #    axs.step(bins, abs_unc_i[i, :], color="orange", linewidth=1.0, where="post")
         axs.set_ylim(yminAbs, ymaxAbs)
+        axs.legend(loc="upper left", frameon=False, fontsize=FONTSIZE)
 
         axs = ax[1]
         axs.set_ylabel("Relative unc.", fontsize=FONTSIZE)
@@ -177,16 +183,18 @@ def plot(path):
         rel_unc_unc[np.isnan(rel_unc_unc)] = 0.
         rel_unc_i = histograms[5:,:,1] / histograms[5:,:,0]
         
-        axs.step(bins, rel_unc, color=colors[1], linewidth=1.0, where="post")
+        axs.step(bins, rel_unc, color=colors[1], linewidth=1.0, where="post", label=labels[1])
         axs.step(bins, rel_unc + rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.step(bins, rel_unc - rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.fill_between(bins, rel_unc + rel_unc_unc, rel_unc - rel_unc_unc,
                          color=colors[1], alpha=0.3, step="post")
-        axs.step(bins, hist_errors[2] / hists[2], linewidth=1.0, where="post", color=colors[2])
+        axs.step(bins, hist_errors[2] / hists[2], linewidth=1.0, where="post", color=colors[2], label=labels[2])
         #for i in range(len(histograms[:,0,1])-5):
         #    axs.step(bins, rel_unc_i[i, :], color="orange", linewidth=1.0, where="post")
         axs.set_ylim(yminRel, ymaxRel)
+        axs.legend(loc="upper right", frameon=False, fontsize=FONTSIZE)
 
+        ax[0].set_xlim(x_range)
         ax[0].tick_params(axis="both", labelsize=TICKLABELSIZE)
         ax[1].tick_params(axis="both", labelsize=TICKLABELSIZE)
 

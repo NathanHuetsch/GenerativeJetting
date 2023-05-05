@@ -28,7 +28,7 @@ class attnetGMM(nn.Module):
             wte = VBLinear(1, self.intermediate_dim, self.prior_prec) \
                 if self.bayesian==3 else nn.Linear(1, self.intermediate_dim), 
             wpe = nn.Embedding(self.block_size, self.intermediate_dim),
-            wnjetse = nn.Embedding(3, self.intermediate_dim), #should be not commented out for njet
+            wnjetse = nn.Embedding(3, self.intermediate_dim), #not needed for toys
             drop = nn.Dropout(self.embd_pdrop),
             h = nn.ModuleList([TransformerBlock(params) for _ in range(self.n_blocks)]),
             ln_f = nn.LayerNorm(self.intermediate_dim),
