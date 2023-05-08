@@ -23,8 +23,7 @@ plt.rcParams["font.family"] = "serif"
 plt.rcParams["font.serif"] = "Charter"
 plt.rcParams["text.usetex"] = True
 plt.rcParams['text.latex.preamble'] = r'\usepackage[bitstream-charter]{mathdesign} \usepackage{amsmath}'
-
-
+plt.rcParams["figure.figsize"] = (9,9)
 def corner_text(ax, text,horizontal_pos,vertical_pos, fontsize):
     ax.text(
         x=0.95 if horizontal_pos == "right" else 0.05,
@@ -67,7 +66,7 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
     integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
     scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
-    FONTSIZE = 16
+    FONTSIZE = 28
     labels = ["True", "DDPM", "Train"]
     colors = ["black","#A52A2A", "#0343DE"]
     dup_last = lambda a: np.append(a, a[-1])
@@ -97,24 +96,25 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
         ratio[ratio_isnan] = 1.
         ratio_err[ratio_isnan] = 0.
 
-        axs[1].step(bins, dup_last(ratio), linewidth=1.0, where="post", color=color)
+        axs[1].step(bins, dup_last(ratio), linewidth=3.0, where="post", color=color)
         axs[1].step(bins, dup_last(ratio + ratio_err), color=color, alpha=0.5,
                         linewidth=0.5, where="post")
         axs[1].step(bins, dup_last(ratio - ratio_err), color=color, alpha=0.5,
                         linewidth=0.5, where="post")
         axs[1].fill_between(bins, dup_last(ratio - ratio_err),
-                                dup_last(ratio + ratio_err), facecolor=color, alpha=0.3, step="post")
+                                dup_last(ratio + ratio_err), facecolor=color, alpha=0.25, step="post")
 
         delta = np.fabs(ratio - 1) * 100
         delta_err = ratio_err * 100
 
         markers, caps, bars = axs[2].errorbar((bins[:-1] + bins[1:]) / 2, delta,
                                                   yerr=delta_err, ecolor=color, color=color, elinewidth=0.5,
-                                                  linewidth=0, fmt=".", capsize=2)
+                                                  linewidth=0, fmt=".", capsize=2, markersize=10)
         [cap.set_alpha(0.5) for cap in caps]
         [bar.set_alpha(0.5) for bar in bars]
 
-    axs[0].legend(loc="center right", frameon=False, fontsize=FONTSIZE)
+    for line in axs[0].legend(loc="center right", frameon=False, fontsize=FONTSIZE).get_lines():
+        line.set_linewidth(3.0)
     axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
     if "p_{T" in name:
@@ -143,13 +143,13 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
     axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
     axs[2].set_ylabel(r"$\delta [\%]$", fontsize=FONTSIZE)
 
-    axs[0].tick_params(axis="both", labelsize=FONTSIZE)
-    axs[1].tick_params(axis="both", labelsize=FONTSIZE)
-    axs[2].tick_params(axis="both", labelsize=FONTSIZE)
+    axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
+    axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
+    axs[2].tick_params(axis="both", labelsize=FONTSIZE-6)
 
     corner_text(axs[0],f"Z+{n_jets} jet exclusive",horizontal_pos="right",vertical_pos="top", fontsize=FONTSIZE)
 
-    plt.savefig(pp, format="pdf")
+    plt.savefig(pp, format="pdf", bbox_inches='tight')
     plt.close()
 
 
@@ -169,7 +169,7 @@ params['redirect_console'] = False
 params['plot_loss'] = False
 
 params["plot"] = False
-params['iterations'] = 10
+params['iterations'] = 20
 params['n_samples'] = 1000000
 #params['iterations'] = 10
 params['batch_size_sample'] = 50000
@@ -187,7 +187,7 @@ elif n_jets == 3:
 else:
     experiment = None
 
-if load_samples:
+if load_samples == True:
     params["sample"] = False
     experiment.full_run()
     samples = []
@@ -225,7 +225,7 @@ if n_jets !=3:
             if n_jets == 2:
                 deltaR12 = delta_r(plot_samples_jets, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                 weights = inverse_magic_trafo(deltaR12)
-            plot_weights.append(weights)
+        plot_weights.append(weights)
 
 else:
     plot_train.append(experiment.model.data_train_raw)

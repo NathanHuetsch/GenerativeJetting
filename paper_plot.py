@@ -21,7 +21,7 @@ plt.rcParams["font.family"] = "serif"
 plt.rcParams["font.serif"] = "Charter"
 plt.rcParams["text.usetex"] = True
 plt.rcParams['text.latex.preamble'] = r'\usepackage[bitstream-charter]{mathdesign} \usepackage{amsmath}'
-
+plt.rcParams["figure.figsize"] = (9,7)
 
 path = sys.argv[1]
 toy_type = sys.argv[2]
@@ -64,14 +64,14 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
         scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
-        FONTSIZE = 16
+        FONTSIZE = 30
         labels = ["True", "DDPM", "Train"]
         colors = ["black","#A52A2A", "#0343DE"]
         dup_last = lambda a: np.append(a, a[-1])
 
         fig1, axs = plt.subplots(3, 1, sharex=True,
-                                 gridspec_kw={"height_ratios": [4, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0.9, w_pad=0.9, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
+                                 gridspec_kw={"height_ratios": [3, 1, 1], "hspace": 0.00})
+        fig1.tight_layout(pad=0.9, w_pad=0.9, h_pad=0.5, rect=(0.1, 0.08, 1, 1))
 
         for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                  labels, colors):
@@ -94,31 +94,33 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
             ratio[ratio_isnan] = 1.
             ratio_err[ratio_isnan] = 0.
 
-            axs[1].step(bins, dup_last(ratio), linewidth=1.0, where="post", color=color)
+            axs[1].step(bins, dup_last(ratio), linewidth=3.0, where="post", color=color)
             axs[1].step(bins, dup_last(ratio + ratio_err), color=color, alpha=0.5,
                         linewidth=0.5, where="post")
             axs[1].step(bins, dup_last(ratio - ratio_err), color=color, alpha=0.5,
                         linewidth=0.5, where="post")
             axs[1].fill_between(bins, dup_last(ratio - ratio_err),
-                                dup_last(ratio + ratio_err), facecolor=color, alpha=0.3, step="post")
+                                dup_last(ratio + ratio_err), facecolor=color, alpha=0.25, step="post")
 
             delta = np.fabs(ratio - 1) * 100
             delta_err = ratio_err * 100
 
             markers, caps, bars = axs[2].errorbar((bins[:-1] + bins[1:]) / 2, delta,
                                                   yerr=delta_err, ecolor=color, color=color, elinewidth=0.5,
-                                                  linewidth=0, fmt=".", capsize=2)
+                                                  linewidth=0, fmt=".", capsize=2, markersize=10)
             [cap.set_alpha(0.5) for cap in caps]
             [bar.set_alpha(0.5) for bar in bars]
 
-        axs[0].legend(loc="upper left", frameon=False, fontsize=FONTSIZE)
+        #axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE)
+        for line in axs[0].legend(loc="upper right", frameon=False, fontsize=FONTSIZE).get_lines():
+            line.set_linewidth(3.0)
         axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
         axs[1].set_ylabel(r"$\frac{\mathrm{DDPM}}{\mathrm{True}}$",
                           fontsize=FONTSIZE)
-        y_ticks = [0.95, 1, 1.05]
+        y_ticks = [0.9, 1, 1.1]
         axs[1].set_yticks(y_ticks)
-        axs[1].set_ylim([0.9, 1.1])
+        axs[1].set_ylim([0.81, 1.19])
         axs[1].axhline(y=y_ticks[1], c="black", ls="--", lw=0.7)
         axs[1].axhline(y=y_ticks[2], c="black", ls="dotted", lw=0.5)
         axs[1].axhline(y=y_ticks[0], c="black", ls="dotted", lw=0.5)
@@ -137,22 +139,22 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
         axs[2].set_ylabel(r"$\delta [\%]$", fontsize=FONTSIZE)
 
-        axs[0].tick_params(axis="both", labelsize=FONTSIZE)
-        axs[1].tick_params(axis="both", labelsize=FONTSIZE)
-        axs[2].tick_params(axis="both", labelsize=FONTSIZE)
+        axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
+        axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
+        axs[2].tick_params(axis="both", labelsize=FONTSIZE-6)
 
         plt.savefig(pp, format="pdf")
         plt.close()
 
         fig2, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1, 1], "hspace": 0.00})
         #fig2, axs = plt.subplots(1, 1)
-        fig2.tight_layout(pad=0.5, w_pad=0.5, h_pad=1.0, rect=(0.07, 0.06, 0.99, 0.95))
+        fig2.tight_layout(pad=0.5, w_pad=0.5, h_pad=1.0, rect=(0.1, 0.08, 1, 1))
 
-        axs[0].set_ylabel("Absolute uncertainty", fontsize=FONTSIZE-1, loc="top")
+        axs[0].set_ylabel(r"$\sigma$", fontsize=FONTSIZE)
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
         #               fontsize=FONTSIZE)
 
-        axs[0].step(bins, dup_last(hist_errors[1] * scales[1]), color=colors[1],linewidth=1.0, where="post")
+        axs[0].step(bins, dup_last(hist_errors[1] * scales[1]), color=colors[1],linewidth=3.0, where="post")
 
         axs[0].step(bins, dup_last(hist_errors[1] - std) * scales[1], color=colors[1],
                     alpha=0.5, linewidth=0.5, where="post")
@@ -163,6 +165,8 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
                             alpha=0.3, step="post")
 
         axs[0].set_ylim(0., ymaxAbs)
+        #axs[1].set_yticks([0, 0.02, 0.04])
+
 
         #plt.savefig(pp, format="pdf")
         #plt.close()
@@ -170,11 +174,11 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         #fig3, axs = plt.subplots(1, 1)
         #fig3.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
 
-        axs[1].set_ylabel("Relative uncertainty", fontsize=FONTSIZE-1, loc="bottom")
+        axs[1].set_ylabel(r"$\sigma / \mu$", fontsize=FONTSIZE)
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
         #               fontsize=FONTSIZE)
 
-        axs[1].step(bins, dup_last(hist_errors[1] / hists[1]), color=colors[1],linewidth=1.0, where="post")
+        axs[1].step(bins, dup_last(hist_errors[1] / hists[1]), color=colors[1],linewidth=3.0, where="post")
         axs[1].step(bins, dup_last((hist_errors[1] - std)/hists[1]) * scales[1], color=colors[1],
                  alpha=0.5, linewidth=0.5, where="post")
         axs[1].step(bins, dup_last((hist_errors[1] + std)/hists[1]) * scales[1], color=colors[1],
@@ -185,8 +189,8 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         axs[1].set_ylim(0., ymaxRel)
 
-        axs[0].tick_params(axis="both", labelsize=FONTSIZE)
-        axs[1].tick_params(axis="both", labelsize=FONTSIZE)
+        axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
+        axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
 
         fig2.align_labels()
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
