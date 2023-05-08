@@ -90,6 +90,8 @@ class Toy_Experiment(Experiment):
             self.make_plots()
 
         self.make_video()
+        self.calculate_likelihoods()
+
         self.finish_up()
 
     def load_data(self):
@@ -175,16 +177,36 @@ class Toy_Experiment(Experiment):
         video = get(self.params, "video", False)
 
         if video:
-            n_samples = get(self.params, "n_samples", 1000000)
-            print(f"make_video: Starting generation of video frame samples")
+            try:
+                n_samples = get(self.params, "n_samples", 1000000)
+                print(f"make_video: Starting generation of video frame samples")
+                t0 = time.time()
+                sample = self.model.sample_n_evolution(n_samples)
+                t1 = time.time()
+                videosampletime = t1 - t0
+                self.params["videosampletime"] = videosampletime
+                print(f"make_video: Drawing videos")
+                t0 = time.time()
+                self.model.toy_video(sample)
+                t1 = time.time()
+                videotime = t1 - t0
+                self.params["videotime"] = videotime
+            except:
+                print(f"make_video: failed")
+
+    def calculate_likelihoods(self):
+
+        if get(self.params, "calculate_likelihoods", False):
+            #try:
+            print(f"calculate_likelihoods: Calculating train and test data likelihoods")
             t0 = time.time()
-            sample = self.model.sample_n_evolution(n_samples)
-            t1 = time.time()
-            videosampletime = t1 - t0
-            self.params["videosampletime"] = videosampletime
-            print(f"make_video: Drawing videos")
+            train_likelihood = self.model.calculate_likelihood(self.model.data_train)
+            self.params["train_likelihood"] = float(np.log(train_likelihood).mean())
+            self.params["train_likelihood_time"] = time.time() - t0
             t0 = time.time()
-            self.model.toy_video(sample)
-            t1 = time.time()
-            videotime = t1 - t0
-            self.params["videotime"] = videotime
+            test_likelihood = self.model.calculate_likelihood(self.model.data_test)
+            self.params["test_likelihood"] = float(np.log(test_likelihood).mean())
+            self.params["test_likelihood_time"] = time.time() - t0
+            #except Exception as e:
+            #    print(f"calculate_likelihoods: failed")
+            #    print(e)

@@ -120,7 +120,7 @@ class TBD(GenerativeModel):
         drift = self.net(x_t, t, condition)
 
         if self.magic_transformation:
-            loss = torch.mean((drift - x_t_dot) ** 2 * weights[:, None])/weights.sum()
+            loss = torch.mean((drift - x_t_dot) ** 2 * weights[:, None])/weights.mean()
             #unweighted_loss = torch.mean((drift - x_t_dot)**2)
             self.regular_loss.append(loss.detach().cpu().numpy())
             #self.unweighted_loss.append(unweighted_loss.detach().cpu().numpy())
@@ -140,12 +140,11 @@ class TBD(GenerativeModel):
                     loss = loss + kl_loss
 
             elif self.loss_type == "mle":
-                mu, sigma = drift.chunk(2, dim=1)
-                sigma = torch.exp(sigma)
+                mu, logsigma = drift.chunk(2, dim=1)
+
                 mse = (mu - x_t_dot) ** 2
-                mse = mse/(2*sigma**2)
-                log = torch.log(sigma)
-                loss = torch.mean(mse+log)
+                mse = mse/(2*torch.exp(logsigma)**2)
+                loss = torch.mean(mse+logsigma)
                 self.regular_loss.append(loss.detach().cpu().numpy())
                 if self.C != 0:
                     kl_loss = self.C*self.net.kl / self.n_traindata
@@ -166,7 +165,7 @@ class TBD(GenerativeModel):
             for bay_layer in self.net.bayesian_layers:
                 bay_layer.random = None
         self.eval()
-        batch_size = get(self.params, "batch_size", 8192)
+        batch_size = get(self.params, "batch_size_sample", 8192)
         x_T = self.latent.sample((n_samples + batch_size, self.dim))
 
         if self.conditional:
@@ -258,18 +257,21 @@ class TBD(GenerativeModel):
 
 
 
-    def invert_n(self, samples):
+    def invert_n(self, samples, evolution = False, timesteps = 1000):
         """
         Generate n_samples new samples.
         Start from Gaussian random noise and solve the reverse ODE to obtain samples
         """
         if self.net.bayesian:
-            self.net.map = get(self.params,"fix_mu", False)
+            self.net.map = get(self.params, "fix_mu", False)
             for bay_layer in self.net.bayesian_layers:
                 bay_layer.random = None
         self.eval()
         batch_size = get(self.params, "batch_size", 8192)
         n_samples = samples.shape[0]
+
+        if evolution:
+            t_frames = np.linspace(1, 0, timesteps)
 
         def f(t, x_t):
             x_t_torch = torch.Tensor(x_t).reshape((-1, self.dim)).to(self.device)
@@ -281,13 +283,22 @@ class TBD(GenerativeModel):
         events = []
         with torch.no_grad():
             for i in range(int(n_samples / batch_size)):
-                sol = solve_ivp(f, (1, 0), samples[batch_size * i: batch_size * (i + 1)].flatten())
-                s = sol.y[:, -1].reshape(batch_size, self.dim)
+                if evolution:
+                    sol = solve_ivp(f, (1, 0), samples[batch_size * i: batch_size * (i + 1)].flatten(), t_eval=t_frames)
+                    s = sol.y.reshape(-1, self.dim, timesteps)
+                else:
+                    sol = solve_ivp(f, (1, 0), samples[batch_size * i: batch_size * (i + 1)].flatten())
+                    s = sol.y[:, -1].reshape(-1, self.dim)
                 events.append(s)
-            sol = solve_ivp(f, (1, 0), samples[batch_size * (i+1):].flatten())
-            s = sol.y[:, -1].reshape(-1, self.dim)
+            if evolution:
+                sol = solve_ivp(f, (1, 0), samples[batch_size * int(n_samples / batch_size):].flatten(), t_eval=t_frames)
+                s = sol.y.reshape(-1, self.dim, timesteps)
+            else:
+                sol = solve_ivp(f, (1, 0), samples[batch_size * int(n_samples / batch_size):].flatten())
+                s = sol.y[:, -1].reshape(-1, self.dim)
             events.append(s)
         return np.concatenate(events, axis=0)[:n_samples]
+
 
     def sample_n_evolution(self, n_samples):
 
@@ -311,6 +322,46 @@ class TBD(GenerativeModel):
                 s = sol.y.reshape(batch_size, self.dim, -1)
                 events.append(s)
         return np.concatenate(events, axis=0)[:n_samples]
+
+
+    def calculate_likelihood(self, x, timesteps = 1000):
+
+        self.eval()
+        batch_size = get(self.params, "batch_size_sample", 8192)
+        n_samples = x.shape[0]
+        times = torch.linspace(1, 0, timesteps).to(self.device)
+        delta_t = (1. / timesteps)
+
+        likelihoods = []
+        for i in range(int(n_samples / batch_size)):
+            inverse_trajectory = torch.from_numpy(self.invert_n(x[batch_size * i: batch_size * (i + 1)],
+                                                                evolution=True,
+                                                                timesteps=timesteps))
+            log_jac = 0
+            for i in range(timesteps):
+                divergence = compute_div(self.net,
+                                         inverse_trajectory[:, :, -i].float().to(self.device),
+                                         times[-i].repeat(inverse_trajectory.shape[0])[:, None].float()).detach()
+                log_jac = log_jac - delta_t * divergence
+
+            jac = torch.exp(log_jac).cpu()
+            inverse_x = inverse_trajectory[:, :, -1].cpu()
+            likelihoods.append(gaussian_density_2d(inverse_x) * jac)
+        inverse_trajectory = torch.from_numpy(self.invert_n(x[batch_size * int(n_samples / batch_size):],
+                                                            evolution=True,
+                                                            timesteps=timesteps))
+        log_jac = 0
+        for i in range(timesteps):
+            divergence = compute_div(self.net,
+                                     inverse_trajectory[:, :, -i].float().to(self.device),
+                                     times[-i].repeat(inverse_trajectory.shape[0])[:, None].float()).detach()
+            log_jac = log_jac - delta_t * divergence
+
+        jac = torch.exp(log_jac).cpu()
+        inverse_x = inverse_trajectory[:, :, -1].cpu()
+        likelihoods.append(gaussian_density_2d(inverse_x) * jac)
+
+        return torch.cat(likelihoods, dim=0).detach().numpy()
 
 
 
@@ -353,3 +404,33 @@ def vp_trajectory(x_0, x_1, t, a=19.9, b=0.1):
     return x_t, x_t_dot
 
 
+def compute_div(f, x, t):
+    """
+    f: Callable[[Time, Sample], torch.tensor],
+    x: torch.tensor,
+    t: torch.tensor  # [batch x dim]
+) -> torch.tensor:
+    Compute the divergence of f(x,t) with respect to x, assuming that x is batched
+    """
+    bs = x.shape[0]
+    with torch.set_grad_enabled(True):
+        x.requires_grad_(True)
+        t.requires_grad_(True)
+        f_val = f(x, t)
+        divergence = 0.0
+        for i in range(x.shape[1]):
+            divergence += \
+                    torch.autograd.grad(
+                            f_val[:, i].sum(), x, create_graph=True
+                        )[0][:, i]
+
+    return divergence.view(bs)
+
+def gaussian_density_2d(X):
+    """
+    Evaluates the 2D Gaussian (normal) density function at a given array of input vectors `X`,
+    with mean 0 and unit covariance matrix.
+    """
+    exponent = -0.5 * torch.sum(torch.square(X), axis=1)
+    coefficient = 1 / (2 * torch.pi)
+    return coefficient * torch.exp(exponent)

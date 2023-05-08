@@ -1,6 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
+import matplotlib as mpl
+import matplotlib.font_manager as font_manager
+font_dir = ['paper/bitstream-charter-ttf/Charter/']
+for font in font_manager.findSystemFonts(font_dir):
+    font_manager.fontManager.addfont(font)
+mpl.font_manager.findSystemFonts(fontpaths='scipostphys-matplotlib', fontext='ttf')
+
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.serif"] = "Charter"
+plt.rcParams["text.usetex"] = True
+plt.rcParams['text.latex.preamble'] = r'\usepackage[bitstream-charter]{mathdesign} \usepackage{amsmath}'
 
 """
 Methods to do make 1d and 2d histograms of the train vs test vs generated data distributions.
@@ -17,7 +28,7 @@ plt.rc('font', family='serif')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
 def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, unit=None, weight_samples=1,
-                             save_dict=None, predict_weights=None, n_epochs=None, n_jets=None):
+                             error_range = [0.71, 1.29], predict_weights=None, n_epochs=None, n_jets=None, y_ticks=[0.8,1,1.2]):
         '''
         Up-to-date plotting function from Theo (binn branch of precision-enthusiasts repo)
         slightly modified (removed save_dict option and renamed parameters to match our earlier version)
@@ -58,13 +69,14 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
             scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
-            FONTSIZE = 14
-            labels = ["True", "Model", "Train"]
-            colors = ["#e41a1c", "#3b528b", "#1a8507"]
+            FONTSIZE = 16
+            labels = ["True", "CFM", "Train"]
+            colors = ["black","#A52A2A", "#0343DE"]
             dup_last = lambda a: np.append(a, a[-1])
 
             fig1, axs = plt.subplots(3, 1, sharex=True,
-                    gridspec_kw={"height_ratios" : [4, 1, 1], "hspace" : 0.00})
+                    gridspec_kw={"height_ratios" : [3, 1, 1], "hspace" : 0.00})
+            fig1.tight_layout(pad=0.6, w_pad=0.5, h_pad=0.6, rect=(0.07, 0.06, 0.99, 0.95))
 
             if n_epochs is not None:
                 if n_jets is not None:
@@ -111,20 +123,23 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
                 [bar.set_alpha(0.5) for bar in bars]
 
 
-            axs[0].legend(loc="upper right", frameon=False)
+            axs[0].legend(loc="center right", frameon=False, fontsize=FONTSIZE)
             axs[0].set_ylabel("Normalized", fontsize = FONTSIZE)
             if "p_{T" in name or "mu" in name:
                 axs[0].set_yscale("log")
 
-            axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{True}}$",
+            axs[1].set_ylabel(r"$\frac{\mathrm{CFM}}{\mathrm{True}}$",
                     fontsize = FONTSIZE)
-            axs[1].set_yticks([0.95,1,1.05])
-            axs[1].set_ylim([0.9,1.1])
-            axs[1].axhline(y=1, c="black", ls="--", lw=0.7)
-            axs[1].axhline(y=1.2, c="black", ls="dotted", lw=0.5)
-            axs[1].axhline(y=0.8, c="black", ls="dotted", lw=0.5)
+
+            axs[1].set_yticks(y_ticks)
+            axs[1].set_ylim(error_range)
+            axs[1].axhline(y=y_ticks[1], c="black", ls="--", lw=0.7)
+            axs[1].axhline(y=y_ticks[2], c="black", ls="dotted", lw=0.5)
+            axs[1].axhline(y=y_ticks[0], c="black", ls="dotted", lw=0.5)
             plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                     fontsize = FONTSIZE)
+            if range is not None:
+                plt.xlim((range[0] + 0.1, range[1] - 0.1))
 
             axs[2].set_ylim((0.05,20))
             axs[2].set_yscale("log")
@@ -137,6 +152,12 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
             axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
 
+
+            axs[0].tick_params(axis="both", labelsize=FONTSIZE)
+            axs[1].tick_params(axis="both", labelsize=FONTSIZE)
+            axs[2].tick_params(axis="both", labelsize=FONTSIZE)
+            corner_text(axs[0], f"Z+{n_jets} jet exclusive", horizontal_pos="right", vertical_pos="top",
+                        fontsize=FONTSIZE)
             if ".png" in str(pp):
                 plt.savefig(pp, bbox_inches="tight", pad_inches=0.05)
                 plt.close()
@@ -144,6 +165,25 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
                 plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
                 plt.close()
 
+
+
+def corner_text(ax, text,horizontal_pos,vertical_pos, fontsize):
+    ax.text(
+        x=0.95 if horizontal_pos == "right" else 0.05,
+        y=0.95 if vertical_pos == "top" else 0.05,
+        s=text,
+        horizontalalignment=horizontal_pos,
+        verticalalignment=vertical_pos,
+        transform=ax.transAxes,
+        fontsize= fontsize
+    )
+    # Dummy line for automatic legend placement
+    plt.plot(
+        0.8 if horizontal_pos == "right" else 0.2,
+        0.8 if vertical_pos == "top" else 0.2,
+        transform=ax.transAxes,
+        color="none"
+    )
 
 def delta_phi(y, idx1, idx2):
     # return y[:,idx1] - y[:,idx2]
@@ -163,7 +203,7 @@ def delta_r(y,  idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14):
 
 
 def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1=9, idx_eta1=10, idx_phi2=13,
-                   idx_eta2=14, n_jets=2):
+                   idx_eta2=14, n_jets=2, weights=None):
     if idx_phi1 == 9 and idx_phi2 == 13:
         i = 1
         j = 2
@@ -191,11 +231,12 @@ def plot_deta_dphi(pp, data_train, data_test, data_generated, n_epochs, idx_phi1
     plt.xlabel(f'$\Delta \eta{i,j}$')
     plt.ylabel(f'$\Delta \phi{i,j}$')
     plt.title('test')
+
     fig.add_subplot(1, 3, 3)
     dphi = data_generated[:, idx_phi1] - data_generated[:, idx_phi2]
     deta = data_generated[:, idx_eta1] - data_generated[:, idx_eta2]
     dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
-    plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]], rasterized=True)
+    plt.hist2d(deta, dphi, bins=100, range=[[-5, 5], [-np.pi, np.pi]], rasterized=True, weights=weights)
     plt.xlabel(f'$\Delta \eta{i,j}$')
     plt.ylabel(f'$\Delta \phi{i,j}$')
     plt.title('generated')

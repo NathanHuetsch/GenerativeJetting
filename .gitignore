@@ -3,3 +3,6 @@
 /runfiles/
 /params/
 /.idea/
+*.npy
+*.pdf
+git

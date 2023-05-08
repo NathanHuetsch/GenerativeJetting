@@ -80,8 +80,10 @@ class Z2_Experiment(Experiment):
 
             self.magic_transformation = get(self.params, "magic_transformation", False)
             if self.magic_transformation:
+                R_minus = get(self.params, "R_minus", 0.2)
+                R_plus = get(self.params, "R_plus", 1.5)
                 deltaR12 = delta_r(self.data_raw[:, 1:], idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-                self.event_weights = magic_trafo(deltaR12)
+                self.event_weights = magic_trafo(deltaR12, R_minus=R_minus, R_plus=R_plus)
                 self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)],
                                       dim=1).float()
                 print(f"preprocess_data: Using magic transformation")
@@ -92,8 +94,10 @@ class Z2_Experiment(Experiment):
 
             self.magic_transformation = get(self.params, "magic_transformation", False)
             if self.magic_transformation:
+                R_minus = get(self.params, "R_minus", 0.2)
+                R_plus = get(self.params, "R_plus", 1.5)
                 deltaR12 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-                self.event_weights = magic_trafo(deltaR12)
+                self.event_weights = magic_trafo(deltaR12, R_minus=R_minus, R_plus=R_plus)
                 self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)], dim=1).float()
                 print(f"preprocess_data: Using magic transformation")
 

@@ -2,12 +2,37 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/8l_512_2b_2k_00001C4216/paramfile.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paper_plot_jets.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paper_plots.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_0.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_1.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_2.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_3.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_4.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_5.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_6.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_7.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_8.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/samples_final_9.npy" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/bitstream-charter-ttf/Charter/Charter-Bold-Italic.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/bitstream-charter-ttf/Charter/Charter-Bold.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/bitstream-charter-ttf/Charter/Charter-Italic.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/bitstream-charter-ttf/Charter/Charter-Regular.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/example-plot.pdf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/scipostphys-matplotlib.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/toy.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/toy.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Experiments/z2.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Experiments/z3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Networks/resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/resnet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/tbd.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/plots.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/plots.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/paper_plot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/runfiles/experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/experiment.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/warm_experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/warm_experiment.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,20 +77,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "true",
-    "WebServerToolWindowPanel.toolwindow.highlight.mappings": "true",
-    "WebServerToolWindowPanel.toolwindow.highlight.symlinks": "true",
-    "WebServerToolWindowPanel.toolwindow.show.date": "false",
-    "WebServerToolWindowPanel.toolwindow.show.permissions": "false",
-    "WebServerToolWindowPanel.toolwindow.show.size": "false",
-    "last_opened_file_path": "/Users/huetsch/Desktop/GenerativeJetting/params",
-    "settings.editor.selected.configurable": "ssh.settings"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.highlight.mappings&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.highlight.symlinks&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.show.date&quot;: &quot;false&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.show.permissions&quot;: &quot;false&quot;,
+    &quot;WebServerToolWindowPanel.toolwindow.show.size&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting/params&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ssh.settings&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/params" />
@@ -146,7 +171,9 @@
       <workItem from="1681198603549" duration="59130000" />
       <workItem from="1681456369346" duration="12335000" />
       <workItem from="1681717027390" duration="82770000" />
-      <workItem from="1681996043546" duration="90272000" />
+      <workItem from="1681996043546" duration="148929000" />
+      <workItem from="1682914304603" duration="119442000" />
+      <workItem from="1683539328987" duration="7124000" />
     </task>
     <servers />
   </component>

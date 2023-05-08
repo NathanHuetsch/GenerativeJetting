@@ -255,8 +255,10 @@ class GenerativeModel(nn.Module):
 
                 if get(self.params, "magic_transformation", False):
                     if self.n_jets == 2:
+                        R_minus = get(self.params, "R_minus", 0.2)
+                        R_plus = get(self.params, "R_plus", 1.5)
                         deltaR12 = delta_r(plot_samples_jets, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-                        weights = inverse_magic_trafo(deltaR12)
+                        weights = inverse_magic_trafo(deltaR12, R_minus=R_minus, R_plus=R_plus)
                 plot_weights.append(weights)
 
         else:
@@ -265,27 +267,28 @@ class GenerativeModel(nn.Module):
             plot_samples.append(samples)
 
             if get(self.params, "magic_transformation", False):
+                R_minus = get(self.params, "R_minus", 0.2)
+                R_plus = get(self.params, "R_plus", 1.5)
                 if self.n_jets == 2:
                     deltaR12 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
-                    weights = inverse_magic_trafo(deltaR12)
+                    weights = inverse_magic_trafo(deltaR12, R_minus=R_minus, R_plus=R_plus)
                 elif self.n_jets == 3 and not self.conditional:
                     deltaR12 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                     deltaR13 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
                     deltaR23 = delta_r(samples, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-                    weights12 = inverse_magic_trafo(deltaR12)
-                    weights13 = inverse_magic_trafo(deltaR13)
-                    weights23 = inverse_magic_trafo(deltaR23)
+                    weights12 = inverse_magic_trafo(deltaR12, R_minus=R_minus, R_plus=R_plus)
+                    weights13 = inverse_magic_trafo(deltaR13, R_minus=R_minus, R_plus=R_plus)
+                    weights23 = inverse_magic_trafo(deltaR23, R_minus=R_minus, R_plus=R_plus)
                     weights = weights12 * weights13 * weights23
 
                 elif self.n_jets == 3 and self.conditional:
+                    deltaR12 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                     deltaR13 = delta_r(samples, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
                     deltaR23 = delta_r(samples, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-                    weights13 = inverse_magic_trafo(deltaR13)
-                    weights23 = inverse_magic_trafo(deltaR23)
-                    weights = weights13 * weights23
-
-                    print(weights)
-                    print(weights.mean())
+                    weights12 = inverse_magic_trafo(deltaR12, R_minus=R_minus, R_plus=R_plus)
+                    weights13 = inverse_magic_trafo(deltaR13, R_minus=R_minus, R_plus=R_plus)
+                    weights23 = inverse_magic_trafo(deltaR23, R_minus=R_minus, R_plus=R_plus)
+                    weights = weights13 * weights23 * weights12
 
             plot_weights.append(weights)
 
