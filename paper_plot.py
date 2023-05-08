@@ -71,7 +71,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         fig1, axs = plt.subplots(3, 1, sharex=True,
                                  gridspec_kw={"height_ratios": [3, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0.9, w_pad=0.9, h_pad=0.5, rect=(0.07, 0.06, 0.99, 0.95))
+        fig1.tight_layout(pad=0.9, w_pad=0.9, h_pad=0.5, rect=(0.1, 0.08, 1, 1))
 
         for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                  labels, colors):
@@ -111,7 +111,9 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
             [cap.set_alpha(0.5) for cap in caps]
             [bar.set_alpha(0.5) for bar in bars]
 
-        axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE)
+        #axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE)
+        for line in axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE).get_lines():
+            line.set_linewidth(3.0)
         axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
         axs[1].set_ylabel(r"$\frac{\mathrm{CFM}}{\mathrm{True}}$",
@@ -142,18 +144,18 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
         axs[2].tick_params(axis="both", labelsize=FONTSIZE-6)
 
-        plt.savefig(pp, format="pdf", bbox_inches='tight')
+        plt.savefig(pp, format="pdf")
         plt.close()
 
         fig2, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1, 1], "hspace": 0.00})
         #fig2, axs = plt.subplots(1, 1)
-        fig2.tight_layout(pad=0.5, w_pad=0.5, h_pad=1.0, rect=(0.07, 0.06, 0.99, 0.95))
+        fig2.tight_layout(pad=0.5, w_pad=0.5, h_pad=1.0, rect=(0.1, 0.08, 1, 1))
 
         axs[0].set_ylabel(r"$\sigma$", fontsize=FONTSIZE)
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
         #               fontsize=FONTSIZE)
 
-        axs[0].step(bins, dup_last(hist_errors[1] * scales[1]), color=colors[1],linewidth=1.0, where="post")
+        axs[0].step(bins, dup_last(hist_errors[1] * scales[1]), color=colors[1],linewidth=3.0, where="post")
 
         axs[0].step(bins, dup_last(hist_errors[1] - std) * scales[1], color=colors[1],
                     alpha=0.5, linewidth=0.5, where="post")
@@ -163,8 +165,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
                             dup_last(hist_errors[1] + std) * scales[1], facecolor=colors[1],
                             alpha=0.3, step="post")
 
-        #axs[0].set_ylim(0., ymaxAbs)
-        axs[0].set_ylim(0.01, 0.02)
+        axs[0].set_ylim(0., ymaxAbs)
         axs[1].set_yticks([0, 0.02, 0.04])
 
 
@@ -178,7 +179,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
         #               fontsize=FONTSIZE)
 
-        axs[1].step(bins, dup_last(hist_errors[1] / hists[1]), color=colors[1],linewidth=1.0, where="post")
+        axs[1].step(bins, dup_last(hist_errors[1] / hists[1]), color=colors[1],linewidth=3.0, where="post")
         axs[1].step(bins, dup_last((hist_errors[1] - std)/hists[1]) * scales[1], color=colors[1],
                  alpha=0.5, linewidth=0.5, where="post")
         axs[1].step(bins, dup_last((hist_errors[1] + std)/hists[1]) * scales[1], color=colors[1],
@@ -199,7 +200,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         plt.xlim((range[0] + 0.01, range[1] - 0.01))
         #plt.xlim(0.65, 1.35)
 
-        plt.savefig(pp, format="pdf", bbox_inches='tight')
+        plt.savefig(pp, format="pdf")
         plt.close()
 
 

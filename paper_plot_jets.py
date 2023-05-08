@@ -113,7 +113,8 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
         [cap.set_alpha(0.5) for cap in caps]
         [bar.set_alpha(0.5) for bar in bars]
 
-    axs[0].legend(loc="center right", frameon=False, fontsize=FONTSIZE)
+    for line in axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE).get_lines():
+        line.set_linewidth(3.0)
     axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
     if "p_{T" in name:
@@ -166,8 +167,8 @@ params['redirect_console'] = False
 params['plot_loss'] = False
 
 params["plot"] = False
-params['iterations'] = 10
-params['n_samples'] = 10000
+params['iterations'] = 30
+params['n_samples'] = 1000000
 #params['iterations'] = 10
 params['batch_size_sample'] = 50000
 params['save_samples'] = False
