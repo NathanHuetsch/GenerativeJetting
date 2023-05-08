@@ -113,7 +113,7 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
         [cap.set_alpha(0.5) for cap in caps]
         [bar.set_alpha(0.5) for bar in bars]
 
-    for line in axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE).get_lines():
+    for line in axs[0].legend(loc="center right", frameon=False, fontsize=FONTSIZE).get_lines():
         line.set_linewidth(3.0)
     axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
