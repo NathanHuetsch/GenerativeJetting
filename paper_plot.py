@@ -112,7 +112,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
             [bar.set_alpha(0.5) for bar in bars]
 
         #axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE)
-        for line in axs[0].legend(loc="upper right", frameon=False, fontsize=FONTSIZE).get_lines():
+        for line in axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE).get_lines():
             line.set_linewidth(3.0)
         axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
@@ -204,7 +204,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 # %%
 if toy_type == "ramp":
     plot_paper(f"{path}paper_plots.pdf", data_train[:, 1], data_test[:, 1],
-               [mus,sigmas], "x_1", ymaxAbs=.2, ymaxRel=.19, range=[.1, .9])
+               [mus,sigmas], "x_2", ymaxAbs=.2, ymaxRel=.19, range=[.1, .9])
 
 if toy_type == "gauss_sphere":
     R_train, _ = ToySimulator.getSpherical(data_train)
