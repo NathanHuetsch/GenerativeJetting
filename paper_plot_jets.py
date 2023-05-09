@@ -66,7 +66,7 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
     integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
     scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
-    FONTSIZE = 28
+    FONTSIZE = 30
     labels = ["True", "CFM", "Train"]
     colors = ["black","#A52A2A", "#0343DE"]
     dup_last = lambda a: np.append(a, a[-1])
@@ -143,9 +143,9 @@ def plot_paper(pp, obs_train, obs_test, obs_predict, name, bins=60, weight_sampl
     axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
     axs[2].set_ylabel(r"$\delta [\%]$", fontsize=FONTSIZE)
 
-    axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
-    axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
-    axs[2].tick_params(axis="both", labelsize=FONTSIZE-6)
+    axs[0].tick_params(axis="both", labelsize=FONTSIZE-3)
+    axs[1].tick_params(axis="both", labelsize=FONTSIZE-3)
+    axs[2].tick_params(axis="both", labelsize=FONTSIZE-3)
 
     corner_text(axs[0],f"Z+{n_jets} jet exclusive",horizontal_pos="right",vertical_pos="top", fontsize=FONTSIZE)
 
@@ -167,7 +167,7 @@ params['redirect_console'] = False
 params['plot_loss'] = False
 
 params["plot"] = False
-params['iterations'] = 30
+params['iterations'] = 3
 params['n_samples'] = 1000000
 #params['iterations'] = 10
 params['batch_size_sample'] = 50000

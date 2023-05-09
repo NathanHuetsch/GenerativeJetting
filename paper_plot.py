@@ -28,7 +28,7 @@ toy_type = sys.argv[2]
 data_split = 0.6
 
 
-data = np.load("/remote/gpu07/huetsch/data/2dGaussSphere.npy")
+data = np.load("/remote/gpu07/huetsch/data/2dRamp.npy")
 n_data = len(data)
 cut1 = int(n_data * data_split)
 data_train = data[:cut1]
@@ -38,8 +38,8 @@ mus = []
 sigmas = []
 for i in range(0,10):
     path_path = path + f"/run_0{i}/"
-    mu_path = path_path + "sigmamu_R_mu.npy"
-    sigma_path = path_path + "sigmamu_R_sigma.npy"
+    mu_path = path_path + "sigmamu_1_mu.npy"
+    sigma_path = path_path + "sigmamu_1_sigma.npy"
     mu = np.load(mu_path)
     sigma = np.load(sigma_path)
     mus.append(mu)
@@ -112,7 +112,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
             [bar.set_alpha(0.5) for bar in bars]
 
         #axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE)
-        for line in axs[0].legend(loc="upper right", frameon=False, fontsize=FONTSIZE).get_lines():
+        for line in axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE).get_lines():
             line.set_linewidth(3.0)
         axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
@@ -126,8 +126,8 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         axs[1].axhline(y=y_ticks[0], c="black", ls="dotted", lw=0.5)
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
-        #plt.xlim((range[0] + 0.01, range[1] - 0.01))
-        plt.xlim(0.65, 1.35)
+        plt.xlim((range[0] + 0.01, range[1] - 0.01))
+        #plt.xlim(0.65, 1.35)
 
         axs[2].set_ylim((0.05, 20))
         axs[2].set_yscale("log")
@@ -189,7 +189,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
                          alpha=0.3, step="post")
 
         axs[1].set_ylim(0., ymaxRel)
-        axs[1].set_yticks([0, 0.05, 0.1])
+        axs[1].set_yticks([0, 0.02, 0.04])
 
         axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
         axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
@@ -197,8 +197,8 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         fig2.align_labels()
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
-        #plt.xlim((range[0] + 0.01, range[1] - 0.01))
-        plt.xlim(0.65, 1.35)
+        plt.xlim((range[0] + 0.01, range[1] - 0.01))
+        #plt.xlim(0.65, 1.35)
 
         plt.savefig(pp, format="pdf")
         plt.close()
@@ -207,7 +207,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 # %%
 if toy_type == "ramp":
     plot_paper(f"{path}paper_plots_new.pdf", data_train[:, 1], data_test[:, 1],
-               [mus,sigmas], "x_1", ymaxAbs=.05, ymaxRel=.05, range=[.1, .9])
+               [mus,sigmas], "x_2", ymaxAbs=.05, ymaxRel=.05, range=[.1, .9])
 
 if toy_type == "gauss_sphere":
     R_train, _ = ToySimulator.getSpherical(data_train)
