@@ -56,12 +56,18 @@ class Experiment:
                           "p_{T,j2}", "\phi_{j2}", "\eta_{j2}", "\mu_{j2}",
                           "p_{T,j3}", "\phi_{j3}", "\eta_{j3}", "\mu_{j3}"]
 
+        self.obs_units = ["GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV"]
+
         # Ranges of the observables for plotting
         self.obs_ranges = [[0.5, 150], [-4, 4], [-6, 6], [0, 50],
                            [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50]]
+                           [17,  157], [-4, 4], [-6, 6], [0, 50],
+                           [17,  82], [-4, 4], [-6, 6], [0, 50],
+                           [17,  82], [-4, 4], [-6, 6], [0, 50]]
         self.params = params
         self.conditional = get(self.params, "conditional", False)
         if not self.conditional:

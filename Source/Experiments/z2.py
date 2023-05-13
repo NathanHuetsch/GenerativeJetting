@@ -128,6 +128,7 @@ class Z2_Experiment(Experiment):
 
         self.model.obs_names = self.obs_names
         self.model.obs_ranges = self.obs_ranges
+        self.model.obs_units = self.obs_units
         self.build_optimizer()
         self.build_dataloaders()
         self.train_model()

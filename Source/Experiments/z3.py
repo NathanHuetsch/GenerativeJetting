@@ -96,10 +96,9 @@ class Z3_Experiment(Experiment):
             self.magic_transformation = get(self.params, "magic_transformation", False)
             if self.magic_transformation:
                 deltaR13 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+                deltaR12 = delta_r(self.data_raw, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
                 deltaR23 = delta_r(self.data_raw, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-                self.event_weights = magic_trafo(deltaR13)*magic_trafo(deltaR23)
-                print(self.event_weights)
-                print(self.event_weights.mean())
+                self.event_weights = magic_trafo(deltaR13)*magic_trafo(deltaR23)*magic_trafo(deltaR12)
                 self.data = torch.cat([self.data, torch.from_numpy(self.event_weights[:, None]).to(self.device)],
                                       dim=1).float()
                 print(f"preprocess_data: Using magic transformation")
@@ -152,6 +151,7 @@ class Z3_Experiment(Experiment):
 
         self.model.obs_names = self.obs_names
         self.model.obs_ranges = self.obs_ranges
+        self.model.obs_units = self.obs_units
         self.build_optimizer()
         self.build_dataloaders()
         self.train_model()

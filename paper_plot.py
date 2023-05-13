@@ -112,7 +112,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
             [bar.set_alpha(0.5) for bar in bars]
 
         #axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE)
-        for line in axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE).get_lines():
+        for line in axs[0].legend(loc="lower right", frameon=False, fontsize=FONTSIZE, bbox_to_anchor=(1.04,0)).get_lines():
             line.set_linewidth(3.0)
         axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
@@ -139,9 +139,9 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
         axs[2].set_ylabel(r"$\delta [\%]$", fontsize=FONTSIZE)
 
-        axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
-        axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
-        axs[2].tick_params(axis="both", labelsize=FONTSIZE-6)
+        axs[0].tick_params(axis="both", labelsize=FONTSIZE-3)
+        axs[1].tick_params(axis="both", labelsize=FONTSIZE-3)
+        axs[2].tick_params(axis="both", labelsize=FONTSIZE-3)
 
         plt.savefig(pp, format="pdf")
         plt.close()
@@ -174,7 +174,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         #fig3, axs = plt.subplots(1, 1)
         #fig3.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
 
-        axs[1].set_ylabel(r"$\sigma / \mu$", fontsize=FONTSIZE)
+        axs[1].set_ylabel(r"$\sigma / p$", fontsize=FONTSIZE)
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
         #               fontsize=FONTSIZE)
 
@@ -189,8 +189,8 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         axs[1].set_ylim(0., ymaxRel)
 
-        axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
-        axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
+        axs[0].tick_params(axis="both", labelsize=FONTSIZE-3)
+        axs[1].tick_params(axis="both", labelsize=FONTSIZE-3)
 
         fig2.align_labels()
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
@@ -210,4 +210,4 @@ if toy_type == "gauss_sphere":
     R_train, _ = ToySimulator.getSpherical(data_train)
     R_test, _ = ToySimulator.getSpherical(data_test)
     plot_paper(f"{path}paper_plots.pdf", R_train, R_test, [mus,sigmas],
-               "R", ymaxAbs=.2, ymaxRel=.44, range=[0.5, 1.5])
+               "R", ymaxAbs=.2, ymaxRel=.34, range=[0.65, 1.35])

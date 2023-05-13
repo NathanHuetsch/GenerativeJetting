@@ -1,17 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import torch
-import torch.distributions as D
 from matplotlib.backends.backend_pdf import PdfPages
 import os, sys
 
-from Source.Models.autoregGMM import AutoRegGMM
-from Source.Models.autoregBinned import AutoRegBinned
-from Source.Util.simulateToyData import ToySimulator
 from Source.Util.util import get, get_device, magic_trafo, inverse_magic_trafo, load_params
 from Source.Experiments import z1,z2,z3
-from Source.Util.plots import plot_obs, delta_r
-from Source.Util.physics import get_M_ll
+from Source.Util.plots import delta_r
 import matplotlib as mpl
 import matplotlib.font_manager as font_manager
 font_dir = ['paper/bitstream-charter-ttf/Charter/']
@@ -60,6 +54,7 @@ def plot_paper(pp, obs_train_exclusive, obs_test_exclusive, obs_predict_exclusiv
         for i,_ in enumerate(obs_predict_exclusive):
             predict_weights[i] = predict_weights[i].reshape(weight_samples,
                                                             len(obs_predict_exclusive[i]) // weight_samples)
+            predict_weights[i] = predict_weights[i]/predict_weights[i].mean()
 
             obs_predict_exclusive[i] = obs_predict_exclusive[i].reshape(weight_samples,
                                               len(obs_predict_exclusive[i]) // weight_samples)
@@ -196,7 +191,7 @@ for i in range(1,4):
     params['plot_loss'] = False
 
     params["plot"] = False
-    params['iterations'] = 30
+    params['iterations'] = iterations
     params['n_samples'] = 1000000
 
     params['batch_size_sample'] = 50000
@@ -266,16 +261,17 @@ for i in range(1,4):
         plot_samples_jets = (globals()[f"experiment_{i}"].samples)
 
         if get(params, "magic_transformation", False):
+            deltaR12 = delta_r(plot_samples_jets, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14)
             deltaR13 = delta_r(plot_samples_jets, idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
             deltaR23 = delta_r(plot_samples_jets, idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+            weights12 = inverse_magic_trafo(deltaR12)
             weights13 = inverse_magic_trafo(deltaR13)
             weights23 = inverse_magic_trafo(deltaR23)
-            weights = weights13 * weights23
+            weights =  weights12 * weights13 * weights23
 
         plot_train_jets = plot_train_jets[:, 8] + plot_train_jets[:, 12] + plot_train_jets[:, 16]
         plot_test_jets = plot_test_jets[:, 8] + plot_test_jets[:, 12] + plot_test_jets[:, 16]
         plot_samples_jets = plot_samples_jets[:, 8] + plot_samples_jets[:, 12] + plot_samples_jets[:, 16]
-
         plot_weights.append(weights)
 
     plot_train.append(plot_train_jets)
@@ -284,8 +280,8 @@ for i in range(1,4):
 
 c_1 = len(plot_train[1])/len(plot_train[0])
 c_2 = len(plot_train[2])/len(plot_train[0])
-N_1 = round(c_1 * 1000000) * iterations
-N_2 = round(c_2 * 1000000) * iterations
+N_1 = round(c_1 * len(plot_samples[0])/iterations) * iterations
+N_2 = round(c_2 * len(plot_samples[0])/iterations) * iterations
 
 plot_samples[1] = plot_samples[1][:N_1]
 plot_samples[2] = plot_samples[2][:N_2]
@@ -295,7 +291,7 @@ plot_weights[2] = plot_weights[2][:N_2]
 
 
 
-obs_name = "\sum_i p_{T,j_i}"
+obs_name = "\sum_i p_{T,ji}"
 obs_range = [15,250]
 
 # Create the plot
