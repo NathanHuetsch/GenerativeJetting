@@ -3,6 +3,5 @@
 /.idea
 /params/
 /runfiles/
-/Scripts/
 *__pycache__*
 *.pdf
