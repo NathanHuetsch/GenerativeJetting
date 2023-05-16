@@ -6,8 +6,6 @@ from Source.Models.tbd import TBD
 from Source.Models.ddpm import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
-from Source.Models.autoregNN import AutoRegNN
-from Source.Models.autoregRQS import AutoRegRQS
 from torch.optim.lr_scheduler import CosineAnnealingLR, OneCycleLR
 from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
@@ -161,7 +159,7 @@ class Experiment:
         try:
             model = eval(model_type)(p)
         except NameError: # do this more general?
-            raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD, DDPM, AutoRegGMM, AutoRegNN, AutoRegRQS or AutoRegBinned")
+            raise ValueError(f"build_model: model class {model_type} not recognised. Use INN, TBD, DDPM, AutoRegGMM or AutoRegBinned")
 
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -326,8 +324,6 @@ class Experiment:
 
             # Save the final model. Update the total amount of training epochs the model has been trained for
             torch.save(self.model.state_dict(), f"models/model_run{self.runs}.pt")
-            if self.params["model"] == "AutoRegNN":
-                torch.save(self.model.enet.state_dict(), f"models/enet_run{self.runs}.pt")
 
             self.params["total_epochs"] = self.total_epochs
             self.params["traintime"] = traintime

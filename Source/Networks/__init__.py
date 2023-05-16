@@ -4,4 +4,3 @@ from .resnet import Resnet
 from .attnet import attnet
 from .attnetGMM import attnetGMM
 from .attnetBinned import attnetBinned
-from .energynet import EnergyNet

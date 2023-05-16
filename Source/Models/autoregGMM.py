@@ -51,9 +51,6 @@ class AutoRegGMM(GenerativeModel):
         pos, n_jets is needed for conditional transformer
         getMore also returns GMM parameters and likelihoods
         """
-        if self.magic_transformation: #only works with encode_njet = factorize
-            weights_magic = x[:,-1]
-            x = x[:,:-1]
             
         x = torch.cat((torch.zeros(x.size(0), 1, device=self.device), x), dim=1) #add start-of-sequence token
         idx = x[:, :-1]
@@ -68,15 +65,13 @@ class AutoRegGMM(GenerativeModel):
         loss = -gmm.log_prob(targets)
         
         # log Likelihood loss
-        if self.magic_transformation:
-            loss *= weights_magic[:,None] / weights_magic.mean()
         loss = loss.sum(dim=1).mean(dim=0) #sum over components to get single-event likelihoods, then average over those
-        self.regular_loss.append(loss.detach().cpu().numpy())
+        #self.regular_loss.append(loss.detach().cpu().numpy())
 
         # KL loss
         if self.bayesian or self.iterations > 1:
             loss += self.net.KL() / len(self.data_train)
-            self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
+            #self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
 
         if getMore:
             logLikelihood = torch.sum(gmm.log_prob(targets), dim=-1)
