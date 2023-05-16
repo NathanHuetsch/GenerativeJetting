@@ -32,6 +32,9 @@ def preformat(data, params):
 
     return events
 
+def getAngle(angle):
+    return (angle + np.pi)%(2*np.pi) - np.pi
+
 def preprocess(data, params):
     """
     Bring data into the format used during training
@@ -44,11 +47,18 @@ def preprocess(data, params):
     conditional = get(params, "conditional", False)
     n_jets = get(params, "n_jets", 2)
     channels_periodic = get(params, "channels_periodic", [])
+    reparametrize = get(params, "reparametrize", 0)
 
     if conditional:
         events = data[:,1:].copy()
     else:
         events = data.copy()
+
+    if reparametrize==1: #work with angular differences
+        if n_jets >= 2:
+            events[:,13] = getAngle(events[:,13]-events[:,9])
+        if n_jets >= 3:
+            events[:,17] = getAngle(events[:,17]-events[:,13])
 
     if preprocess>=1:
         # apply log transform to pT
@@ -121,6 +131,7 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
     conditional = get(params, "conditional", False)
     n_jets = get(params, "n_jets", 2)
     channels_periodic = get(params, "channels_periodic", [])
+    reparametrize = get(params, "reparametrize", 0)
     
     if conditional and n_jets != 3:
         cut = 4 - n_jets
@@ -156,6 +167,10 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
         events[:, 8::4] = np.exp(events[:, 8::4]) + 20 - 1e-2
 
         events[:, 3::4] = np.exp(events[:,3::4])
+
+    if reparametrize==1:
+        events[:,13] = getAngle(events[:,9]+events[:,13])
+        events[:,17] = getAngle(events[:,13]+events[:,17])
 
     if conditional and n_jets != 3:
         cut = 4 - n_jets

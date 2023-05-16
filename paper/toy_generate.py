@@ -14,7 +14,7 @@ from Source.Util.simulateToyData import ToySimulator
 
 device = get_device()
 
-def genHistograms(path, nModels=10):
+def genHistograms(path, nModels=12):
     if device=="cuda":
         sys.stdout = open(f"paper/toy/stdout_{path}.txt", "w", buffering=1)
         sys.stderr = open(f"paper/toy/stderr_{path}.txt", "w", buffering=1)
@@ -30,7 +30,7 @@ def genHistograms(path, nModels=10):
     nEnsemble = len(paths)
     #range_ramp = [-0.1, 1.1]
     range_ramp = [0.1, 0.9]
-    range_gauss_sphere = [0.5, 1.5]
+    range_gauss_sphere = [0.65, 1.35] #[.5, 1.5]
 
     dup_last = lambda a: np.append(a, a[-1])
 
@@ -136,9 +136,13 @@ def genHistograms(path, nModels=10):
         sys.stdout.close()
         sys.stderr.close()
 
-genHistograms("paper_GMM_ramp4")
-#genHistograms("paper_GMM_sphere5")
-#genHistograms("paper_Binned_ramp4")
-#genHistograms("paper_Binned_sphere4")
+genHistograms("paper_GMM_ramp6")
+genHistograms("paper_GMM_sphere6")
+genHistograms("paper_Binned_ramp6")
+genHistograms("paper_Binned_ramp7")
+genHistograms("paper_Binned_ramp8")
+genHistograms("paper_Binned_sphere6")
+
+
 #genHistograms("paper_NN_ramp2")
 #genHistograms("paper_NN_sphere2")

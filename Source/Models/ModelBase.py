@@ -6,7 +6,7 @@ from torch.utils.tensorboard import SummaryWriter
 from Source.Util.util import get, get_device, magic_trafo, inverse_magic_trafo
 from Source.Util.preprocessing import undo_preprocessing
 from Source.Util.discretize import undo_discretize
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
+from Source.Util.plots import plot_obs, delta_r, delta_phi, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
 from Source.Util.physics import get_M_ll
 from Source.Util.simulateToyData import ToySimulator
 from matplotlib.backends.backend_pdf import PdfPages
@@ -147,9 +147,6 @@ class GenerativeModel(nn.Module):
             self.optimizer.zero_grad()
 
             loss = self.batch_loss(x)
-
-            #print(self.net.transformer.h[0].attn.c_attn.weight[:1,:1])
-            print(self.enet.layers[0].weight[:1,:1])
 
             if np.isfinite(loss.item()): # and (abs(loss.item() - loss_m) / loss_s < 5 or len(self.train_losses_epoch) == 0):
                 loss.backward()
@@ -521,9 +518,15 @@ class GenerativeModel(nn.Module):
                     channel2 = channels[1]
                     obs_name = self.obs_names[channel1] + " - " + self.obs_names[channel2]
                     for j,_ in enumerate(plot_train):
-                        obs_train = plot_train[j][:, channel1] - plot_train[j][:, channel2]
-                        obs_test = plot_test[j][:, channel1] - plot_test[j][:, channel2]
-                        obs_generated = plot_samples[j][:, channel1] - plot_samples[j][:, channel2]
+                        if channel1%2==0: #is eta
+                            obs_train = plot_train[j][:, channel1] - plot_train[j][:, channel2]
+                            obs_test = plot_test[j][:, channel1] - plot_test[j][:, channel2]
+                            obs_generated = plot_samples[j][:, channel1] - plot_samples[j][:, channel2]
+                        else: #is phi
+                            obs_train = delta_phi(plot_train[j], channel1, channel2)
+                            obs_test = delta_phi(plot_test[j], channel1, channel2)
+                            obs_generated = delta_phi(plot_samples[j], channel1, channel2)
+                            
                         plot_obs(pp=out,
                                  obs_train=obs_train,
                                  obs_test=obs_test,

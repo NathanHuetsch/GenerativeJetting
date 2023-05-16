@@ -13,7 +13,7 @@ from Source.Experiments.zn import Zn_Experiment
 
 device = get_device()
 
-nBNN = 10
+nBNN = 30
 n_samples = 1000000
 
 def genHistograms(path, nModels=10):
@@ -60,4 +60,6 @@ def genHistograms(path, nModels=10):
         sys.stdout.close()
         sys.stderr.close()
 
-genHistograms("AutoRegGMMcond_6435")
+#genHistograms("AutoRegGMMcond_6435")
+#genHistograms("AutoRegGMMcond_6880")
+genHistograms("AutoRegGMMcond_4630")

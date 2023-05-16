@@ -10,10 +10,9 @@ import scipy.stats as stats
 
 class AutoRegGMM(GenerativeModel):
     """
-    Implementation of an autoregressive transformer model following the minimal
-    GPT implementation in https://github.com/karpathy/minGPT.
+    Autoregressive transformer with Gaussian mixture (GMM) likelihood
+    Implementation based on https://github.com/karpathy/minGPT
     """
-
     def __init__(self, params, out=True):
         self.magic_transformation = get(params, "magic_transformation", False)
         self.channels_periodic = np.array(get(params, "channels_periodic", [])) #only works for encode_njet=factorize
@@ -52,12 +51,11 @@ class AutoRegGMM(GenerativeModel):
     
     def batch_loss(self, x, conditional=False, getMore=False, pos=None, n_jets = None):
         """
-        Loss function for autoregressive model
-        TBD: Implement conditional
-        :x: Training data in shape (batch_size, block_size)
-        :returns: torch loss object
+        Loss function for autoregressive transformer
+        conditional is needed for conditional DM/INN
+        pos, n_jets is needed for conditional transformer
+        getMore also returns GMM parameters and likelihoods
         """
-        #print(pos, n_jets)
         if self.magic_transformation: #only works with encode_njet = factorize
             weights_magic = x[:,-1]
             x = x[:,:-1]
@@ -74,7 +72,7 @@ class AutoRegGMM(GenerativeModel):
             gmm = D.MixtureSameFamily(mix, comp)
             
             loss = -gmm.log_prob(targets)
-        else:
+        else: #build GMM and vonMises
             idx_periodic = np.isin(pos, self.channels_periodic)
 
             mix_vm = D.Categorical(weights[:,idx_periodic,:]) #build von Mises mixture for periodic variables
@@ -95,17 +93,17 @@ class AutoRegGMM(GenerativeModel):
         if self.magic_transformation:
             loss *= weights_magic[:,None] / weights_magic.mean()
         loss = loss.sum(dim=1).mean(dim=0) #sum over components to get single-event likelihoods, then average over those
-        #self.regular_loss.append(loss.detach().cpu().numpy())
+        self.regular_loss.append(loss.detach().cpu().numpy())
 
         # GMM weight regularization
         if self.l2_lambda > 0.:
             loss -= self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))
-            #self.regularizeGMM_loss.append( (-self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))).detach().cpu().tolist())
+            self.regularizeGMM_loss.append( (-self.l2_lambda * self.n_gauss * torch.mean(weights.pow(self.l2_p))).detach().cpu().tolist())
 
         # KL loss
         if self.bayesian or self.iterations > 1:
             loss += self.net.KL() / len(self.data_train)
-            #self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
+            self.kl_loss.append( (self.net.KL() / len(self.data_train)).detach().cpu().tolist())
 
         if getMore:
             logLikelihood = torch.sum(gmm.log_prob(targets), dim=-1)
@@ -116,24 +114,10 @@ class AutoRegGMM(GenerativeModel):
     def sample_n(self, n_samples, conditional=False, prior_samples=None, con_depth=0, n_jets=None, pos=None):
         """
         Event generation for autoregressive model
-        TBD: Implement conditional
-        :n_samples: Number of samples to be generated
-        :returns: Generated samples in the shape (n_samples, block_size)
+        conditional, prior_samples, con_depth are needed for the conditional DM/INN
+        pos, n_jets are needed for the conditional transformer
         """
-        if self.net.bayesian != 0:
-            self.net.map = get(self.params, "fix_mu", False)
-        if self.net.bayesian == 1 or self.net.bayesian == 2 or self.net.bayesian == 3:
-            for i in range(self.net.n_blocks):
-                self.net.transformer.h[i].mlp.c_fc.random = None
-                self.net.transformer.h[i].mlp.c_proj.random = None
-        if self.net.bayesian == 2 or self.net.bayesian == 3:
-            for i in range(self.net.n_blocks):
-                self.net.transformer.h[i].attn.c_attn.random = None
-                self.net.transformer.h[i].attn.c_proj.random = None
-        if self.net.bayesian == 3 or self.net.bayesian == 4:
-            self.net.lm_head.random = None
-        if self.net.bayesian == 3:
-            self.net.transformer.wte.random = None
+        self.net.reset_BNN()
         self.eval()
 
         if type(pos) is np.ndarray:
@@ -148,10 +132,8 @@ class AutoRegGMM(GenerativeModel):
 
             idx = torch.zeros(self.batch_size_sample, 1, device=self.device)
             for iBlock in range(nElements):
-                mu, sigma, weights = self.net(idx, n_jets=n_jets, pos=pos[:iBlock+1] if
-                                              type(pos) is np.ndarray else None)
-
-                #print(pos[:iBlock+1], pos[iBlock], mu.size())
+                pos_i = pos[:iBlock+1] if type(pos) is np.ndarray else None
+                mu, sigma, weights = self.net(idx, n_jets=n_jets, pos=pos_i)
                 
                 mix = D.Categorical(weights[:,-1,:])
                 if len(self.channels_periodic) == 0:
@@ -163,13 +145,12 @@ class AutoRegGMM(GenerativeModel):
                     else:
                         comp = D.Normal(mu[:,-1,:], sigma[:,-1,:])
                 gmm = D.MixtureSameFamily(mix, comp)
-                idx_next = gmm.sample((1,)).permute(1,0)
-                        
+                idx_next = gmm.sample((1,)).permute(1,0)     
 
                 idx = torch.cat((idx, idx_next), dim=1)
             sample = np.append(sample, idx[:,1:].detach().cpu().numpy(), axis=0)
 
-            if(i==0): # sampling time estimate after first sampling
+            if i==0: # sampling time estimate after first sampling step
                 t1=time.time()
                 dtEst = (t1-t0)*n_batches
                 print(f"Sampling time estimate: {dtEst:.2f} s = {dtEst/60:.2f} min")

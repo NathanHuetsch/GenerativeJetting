@@ -5,8 +5,9 @@ from torch.nn import functional as F
 from Source.Networks.vblinear import VBLinear
 
 '''
-This is a minimal implementation of the autoregressive transformer architecture used in the GPT models,
-the code is essentially copied from https://github.com/karpathy/minGPT
+Building blocks for the autoregressive transformer
+Code mostly taken from https://github.com/karpathy/minGPT
+and extended by Bayesian Linear layers
 '''
 
 class NewGELU(nn.Module):
@@ -23,7 +24,6 @@ class CausalSelfAttention(nn.Module):
     It is possible to use torch.nn.MultiheadAttention here but I am including an
     explicit implementation here to show that there is nothing too scary here.
     """
-
     def __init__(self, params):
         super().__init__()
         self.n_head = params["n_head"]
@@ -102,7 +102,6 @@ class CausalSelfAttention(nn.Module):
 
 class TransformerBlock(nn.Module):
     """ A transformer block, consisting of a CausalSelfAttention block and a multilayer perceptron"""
-
     def __init__(self, params):
         super().__init__()
         self.intermediate_dim = params["intermediate_dim"]
@@ -142,7 +141,6 @@ class TransformerBlock(nn.Module):
 
 class attnet(nn.Module):
     """Autoregressive transformer model, following the GPT architecture"""
-
     def __init__(self, params):
         super().__init__()
 
@@ -219,4 +217,19 @@ class attnet(nn.Module):
             lm_head_KL = .5 * self.prior_prec * self.lm_head.weight.sum()
             kl += wte_KL + lm_head_KL
         return kl
-
+    
+    def reset_BNN(self):
+        if self.bayesian != 0:
+            self.map = get(self.params, "fix_mu", False)
+        if self.bayesian == 1 or self.bayesian == 2 or self.bayesian == 3:
+            for i in range(self.n_blocks):
+                self.transformer.h[i].mlp.c_fc.random = None
+                self.transformer.h[i].mlp.c_proj.random = None
+        if self.bayesian == 2 or self.bayesian == 3:
+            for i in range(self.n_blocks):
+                self.transformer.h[i].attn.c_attn.random = None
+                self.transformer.h[i].attn.c_proj.random = None
+        if self.bayesian == 3 or self.bayesian == 4:
+            self.lm_head.random = None
+        if self.bayesian == 3:
+            self.transformer.wte.random = None

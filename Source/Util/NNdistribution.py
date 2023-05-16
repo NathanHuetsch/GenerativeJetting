@@ -7,7 +7,12 @@ import torch.nn.functional as F
 import torch.distributions as D
 from scipy.stats import poisson
 
-import matplotlib.pyplot as plt
+'''
+Distribution parametrized by a summary network,
+used for the autoregressive transformer with summary network likelihood (AutoRegNN)
+
+Work on this not finished, but code should run
+'''
 
 class NNdistribution(torch.distributions.distribution.Distribution):
     def __init__(self, enet, obs_ranges_NN, params, conditions):
@@ -43,13 +48,6 @@ class NNdistribution(torch.distributions.distribution.Distribution):
         #t4 = time.time()
         #print(f"Time consumption: {(t1-t0)/(t4-t0):.2e} {(t2-t1)/(t4-t0):.2e} {(t3-t2)/(t4-t0):.2e} {(t4-t3)/(t4-t0):.2e}")
 
-    '''
-    @staticmethod #non-parallel version
-    def linInterp(x, y, idx0, value):
-        a = (y[idx0+1]-y[idx0])/(x[idx0+1]-x[idx0])
-        b = y[idx0] - a * x[idx0]
-        return a * value + b
-    '''
     @staticmethod
     def linInterp(x, y, idx0, value):
         a = (y[torch.arange(idx0.size(0))[:, None], torch.arange(idx0.size(1))[None, :], idx0+1]-y[torch.arange(idx0.size(0))[:, None], torch.arange(idx0.size(1))[None, :], idx0]) \
@@ -70,13 +68,6 @@ class NNdistribution(torch.distributions.distribution.Distribution):
         #improved version: Use linear interpolation
         ret = -self.linInterp(self.x, self.energy, idx, value) - torch.log(self.omega)
         return ret
-    '''
-    def cdf(self, value): #not needed right now (but comes for free)
-        value1 = value.reshape(value.size(0), value.size(1), 1).expand(value.size(0), value.size(1), self.x.size(2))
-        test = self.x < value1
-        idx = torch.argmax(torch.cumsum(test, dim=2), dim=2)
-        return self.linInterp(self.x, self.cdf, idx, value)
-    '''
 
     def icdf(self, value):
         value1 = value.reshape(value.size(0), value.size(1), 1).expand(value.size(0), value.size(1), self.x.size(2))

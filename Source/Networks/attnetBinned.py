@@ -3,12 +3,17 @@ import torch.nn as nn
 import math
 from Source.Networks.vblinear import VBLinear
 from Source.Networks.attnet import TransformerBlock
+from Source.Util.util import get
 
 class attnetBinned(nn.Module):
-    """Autoregressive transformer model, following the GPT architecture"""
+    """
+    Autoregressive transformer model, following the GPT architecture
+    This version takes discrete inputs (i.e. binned data) and returns normalized logits (bin likelihoods)
+    """
 
     def __init__(self, params):
         super().__init__()
+        self.params = params
 
         self.vocab_size = params["vocab_size"]
         self.block_size = params["block_size"]
@@ -77,3 +82,17 @@ class attnetBinned(nn.Module):
             lm_head_KL = .5 * self.prior_prec * self.lm_head.weight.sum()
             kl += wte_KL + lm_head_KL
         return kl
+
+    def reset_BNN(self):
+        if self.bayesian != 0:
+            self.map = get(self.params, "fix_mu", False)
+        if self.bayesian == 1 or self.bayesian == 2 or self.bayesian == 3:
+            for i in range(self.n_blocks):
+                self.transformer.h[i].mlp.c_fc.random = None
+                self.transformer.h[i].mlp.c_proj.random = None
+        if self.bayesian == 2 or self.bayesian == 3:
+            for i in range(self.n_blocks):
+                self.transformer.h[i].attn.c_attn.random = None
+                self.transformer.h[i].attn.c_proj.random = None
+        if self.bayesian == 3 or self.bayesian == 4:
+            self.lm_head.random = None    

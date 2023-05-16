@@ -5,12 +5,16 @@ import math
 from torch.nn import functional as F
 from Source.Networks.vblinear import VBLinear
 from Source.Networks.attnet import TransformerBlock
+from Source.Util.util import get
             
 class attnetGMM(nn.Module):
-    """Autoregressive transformer model, following the GPT architecture"""
-
+    """
+    Autoregressive transformer model, following the GPT architecture
+    This version returns GMM parameters
+    """
     def __init__(self, params):
         super().__init__()
+        self.params = params
 
         self.vocab_size = params["vocab_size"]
         self.in_size = 1
@@ -33,8 +37,13 @@ class attnetGMM(nn.Module):
             h = nn.ModuleList([TransformerBlock(params) for _ in range(self.n_blocks)]),
             ln_f = nn.LayerNorm(self.intermediate_dim),
         ))
+        if self.bayesian == 5 or self.bayesian == 6: #manually bayesianize the last layer
+            params2 = params.copy()
+            params2["bayesian"] = 1 if self.bayesian==5 else 2 
+            self.transformer.h[-1] = TransformerBlock(params2) #just overwrite the non-bayesian block
+        
         self.lm_head = VBLinear(self.intermediate_dim, self.vocab_size) \
-                       if self.bayesian==3 or self.bayesian==4 \
+                       if self.bayesian==3 or self.bayesian==4 or self.bayesian==5 \
                        else nn.Linear(self.intermediate_dim, self.vocab_size)
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
@@ -76,6 +85,7 @@ class attnetGMM(nn.Module):
         for block in self.transformer.h:
             x = block(x)
         x = self.transformer.ln_f(x)
+        
         logits = self.lm_head(x).reshape(idx.size(0), idx.size(1), self.n_gauss, 3)
         mu = logits[:,:,:,0]
         sigma = torch.exp(logits[:,:,:,1]) #ensures positivity and slowly goes to zero
@@ -98,3 +108,25 @@ class attnetGMM(nn.Module):
             lm_head_KL = .5 * self.prior_prec * self.lm_head.weight.sum()
             kl += wte_KL + lm_head_KL
         return kl
+
+    def reset_BNN(self):
+        if self.bayesian != 0:
+            self.map = get(self.params, "fix_mu", False)
+        if self.bayesian == 1 or self.bayesian == 2 or self.bayesian == 3:
+            for i in range(self.n_blocks):
+                self.transformer.h[i].mlp.c_fc.random = None
+                self.transformer.h[i].mlp.c_proj.random = None
+        if self.bayesian == 2 or self.bayesian == 3:
+            for i in range(self.n_blocks):
+                self.transformer.h[i].attn.c_attn.random = None
+                self.transformer.h[i].attn.c_proj.random = None
+        if self.bayesian == 5 or self.bayesian==6:
+            self.transformer.h[-1].mlp.c_fc.random = None
+            self.transformer.h[-1].mlp.c_proj.random = None
+        if self.bayesian==6:
+            self.transformer.h[-1].attn.c_attn.random = None
+            self.transformer.h[-1].attn.c_proj.random = None
+        if self.bayesian == 3 or self.bayesian == 4 or self.bayesian==5 or self.bayesian==6:
+            self.lm_head.random = None
+        if self.bayesian == 3:
+            self.transformer.wte.random = None

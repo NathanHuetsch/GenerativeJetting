@@ -19,12 +19,13 @@ plt.rcParams["font.family"] = "serif"
 plt.rcParams["font.serif"] = "Charter"
 plt.rcParams["text.usetex"] = True
 plt.rcParams['text.latex.preamble'] = r'\usepackage[bitstream-charter]{mathdesign} \usepackage{amsmath}'
+plt.rcParams["figure.figsize"] = (9,7)
 
 #ramp (GMM, Binned, NN), sphere (GMM, Binned, NN)
 yminAbsArr = [[0., 0., 0.], [0., 0., 0.]]
-ymaxAbsArr = [[.065, .039, .5], [.034, .024, .5]]
+ymaxAbsArr = [[.059, .034, .5], [.039, .029, .5]]
 yminRelArr = [[0., 0., 0.], [0., 0., 0.]]
-ymaxRelArr = [[.055, .039, .2], [.075, .055, 1.]]
+ymaxRelArr = [[.045, .034, .2], [.079, .055, 1.]]
 iShowArr = [[5, 5, 5], [5, 5, 5]]
 model_name = "AT"
 
@@ -51,6 +52,7 @@ def plot(path):
         ymaxRel = ymaxRelArr[0][imodel(model_type)]
         iShow = iShowArr[0][imodel(model_type)]
         x_range = [.1,.9]
+        legend_loc = "lower right"
     elif toy_type == "gauss_sphere":
         name = "R"
         unit=None
@@ -59,7 +61,8 @@ def plot(path):
         yminRel = yminRelArr[1][imodel(model_type)]
         ymaxRel = ymaxRelArr[1][imodel(model_type)]
         iShow = iShowArr[1][imodel(model_type)]
-        x_range = [.5, 1.5]
+        x_range = [.65, 1.35] #[.5, 1.5]
+        legend_loc = "upper right"
 
     with warnings.catch_warnings() and PdfPages(f"paper/toy/{path}.pdf") as pp:
         warnings.simplefilter("ignore", RuntimeWarning)
@@ -68,14 +71,15 @@ def plot(path):
         hists = [histograms[2,:,0], histograms[iShow,:,0], histograms[1,:,0]]
         hist_errors = [histograms[2,:,1], histograms[iShow,:,1], histograms[1,:,1]]
         
-        FONTSIZE = 22
-        TICKLABELSIZE = 18
-        labels = ["True", model_name, "Train"]
+        FONTSIZE = 30
+        TICKLABELSIZE = FONTSIZE -3
+        labels = ["Truth", model_name, "Train"]
         colors = ["black","#A52A2A", "#0343DE"]
+        y_ticks = [.9, 1., 1.1]
 
-        fig1, axs = plt.subplots(3, 1, sharex=True, figsize=(7,5),
+        fig1, axs = plt.subplots(3, 1, sharex=True,
                                  gridspec_kw={"height_ratios": [3, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0., rect=(0.1, 0.1, 1., 1.))
+        fig1.tight_layout(rect=(0.1, 0.08, 1., 1.))
 
         for y, y_err, label, color in zip(hists, hist_errors, labels, colors):
 
@@ -89,7 +93,7 @@ def plot(path):
                                 y + y_err, facecolor=color,
                                 alpha=0.3, step="post")
 
-            if label == "True": continue
+            if label == "Truth": continue
 
             ratio = y / hists[0]
             ratio_err = np.sqrt( (y_err / y)**2 + (hist_errors[0] / hists[0])**2)
@@ -97,7 +101,7 @@ def plot(path):
             ratio[ratio_isnan] = 1.
             ratio_err[ratio_isnan] = 0.
                        
-            axs[1].step(bins, ratio, linewidth=1.0, where="post", color=color)
+            axs[1].step(bins, ratio, linewidth=3.0, where="post", color=color)
             axs[1].step(bins, ratio + ratio_err, color=color, alpha=0.5,
                         linewidth=0.5, where="post")
             axs[1].step(bins, ratio - ratio_err, color=color, alpha=0.5,
@@ -110,20 +114,22 @@ def plot(path):
 
             markers, caps, bars = axs[2].errorbar((bins[:-1] + bins[1:]) / 2, delta,
                                                   yerr=delta_err, ecolor=color, color=color, elinewidth=0.5,
-                                                  linewidth=0, fmt=".", capsize=2)
+                                                  linewidth=0, fmt=".", capsize=2, markersize=10)
             [cap.set_alpha(0.5) for cap in caps]
             [bar.set_alpha(0.5) for bar in bars]
 
-        axs[0].legend(loc="upper left", frameon=False, fontsize=FONTSIZE)
+        #axs[0].legend(loc=legend_loc, frameon=False, fontsize=FONTSIZE)
+        for line in axs[0].legend(loc=legend_loc, frameon=False, fontsize=FONTSIZE).get_lines():
+            line.set_linewidth(3.0)
         axs[0].set_ylabel("Normalized", fontsize=FONTSIZE)
 
-        axs[1].set_ylabel(r"$\frac{\mathrm{%s}}{\mathrm{True}}$" % model_name,
+        axs[1].set_ylabel(r"$\frac{\mathrm{%s}}{\mathrm{Truth}}$" % model_name,
                           fontsize=FONTSIZE)
-        axs[1].set_yticks([0.95, 1, 1.05])
-        axs[1].set_ylim([0.9, 1.1])
-        axs[1].axhline(y=1, c="black", ls="--", lw=0.7)
-        axs[1].axhline(y=1.05, c="black", ls="dotted", lw=0.5)
-        axs[1].axhline(y=0.95, c="black", ls="dotted", lw=0.5)
+        axs[1].set_yticks(y_ticks)
+        axs[1].set_ylim(.81, 1.19)
+        axs[1].axhline(y=y_ticks[1], c="black", ls="--", lw=0.7)
+        axs[1].axhline(y=y_ticks[0], c="black", ls="dotted", lw=0.5)
+        axs[1].axhline(y=y_ticks[2], c="black", ls="dotted", lw=0.5)
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                    fontsize=FONTSIZE)
 
@@ -147,13 +153,13 @@ def plot(path):
         plt.savefig(pp, format="pdf")
         plt.close()
 
-        fig2, ax = plt.subplots(2,1, sharex=True, figsize=(7,5),
+        fig2, ax = plt.subplots(2,1, sharex=True,
                                 gridspec_kw={"height_ratios": [1,1], "hspace": 0.})
-        fig2.tight_layout(pad=0., rect=(0.1, 0.1, 1., 1.))
+        fig2.tight_layout(rect=(0.1, 0.08, 1., 1.))
         
         axs = ax[0]
 
-        axs.set_ylabel("Absolute unc.", fontsize=FONTSIZE)
+        axs.set_ylabel(r"$\sigma$", fontsize=FONTSIZE)
         axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                        fontsize=FONTSIZE)
 
@@ -161,19 +167,19 @@ def plot(path):
         abs_unc_unc = histograms[4,:,1]
         abs_unc_i = histograms[5:,:,1]
     
-        axs.step(bins, abs_unc, color=colors[1], linewidth=1.0, where="post", label=labels[1])
+        axs.step(bins, abs_unc, color=colors[1], linewidth=3.0, where="post", label=labels[1])
         axs.step(bins, abs_unc + abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.step(bins, abs_unc - abs_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.fill_between(bins, abs_unc + abs_unc_unc, abs_unc-+ abs_unc_unc,
                          step="post", alpha=.3, facecolor=colors[1])
-        axs.step(bins, hist_errors[2], linewidth=1.0, where="post", color=colors[2], label=labels[2])
+        axs.step(bins, hist_errors[2], linewidth=3.0, where="post", color=colors[2], label=labels[2])
         #for i in range(len(histograms[:,0,1])-5):
         #    axs.step(bins, abs_unc_i[i, :], color="orange", linewidth=1.0, where="post")
         axs.set_ylim(yminAbs, ymaxAbs)
-        axs.legend(loc="upper left", frameon=False, fontsize=FONTSIZE)
+        #axs.legend(loc="upper left", frameon=False, fontsize=FONTSIZE)
 
         axs = ax[1]
-        axs.set_ylabel("Relative unc.", fontsize=FONTSIZE)
+        axs.set_ylabel(r"$\sigma / p$", fontsize=FONTSIZE)
         axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                        fontsize=FONTSIZE)
 
@@ -183,16 +189,16 @@ def plot(path):
         rel_unc_unc[np.isnan(rel_unc_unc)] = 0.
         rel_unc_i = histograms[5:,:,1] / histograms[5:,:,0]
         
-        axs.step(bins, rel_unc, color=colors[1], linewidth=1.0, where="post", label=labels[1])
+        axs.step(bins, rel_unc, color=colors[1], linewidth=3.0, where="post", label=labels[1])
         axs.step(bins, rel_unc + rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.step(bins, rel_unc - rel_unc_unc, color=colors[1], linewidth=1.0, where="post", alpha=.5)
         axs.fill_between(bins, rel_unc + rel_unc_unc, rel_unc - rel_unc_unc,
                          color=colors[1], alpha=0.3, step="post")
-        axs.step(bins, hist_errors[2] / hists[2], linewidth=1.0, where="post", color=colors[2], label=labels[2])
+        axs.step(bins, hist_errors[2] / hists[2], linewidth=3.0, where="post", color=colors[2], label=labels[2])
         #for i in range(len(histograms[:,0,1])-5):
         #    axs.step(bins, rel_unc_i[i, :], color="orange", linewidth=1.0, where="post")
         axs.set_ylim(yminRel, ymaxRel)
-        axs.legend(loc="upper right", frameon=False, fontsize=FONTSIZE)
+        #axs.legend(loc="upper right", frameon=False, fontsize=FONTSIZE)
 
         ax[0].set_xlim(x_range)
         ax[0].tick_params(axis="both", labelsize=TICKLABELSIZE)
@@ -200,10 +206,20 @@ def plot(path):
 
         plt.savefig(pp, format="pdf")
         plt.close()
+        
+plot("paper_GMM_ramp6")
+plot("paper_GMM_sphere6")
+plot("paper_Binned_ramp6")
+plot("paper_Binned_ramp7")
+plot("paper_Binned_ramp8")
+plot("paper_Binned_sphere6")
 
+'''
 plot("paper_GMM_ramp4")
 plot("paper_GMM_sphere5")
 plot("paper_Binned_ramp4")
 plot("paper_Binned_sphere4")
+
 #plot("paper_NN_ramp2")
 #plot("paper_NN_sphere2")
+'''

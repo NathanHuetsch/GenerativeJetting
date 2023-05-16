@@ -17,7 +17,8 @@ plt.rc('font', family='serif')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
 def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, unit=None, weight_samples=1,
-                             save_dict=None, predict_weights=None, n_epochs=None, n_jets=None):
+                             predict_weights=None, n_epochs=None, n_jets=None, error_range=[.85, 1.15],
+             error_ticks=[.9,1.,1.1]):
         '''
         Up-to-date plotting function from Theo (binn branch of precision-enthusiasts repo)
         slightly modified (removed save_dict option and renamed parameters to match our earlier version)
@@ -28,12 +29,16 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
         :obs_predict: predicted data
         :bins: Bins to be used for the histogram. Can be either a number (then bins are created equidistantly)
                 or an array of the bin edges, as taken by np.histogram(..., bins=bins)
-        :range: Range to be used for the histogram. Optional parameter, if not specified then the range is chosen from the data
+        :range: x range to be used for the histogram. Optional parameter, if not specified then the range is chosen from the data
         :name: Name of the variable to be histogrammed (goes into xlabel)
         :unit: Unit of the variable to be histogrammed (goes into xlabel)
         :weight_samples: Integer that specifies how many different choices of weights have been used (for Bayesian models)
                 If weight_samples!=None, assume that obs_predict has the form [dataset1, dataset2, ...]
         :predict_weights: Weights of the predicted events (for e.g. discriminator reweighting)
+        :n_epochs: For title
+        :n_jets: For title
+        :error_range: Range of middle plot
+        :error_ticks: Ticks of middle plot
         '''
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
@@ -59,12 +64,13 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
             FONTSIZE = 14
-            labels = ["True", "Model", "Train"]
-            colors = ["#e41a1c", "#3b528b", "#1a8507"]
+            TICKLABELSIZE = FONTSIZE -3
+            labels = ["Truth", "Model", "Train"]
+            colors = ["black","#A52A2A","#0343DE"]
             dup_last = lambda a: np.append(a, a[-1])
 
             fig1, axs = plt.subplots(3, 1, sharex=True,
-                    gridspec_kw={"height_ratios" : [4, 1, 1], "hspace" : 0.00})
+                    gridspec_kw={"height_ratios" : [3, 1, 1], "hspace" : 0.00})
 
             if n_epochs is not None:
                 if n_jets is not None:
@@ -85,7 +91,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
                         dup_last(y + y_err) * scale, facecolor=color,
                         alpha=0.3, step="post")
 
-                if label == "True": continue
+                if label == "Truth": continue
 
                 ratio = (y * scale)/ (hists[0] * scales[0])
                 ratio_err = np.sqrt((y_err / y)**2 + (hist_errors[0] / hists[0])**2)
@@ -113,16 +119,19 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
 
             axs[0].legend(loc="upper right", frameon=False)
             axs[0].set_ylabel("Normalized", fontsize = FONTSIZE)
+            
             if "p_{T" in name or "mu" in name:
                 axs[0].set_yscale("log")
 
-            axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{True}}$",
+            axs[0].set_xlim(range)
+
+            axs[1].set_ylabel(r"$\frac{\mathrm{Model}}{\mathrm{Truth}}$",
                     fontsize = FONTSIZE)
-            axs[1].set_yticks([0.95,1,1.05])
-            axs[1].set_ylim([0.9,1.1])
-            axs[1].axhline(y=1, c="black", ls="--", lw=0.7)
-            axs[1].axhline(y=1.2, c="black", ls="dotted", lw=0.5)
-            axs[1].axhline(y=0.8, c="black", ls="dotted", lw=0.5)
+            axs[1].set_yticks(error_ticks)
+            axs[1].set_ylim(error_range)
+            axs[1].axhline(y=error_ticks[0], c="black", ls="dotted", lw=0.5)
+            axs[1].axhline(y=error_ticks[1], c="black", ls="--", lw=0.7)
+            axs[1].axhline(y=error_ticks[2], c="black", ls="dotted", lw=0.5)
             plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                     fontsize = FONTSIZE)
 
@@ -137,15 +146,20 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
             axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
 
+            axs[0].tick_params(axis="both", labelsize=TICKLABELSIZE)
+            axs[1].tick_params(axis="both", labelsize=TICKLABELSIZE)
+            axs[2].tick_params(axis="both", labelsize=TICKLABELSIZE)
 
-            plt.savefig(pp, bbox_inches="tight", format="pdf", pad_inches=0.05)
+            plt.savefig(pp, bbox_inches="tight", format="pdf")
             plt.close()
 
 
 def delta_phi(y, idx1, idx2):
     # return y[:,idx1] - y[:,idx2]
-    dphi = np.abs(y[:,idx1] - y[:,idx2])
-    return np.where(dphi > np.pi, 2*np.pi - dphi, dphi)
+    #dphi = np.abs(y[:,idx1] - y[:,idx2])
+    #return np.where(dphi > np.pi, 2*np.pi - dphi, dphi)
+    dphi = y[:,idx1] - y[:,idx2] #alternative implementation (without abs)
+    return (dphi + np.pi) % (2*np.pi) - np.pi
 
 
 def delta_eta(y, idx1, idx2):

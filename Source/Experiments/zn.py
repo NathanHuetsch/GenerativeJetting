@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from Source.Util.datasets import Dataset
 from Source.Util.util import get_device, save_params, get, load_params, magic_trafo, inverse_magic_trafo
 from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
-from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
+from Source.Util.plots import plot_obs, delta_r, delta_phi, plot_deta_dphi, plot_obs_2d, plot_loss, plot_binned_sigma, plot_mu_sigma
 from Source.Util.physics import get_M_ll
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Experiments.jet import Jet_Experiment
@@ -13,7 +13,7 @@ import os, sys, time, random
 
 class Zn_Experiment(Jet_Experiment):
     """
-    Class to run Z+njet generative modelling experiments
+    Class to run Z+njet generative modelling experiments with the transformer
     """
 
     def __init__(self, params):
@@ -27,16 +27,12 @@ class Zn_Experiment(Jet_Experiment):
             self.plot_channels = self.channels
             self.params["plot_channels"] = self.channels
 
+        # implemented only for AutoRegGMM
+        model_type = params["model"]
+        assert model_type == "AutoRegGMM", f"__init__: Conditional jet generation (transformer style) only implemented for AutoRegGMM, but you are using {model_type}"
+        
 
     def load_data(self):
-        """
-        The load_data method gets the necessary parameters and reads in the data
-        Currently supported are datasets of type *.npy ; *.torch ; *.h5
-
-        Overwrite this method if other ways of reading in data are needed
-        This method should place the data under self.data_raw
-                """
-        # Read in the "data_path" parameter. Raise and error if it is not specified or does not exist
         data_path = get(self.params, "data_path", None)
         fraction = get(self.params,"fraction",None)
         if data_path is None:
@@ -64,6 +60,7 @@ class Zn_Experiment(Jet_Experiment):
         channels_3jet_raw = np.array(self.params["channels"], dtype="int")
         channels_1jet_raw = channels_3jet_raw[~np.isin(channels_3jet_raw, np.array([1, 3, 7, 12, 13, 14, 15, 16, 17, 18, 19])).astype("bool")]
         channels_2jet_raw = channels_3jet_raw[~np.isin(channels_3jet_raw, np.array([1, 3, 7, 16, 17, 18, 19])).astype("bool")]
+        
         self.channels_njet_raw = [channels_1jet_raw, channels_2jet_raw, channels_3jet_raw] #used for preprocessing
         
         channels_1jet = np.arange(0, 9)
@@ -83,6 +80,7 @@ class Zn_Experiment(Jet_Experiment):
 
         def preprocess_for_njets(data_raw, n_jets, p):
             p["channels"] = self.channels_njet_raw[n_jets-1]
+            p["n_jets"] = n_jets
             
             data_raw = preformat(data_raw, p)
             data, data_mean, data_std, data_u, data_s, bin_edges, bin_means = preprocess(data_raw, p)
@@ -132,7 +130,9 @@ class Zn_Experiment(Jet_Experiment):
         self.data_train_3 = self.data_raw_3[:cut_3_1]
         self.data_test_3 = self.data_raw_3[cut_3_2:]
 
-        self.model.data_train = self.data_train_3 #for KL loss (this is technically cheating, should fix this)
+        # needed for KL loss (this is technically wrong by a factor of 3,
+        # but does not affect results - tested different prior widths)
+        self.model.data_train = self.data_train_3 
 
         if train:
             train_set = Conditional_Jet_Dataset(self.data_1[:cut_1_1], self.data_2[:cut_2_1], self.data_3[:cut_3_1])
@@ -251,7 +251,7 @@ class Zn_Experiment(Jet_Experiment):
             if get(self.params, "weight_loss", True):
                 loss = (loss1 * 17/9 + loss2 * 17/13 + loss3)/3 #reweight the losses to make all multiplicities equally important, irrespective of the differences
             else:
-                loss = (loss1 + loss2 + loss3)/3 #multiplicities differently important                 
+                loss = (loss1 + loss2 + loss3)/3 #multiplicities differently important
 
             if np.isfinite(loss.item()): 
                 loss.backward()
@@ -753,10 +753,15 @@ class Zn_Experiment(Jet_Experiment):
                     channel1 = channels[0]
                     channel2 = channels[1]
                     obs_name = self.obs_names[channel1] + " - " + self.obs_names[channel2]
-                    
-                    obs_train = plot_train_1[:, channel1] - plot_train_1[:, channel2]
-                    obs_test = plot_test_1[:, channel1] - plot_test_1[:, channel2]
-                    obs_generated = plot_samples_1[:, channel1] - plot_samples_1[:, channel2]
+
+                    if channel1%2==0: #is eta            
+                        obs_train = plot_train_1[:, channel1] - plot_train_1[:, channel2]
+                        obs_test = plot_test_1[:, channel1] - plot_test_1[:, channel2]
+                        obs_generated = plot_samples_1[:, channel1] - plot_samples_1[:, channel2]
+                    else: #is phi
+                        obs_train = delta_phi(plot_train_1, channel1, channel2)
+                        obs_test = delta_phi(plot_test_1, channel1, channel2)
+                        obs_generated = delta_phi(plot_samples_1, channel1, channel2)
                     plot_obs(pp=out,
                                  obs_train=obs_train,
                                  obs_test=obs_test,
@@ -773,9 +778,14 @@ class Zn_Experiment(Jet_Experiment):
                     channel2 = channels[1]
                     obs_name = self.obs_names[channel1] + " - " + self.obs_names[channel2]
                     
-                    obs_train = plot_train_2[:, channel1] - plot_train_2[:, channel2]
-                    obs_test = plot_test_2[:, channel1] - plot_test_2[:, channel2]
-                    obs_generated = plot_samples_2[:, channel1] - plot_samples_2[:, channel2]
+                    if channel1%2==0: #is eta            
+                        obs_train = plot_train_2[:, channel1] - plot_train_2[:, channel2]
+                        obs_test = plot_test_2[:, channel1] - plot_test_2[:, channel2]
+                        obs_generated = plot_samples_2[:, channel1] - plot_samples_2[:, channel2]
+                    else: #is phi
+                        obs_train = delta_phi(plot_train_2, channel1, channel2)
+                        obs_test = delta_phi(plot_test_2, channel1, channel2)
+                        obs_generated = delta_phi(plot_samples_2, channel1, channel2)
                     plot_obs(pp=out,
                                  obs_train=obs_train,
                                  obs_test=obs_test,
@@ -793,9 +803,14 @@ class Zn_Experiment(Jet_Experiment):
                     channel2 = channels[1]
                     obs_name = self.obs_names[channel1] + " - " + self.obs_names[channel2]
                     
-                    obs_train = plot_train_3[:, channel1] - plot_train_3[:, channel2]
-                    obs_test = plot_test_3[:, channel1] - plot_test_3[:, channel2]
-                    obs_generated = plot_samples_3[:, channel1] - plot_samples_3[:, channel2]
+                    if channel1%2==0: #is eta            
+                        obs_train = plot_train_3[:, channel1] - plot_train_3[:, channel2]
+                        obs_test = plot_test_3[:, channel1] - plot_test_3[:, channel2]
+                        obs_generated = plot_samples_3[:, channel1] - plot_samples_3[:, channel2]
+                    else: #is phi
+                        obs_train = delta_phi(plot_train_3, channel1, channel2)
+                        obs_test = delta_phi(plot_test_3, channel1, channel2)
+                        obs_generated = delta_phi(plot_samples_3, channel1, channel2)
                     plot_obs(pp=out,
                                  obs_train=obs_train,
                                  obs_test=obs_test,
@@ -828,6 +843,9 @@ class Zn_Experiment(Jet_Experiment):
         self.finish_up()
 
 class Conditional_Jet_Dataset(Dataset):
+    '''
+    Special Dataset class for joint training on 1,2,3jet data
+    '''
     def __init__(self, data_1, data_2, data_3):
         self.data_1 = data_1
         self.data_2 = data_2
@@ -850,6 +868,9 @@ class Conditional_Jet_Dataset(Dataset):
         return (x1, x2, x3)
 
 class Conditional_Jet_DataLoader(DataLoader):
+    '''
+    Special Dataloader class for joint training on 1,2,3jet data
+    '''
     def __init__(self, dataset, batch_size, shuffle=True, num_workers=0, collate_fn=None, pin_memory=False, drop_last=False, pre_epoch_callback=None):
         super().__init__(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=collate_fn, pin_memory=pin_memory, drop_last=drop_last)
         
