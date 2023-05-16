@@ -54,12 +54,6 @@ def preprocess(data, params):
     else:
         events = data.copy()
 
-    if reparametrize==1: #work with angular differences
-        if n_jets >= 2:
-            events[:,13] = getAngle(events[:,13]-events[:,9])
-        if n_jets >= 3:
-            events[:,17] = getAngle(events[:,17]-events[:,13])
-
     if preprocess>=1:
         # apply log transform to pT
         events[:, 0] = np.log(events[:, 0])
@@ -70,8 +64,7 @@ def preprocess(data, params):
         events[:,3::4] = np.log(events[:,3::4])
 
         # apply artanh transform to phi
-        if len(channels_periodic) == 0:
-            events[:, 1::4] = np.arctanh(events[:, 1::4]/np.pi)
+        events[:, 1::4] = np.arctanh(events[:, 1::4]/np.pi)
 
     # discard unwanted channels
     events = events[:, channels]
@@ -130,8 +123,6 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
     channels = params["channels"]
     conditional = get(params, "conditional", False)
     n_jets = get(params, "n_jets", 2)
-    channels_periodic = get(params, "channels_periodic", [])
-    reparametrize = get(params, "reparametrize", 0)
     
     if conditional and n_jets != 3:
         cut = 4 - n_jets
@@ -158,8 +149,7 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
 
     if preprocess>=1:
         # undo atanh transform
-        if len(channels_periodic) == 0:
-            events[:,1::4] = np.tanh(events[:, 1::4]) * np.pi
+        events[:,1::4] = np.tanh(events[:, 1::4]) * np.pi
 
         # undo log transform
         events[:, 0] = np.exp(events[:, 0])
@@ -167,10 +157,6 @@ def undo_preprocessing(data, events_mean, events_std, u, s, bin_edges, bin_means
         events[:, 8::4] = np.exp(events[:, 8::4]) + 20 - 1e-2
 
         events[:, 3::4] = np.exp(events[:,3::4])
-
-    if reparametrize==1:
-        events[:,13] = getAngle(events[:,9]+events[:,13])
-        events[:,17] = getAngle(events[:,13]+events[:,17])
 
     if conditional and n_jets != 3:
         cut = 4 - n_jets

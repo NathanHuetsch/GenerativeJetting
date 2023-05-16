@@ -69,14 +69,10 @@ class Zn_Experiment(Jet_Experiment):
         
         encode_njet = get(self.params, "encode_njet", "factorize")
         self.magic_transformation = get(self.params, "magic_transformation", False)
-        if encode_njet == "factorize": # embed n_jets seperately
-            self.params["dim"] = max(channels)+1
-            self.n_jets = [1, 2, 3]
-            self.channels_njet = self.channels_njet_raw #used for positional embedding
-        elif encode_njet == "joint": # combined n_jets and positional embedding
-            self.params["dim"] = 9+13+17
-            self.n_jets = [None, None, None]
-            self.channels_njet = [channels_1jet, channels_2jet, channels_3jet]
+    
+        self.params["dim"] = max(channels)+1
+        self.n_jets = [1, 2, 3]
+        self.channels_njet = self.channels_njet_raw #used for positional embedding
 
         def preprocess_for_njets(data_raw, n_jets, p):
             p["channels"] = self.channels_njet_raw[n_jets-1]
@@ -237,21 +233,13 @@ class Zn_Experiment(Jet_Experiment):
         train_losses = np.array([])
         for batch_id, x in enumerate(self.model.train_loader):
             x1, x2, x3 = x
-            if get(self.params, "weight_datasets", False):
-                fac2jet = int(len(self.data_train_2)/len(self.data_train_1)*len(x1))
-                fac3jet = int(len(self.data_train_3)/len(self.data_train_1)*len(x1))
-                x2 = x2[:fac2jet,:]
-                x3 = x3[:fac3jet,:]
                 
             self.model.optimizer.zero_grad()
             loss1 = self.model.batch_loss(x1, n_jets=self.n_jets[0], pos=self.channels_njet[0])
             loss2 = self.model.batch_loss(x2, n_jets=self.n_jets[1], pos=self.channels_njet[1])
             loss3 = self.model.batch_loss(x3, n_jets=self.n_jets[2], pos=self.channels_njet[2])
 
-            if get(self.params, "weight_loss", True):
-                loss = (loss1 * 17/9 + loss2 * 17/13 + loss3)/3 #reweight the losses to make all multiplicities equally important, irrespective of the differences
-            else:
-                loss = (loss1 + loss2 + loss3)/3 #multiplicities differently important
+            loss = (loss1 + loss2 + loss3)/3 #multiplicities differently important
 
             if np.isfinite(loss.item()): 
                 loss.backward()
