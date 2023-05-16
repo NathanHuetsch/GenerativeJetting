@@ -3,5 +3,6 @@
 /.idea
 /params/
 /runfiles/
+/paper/toy/
+/paper/jet/
 *__pycache__*
-*.pdf
