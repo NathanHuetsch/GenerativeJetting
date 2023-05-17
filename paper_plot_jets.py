@@ -277,13 +277,13 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                     y_ticks=[0.8,1,1.2],
                     unit = obs_unit,
                     predict_weights=weights)
-
-        obs_name = "M_{\mu \mu}"
-        obs_range = [79, 104]
-        data_train = get_M_ll(plot_train[j])
-        data_test = get_M_ll(plot_test[j])
-        data_generated = get_M_ll(plot_samples[j])
-        plot_paper(pp=out,
+        if n_jets == 1 :
+            obs_name = "M_{\mu \mu}"
+            obs_range = [79, 104]
+            data_train = get_M_ll(plot_train[j])
+            data_test = get_M_ll(plot_test[j])
+            data_generated = get_M_ll(plot_samples[j])
+            plot_paper(pp=out,
              obs_train=data_train,
              obs_test=data_test,
              obs_predict=data_generated,
@@ -297,12 +297,12 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
              y_ticks=[0.8,1,1.2],
              unit = unit)
 
-        obs_name = "\Delta R_{l1 l2}"
-        obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
-        obs_test = delta_r(plot_test[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
-        obs_generated = delta_r(plot_samples[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
-        weights = plot_weights[j]
-        plot_paper(pp=out,
+            obs_name = "\Delta R_{l1 l2}"
+            obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
+            obs_test = delta_r(plot_test[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
+            weights = plot_weights[j]
+            plot_paper(pp=out,
              obs_train=obs_train,
              obs_test=obs_test,
              obs_predict=obs_generated,
@@ -314,11 +314,11 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
              error_range=[0.71, 1.29],
              y_ticks=[0.8, 1, 1.2])
 
-        obs_name = "\Delta R_{l1 j1}"
-        obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
-        obs_test = delta_r(plot_test[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
-        obs_generated = delta_r(plot_samples[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
-        plot_paper(pp=out,
+            obs_name = "\Delta R_{l1 j1}"
+            obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
+            obs_test = delta_r(plot_test[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
+            plot_paper(pp=out,
              obs_train=obs_train,
              obs_test=obs_test,
              obs_predict=obs_generated,
@@ -330,16 +330,16 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
              error_range=[0.71, 1.29],
              y_ticks=[0.8, 1, 1.2])
 
-        obs_name = "\Delta R_{l2 j1}"
-        obs_train = delta_r(plot_train[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
-        obs_test = delta_r(plot_test[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
-        obs_generated = delta_r(plot_samples[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
-        plot_paper(pp=out,
+            obs_name = "\Delta R_{l2 j1}"
+            obs_train = delta_r(plot_train[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
+            obs_test = delta_r(plot_test[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
+            plot_paper(pp=out,
              obs_train=obs_train,
              obs_test=obs_test,
              obs_predict=obs_generated,
              name=obs_name,
-             n_jets= n_jets,
+             n_jets=j+ n_jets,
              range=[0, 8],
              weight_samples=experiment.model.iterations,
              predict_weights=weights,
@@ -347,12 +347,11 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
              y_ticks=[0.8, 1, 1.2])
 
         if n_jets == 1:
-            differences = [[2, 6], [2, 10], [6, 10], [5, 9], [1, 5], [1, 9]]
+            differences = [[2, 6], [2, 10], [6, 10], [5, 9]]
         elif n_jets == 2:
-            differences = [[2, 14], [6, 14], [10, 14], [5, 13], [9, 13],
-                       [1, 13]]
+            differences = [[2, 14], [6, 14], [10, 14], [5, 13], [9, 13]]
         else:
-            differences = [[2, 18], [6, 18], [10, 18], [14, 18], [5, 17], [9, 17], [13, 17],[1, 17]]
+            differences = [[2, 18], [6, 18], [10, 18], [14, 18], [5, 17], [9, 17], [13, 17]]
 
         for channels in differences:
             channel1 = channels[0]
