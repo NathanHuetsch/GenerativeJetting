@@ -181,11 +181,14 @@ params['save_samples'] = True
 
 n_jets = get(params,"n_jets",3)
 if n_jets == 1:
+    params["plot_channels"] = [0,2,4,5,6,8,9,10,11]
     experiment = z1.Z1_Experiment(params)
 
 elif n_jets == 2:
+    params["plot_channels"] = [12,13,14,15]
     experiment = z2.Z2_Experiment(params)
 elif n_jets == 3:
+    params["plot_channels"] = [16, 17, 18, 19]
     experiment = z3.Z3_Experiment(params)
 else:
     experiment = None
@@ -249,19 +252,20 @@ else:
 
 
 with PdfPages(f"{path}/paper_plots.pdf") as out:
-    for i, channel in enumerate(experiment.model.params["plot_channels"]):
-        obs_train = plot_train[0][:, channel]
-        obs_test = plot_test[0][:, channel]
-        obs_generated = plot_samples[0][:, channel]
-        # Get the name and the range of the observable
-        obs_name = experiment.model.obs_names[channel]
-        obs_range = experiment.model.obs_ranges[channel]
-        obs_unit = experiment.model.obs_units[channel]
+    for j, _ in enumerate(plot_train):
+        for i, channel in enumerate(experiment.model.params["plot_channels"]):
+            obs_train = plot_train[j][:, channel]
+            obs_test = plot_test[j][:, channel]
+            obs_generated = plot_samples[j][:, channel]
+            # Get the name and the range of the observable
+            obs_name = experiment.model.obs_names[channel]
+            obs_range = experiment.model.obs_ranges[channel]
+            obs_unit = experiment.model.obs_units[channel]
 
-        weights = plot_weights[0]
+            weights = plot_weights[j]
 
         # Create the plot
-        plot_paper(pp=out,
+            plot_paper(pp=out,
                     obs_train=obs_train,
                     obs_test=obs_test,
                     obs_predict=obs_generated,
@@ -269,17 +273,17 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                     range=obs_range,
                     weight_samples=experiment.model.iterations,
                     error_range=[0.71,1.29],
-                    n_jets=n_jets,
+                    n_jets=j+n_jets,
                     y_ticks=[0.8,1,1.2],
                     unit = obs_unit,
                     predict_weights=weights)
 
-    obs_name = "M_{\mu \mu}"
-    obs_range = [79, 104]
-    data_train = get_M_ll(plot_train[0])
-    data_test = get_M_ll(plot_test[0])
-    data_generated = get_M_ll(plot_samples[0])
-    plot_paper(pp=out,
+        obs_name = "M_{\mu \mu}"
+        obs_range = [79, 104]
+        data_train = get_M_ll(plot_train[j])
+        data_test = get_M_ll(plot_test[j])
+        data_generated = get_M_ll(plot_samples[j])
+        plot_paper(pp=out,
              obs_train=data_train,
              obs_test=data_test,
              obs_predict=data_generated,
@@ -289,48 +293,48 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
              weight_samples=experiment.model.iterations,
              predict_weights=weights,
              error_range=[0.71,1.29],
-             n_jets=n_jets,
+             n_jets=j+n_jets,
              y_ticks=[0.8,1,1.2],
              unit = unit)
 
-    obs_name = "\Delta R_{l1 l2}"
-    obs_train = delta_r(plot_train[0], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
-    obs_test = delta_r(plot_test[0], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
-    obs_generated = delta_r(plot_samples[0], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
-    weights = plot_weights[0]
-    plot_paper(pp=out,
+        obs_name = "\Delta R_{l1 l2}"
+        obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
+        obs_test = delta_r(plot_test[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
+        obs_generated = delta_r(plot_samples[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
+        weights = plot_weights[j]
+        plot_paper(pp=out,
              obs_train=obs_train,
              obs_test=obs_test,
              obs_predict=obs_generated,
              name=obs_name,
-             n_jets=n_jets,
+             n_jets=j+n_jets,
              range=[0, 8],
              weight_samples=experiment.model.iterations,
              predict_weights=weights,
              error_range=[0.71, 1.29],
              y_ticks=[0.8, 1, 1.2])
 
-    obs_name = "\Delta R_{l1 j1}"
-    obs_train = delta_r(plot_train[0], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
-    obs_test = delta_r(plot_test[0], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
-    obs_generated = delta_r(plot_samples[0], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
-    plot_paper(pp=out,
+        obs_name = "\Delta R_{l1 j1}"
+        obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
+        obs_test = delta_r(plot_test[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
+        obs_generated = delta_r(plot_samples[j], idx_phi1=1, idx_eta1=2, idx_phi2=9, idx_eta2=10)
+        plot_paper(pp=out,
              obs_train=obs_train,
              obs_test=obs_test,
              obs_predict=obs_generated,
              name=obs_name,
-             n_jets=n_jets,
+             n_jets=j+n_jets,
              range=[0, 8],
              weight_samples=experiment.model.iterations,
              predict_weights=weights,
              error_range=[0.71, 1.29],
              y_ticks=[0.8, 1, 1.2])
 
-    obs_name = "\Delta R_{l2 j1}"
-    obs_train = delta_r(plot_train[0], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
-    obs_test = delta_r(plot_test[0], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
-    obs_generated = delta_r(plot_samples[0], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
-    plot_paper(pp=out,
+        obs_name = "\Delta R_{l2 j1}"
+        obs_train = delta_r(plot_train[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
+        obs_test = delta_r(plot_test[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
+        obs_generated = delta_r(plot_samples[j], idx_phi1=5, idx_eta1=6, idx_phi2=9, idx_eta2=10)
+        plot_paper(pp=out,
              obs_train=obs_train,
              obs_test=obs_test,
              obs_predict=obs_generated,
@@ -342,41 +346,45 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
              error_range=[0.71, 1.29],
              y_ticks=[0.8, 1, 1.2])
 
-    if n_jets == 1:
-        differences = [[2, 6], [2, 10], [6, 10], [5, 9], [1, 5], [1, 9]]
-    elif n_jets == 2:
-        differences = [[2, 6], [2, 10], [2, 14], [6, 10], [6, 14], [10, 14], [5, 9], [5, 13], [9, 13], [1, 5], [1, 9],
+        if n_jets == 1:
+            differences = [[2, 6], [2, 10], [6, 10], [5, 9], [1, 5], [1, 9]]
+        elif n_jets == 2:
+            differences = [[2, 14], [6, 14], [10, 14], [5, 13], [9, 13],
                        [1, 13]]
-    else:
-        differences = [[2, 6], [2, 10], [2, 14], [6, 10], [6, 14], [10, 14], [5, 9], [5, 13], [9, 13],
-                       [2, 18], [6, 18], [10, 18], [14, 18], [5, 17], [9, 17], [13, 17], [1, 5], [1, 9], [1, 13],
-                       [1, 17]]
-    for channels in differences:
-        channel1 = channels[0]
-        channel2 = channels[1]
-        obs_name = experiment.model.obs_names[channel1] + " - " + experiment.model.obs_names[channel2]
-        obs_train = plot_train[0][:, channel1] - plot_train[0][:, channel2]
-        obs_test = plot_test[0][:, channel1] - plot_test[0][:, channel2]
-        obs_generated = plot_samples[0][:, channel1] - plot_samples[0][:, channel2]
-        weights = plot_weights[0]
-        plot_paper(pp=out,
+        else:
+            differences = [[2, 18], [6, 18], [10, 18], [14, 18], [5, 17], [9, 17], [13, 17],[1, 17]]
+
+        for channels in differences:
+            channel1 = channels[0]
+            channel2 = channels[1]
+            obs_name = experiment.model.obs_names[channel1] + " - " + experiment.model.obs_names[channel2]
+            obs_train = plot_train[j][:, channel1] - plot_train[j][:, channel2]
+            obs_test = plot_test[j][:, channel1] - plot_test[j][:, channel2]
+            obs_generated = plot_samples[j][:, channel1] - plot_samples[j][:, channel2]
+            weights = plot_weights[j]
+            if channels in [[1, 5], [1, 9], [1, 13], [1, 17], [5, 9], [5, 13], [5, 17],
+                        [9, 13], [9, 17], [13, 17]]:
+                obs_train = (obs_train + np.pi) % (2 * np.pi) - np.pi
+                obs_test = (obs_test + np.pi) % (2 * np.pi) - np.pi
+                obs_generated = (obs_generated + np.pi) % (2 * np.pi) - np.pi
+            plot_paper(pp=out,
                  obs_train=obs_train,
                  obs_test=obs_test,
                  obs_predict=obs_generated,
                  name=obs_name,
-                 n_jets= n_jets,
+                 n_jets= j+n_jets,
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
                  error_range=[0.71, 1.29],
                  y_ticks=[0.8, 1, 1.2])
 
-    if n_jets > 1:
-        obs_name = "\Delta R_{j1 j2}"
-        obs_train = delta_r(plot_train[0])
-        obs_test = delta_r(plot_test[0])
-        weights = plot_weights[0]
-        obs_generated = delta_r(plot_samples[0])
-        plot_paper(pp=out,
+        if n_jets == 2:
+            obs_name = "\Delta R_{j1 j2}"
+            obs_train = delta_r(plot_train[j])
+            obs_test = delta_r(plot_test[j])
+            weights = plot_weights[j]
+            obs_generated = delta_r(plot_samples[j])
+            plot_paper(pp=out,
                  obs_train=obs_train,
                  obs_test=obs_test,
                  obs_predict=obs_generated,
@@ -386,14 +394,14 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
                  error_range = [0.71,1.29],
-                 n_jets=n_jets,
+                 n_jets=j+n_jets,
                  y_ticks=[0.8,1,1.2])
 
-        obs_name = "\Delta R_{l1 j2}"
-        obs_train = delta_r(plot_train[0], idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
-        obs_test = delta_r(plot_test[0], idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
-        obs_generated = delta_r(plot_samples[0], idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
-        plot_paper(pp=out,
+            obs_name = "\Delta R_{l1 j2}"
+            obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
+            obs_test = delta_r(plot_test[j], idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=1, idx_eta1=2, idx_phi2=13, idx_eta2=14)
+            plot_paper(pp=out,
                  obs_train=obs_train,
                  obs_test=obs_test,
                  obs_predict=obs_generated,
@@ -403,14 +411,14 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
                  error_range=[0.71, 1.29],
-                 n_jets=n_jets,
+                 n_jets=j+n_jets,
                  y_ticks=[0.8, 1, 1.2])
 
-        obs_name = "\Delta R_{l2 j2}"
-        obs_train = delta_r(plot_train[0], idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
-        obs_test = delta_r(plot_test[0], idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
-        obs_generated = delta_r(plot_samples[0], idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
-        plot_paper(pp=out,
+            obs_name = "\Delta R_{l2 j2}"
+            obs_train = delta_r(plot_train[j], idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
+            obs_test = delta_r(plot_test[j], idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=5, idx_eta1=6, idx_phi2=13, idx_eta2=14)
+            plot_paper(pp=out,
                  obs_train=obs_train,
                  obs_test=obs_test,
                  obs_predict=obs_generated,
@@ -420,16 +428,16 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
                  error_range=[0.71, 1.29],
-                 n_jets=n_jets,
+                 n_jets=j+n_jets,
                  y_ticks=[0.8, 1, 1.2])
 
-    if n_jets > 2:
-        obs_name = "\Delta R_{j1 j3}"
-        obs_train = delta_r(plot_train[0], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
-        obs_test = delta_r(plot_test[0], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
-        obs_generated = delta_r(plot_samples[0], idx_phi1=9, idx_eta1=10, idx_phi2=17,
+        if n_jets == 3:
+            obs_name = "\Delta R_{j1 j3}"
+            obs_train = delta_r(plot_train[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+            obs_test = delta_r(plot_test[j], idx_phi1=9, idx_eta1=10, idx_phi2=17, idx_eta2=18)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=9, idx_eta1=10, idx_phi2=17,
                                 idx_eta2=18)
-        plot_paper(pp=out,
+            plot_paper(pp=out,
                  obs_train=obs_train,
                  obs_test=obs_test,
                  obs_predict=obs_generated,
@@ -439,14 +447,14 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
                  error_range = [0.71,1.29],
-                 n_jets=n_jets,
+                 n_jets=j+n_jets,
                  y_ticks=[0.8,1,1.2])
-        obs_name = "\Delta R_{j2 j3}"
-        obs_train = delta_r(plot_train[0], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-        obs_test = delta_r(plot_test[0], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
-        obs_generated = delta_r(plot_samples[0], idx_phi1=13, idx_eta1=14, idx_phi2=17,
+            obs_name = "\Delta R_{j2 j3}"
+            obs_train = delta_r(plot_train[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+            obs_test = delta_r(plot_test[j], idx_phi1=13, idx_eta1=14, idx_phi2=17, idx_eta2=18)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=13, idx_eta1=14, idx_phi2=17,
                                 idx_eta2=18)
-        plot_paper(pp=out,
+            plot_paper(pp=out,
                  obs_train=obs_train,
                  obs_test=obs_test,
                  obs_predict=obs_generated,
@@ -456,14 +464,14 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
                  error_range = [0.71,1.29],
-                 n_jets=n_jets,
+                 n_jets=j+n_jets,
                  y_ticks=[0.8,1,1.2])
 
-        obs_name = "\Delta R_{l1 j3}"
-        obs_train = delta_r(plot_train[0], idx_phi1=1, idx_eta1=2, idx_phi2=17, idx_eta2=18)
-        obs_test = delta_r(plot_test[0], idx_phi1=1, idx_eta1=2, idx_phi2=17, idx_eta2=18)
-        obs_generated = delta_r(plot_samples[0], idx_phi1=1, idx_eta1=2, idx_phi2=17, idx_eta2=18)
-        plot_paper(pp=out,
+            obs_name = "\Delta R_{l1 j3}"
+            obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=17, idx_eta2=18)
+            obs_test = delta_r(plot_test[j], idx_phi1=1, idx_eta1=2, idx_phi2=17, idx_eta2=18)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=1, idx_eta1=2, idx_phi2=17, idx_eta2=18)
+            plot_paper(pp=out,
                  obs_train=obs_train,
                  obs_test=obs_test,
                  obs_predict=obs_generated,
@@ -473,14 +481,14 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
                  error_range=[0.71, 1.29],
-                 n_jets=n_jets,
+                 n_jets=j+n_jets,
                  y_ticks=[0.8, 1, 1.2])
 
-        obs_name = "\Delta R_{l2 j3}"
-        obs_train = delta_r(plot_train[0], idx_phi1=5, idx_eta1=6, idx_phi2=17, idx_eta2=18)
-        obs_test = delta_r(plot_test[0], idx_phi1=5, idx_eta1=6, idx_phi2=17, idx_eta2=18)
-        obs_generated = delta_r(plot_samples[0], idx_phi1=5, idx_eta1=6, idx_phi2=17, idx_eta2=18)
-        plot_paper(pp=out,
+            obs_name = "\Delta R_{l2 j3}"
+            obs_train = delta_r(plot_train[j], idx_phi1=5, idx_eta1=6, idx_phi2=17, idx_eta2=18)
+            obs_test = delta_r(plot_test[j], idx_phi1=5, idx_eta1=6, idx_phi2=17, idx_eta2=18)
+            obs_generated = delta_r(plot_samples[j], idx_phi1=5, idx_eta1=6, idx_phi2=17, idx_eta2=18)
+            plot_paper(pp=out,
                  obs_train=obs_train,
                  obs_test=obs_test,
                  obs_predict=obs_generated,
@@ -490,7 +498,7 @@ with PdfPages(f"{path}/paper_plots.pdf") as out:
                  weight_samples=experiment.model.iterations,
                  predict_weights=weights,
                  error_range=[0.71, 1.29],
-                 n_jets=n_jets,
+                 n_jets=j+n_jets,
                  y_ticks=[0.8, 1, 1.2])
 
 
