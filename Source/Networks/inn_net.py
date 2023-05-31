@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from functools import partial
 
 from FrEIA.framework import *
 from FrEIA.modules import *
@@ -10,10 +11,139 @@ from scipy.stats import special_ortho_group
 import numpy as np
 import math
 
+from Source.Networks.vblinear import VBLinear
+
 """
 The necessary code to build the INNs.
 Any questions are best asked to Theo. I have no clue.
 """
+class INNnet(nn.Module):
+    def __init__(self, params):
+        super().__init__()
+        # Load all hyperparameters
+        self.params = params
+
+        #Get bayesian parameters
+        self.bayesian = self.params.get("bayesian", False)
+        self.prior_prec = self.params.get("prior_prec", 1.)
+
+        # set input and conditional dimension
+        self.dim = self.params.get("dim", 4)
+        self.conditional = self.params.get("conditional",False)
+        self.n_con = self.params.get("n_con", 3)
+
+        # set network parameters
+        self.intermediate_dim = self.params.get("intermediate_dim", 128)
+        self.layers_per_block = self.params.get("layers_per_block", 4)
+        self.n_blocks = self.params.get("n_blocks", 4)
+
+        # set spline parameters
+        self.use_splines = self.params.get("use_splines", False)
+        self.permutation_seed = self.params.get("seed", None)
+        self.clamping = self.params.get("clamping", 2.)
+        self.spline_bound = self.params.get("spline_bound", 1.)
+
+        # special layers
+        self.dropout = self.params.get("dropout", 0.0)
+
+        # build subnet function
+        self.constructor_fct = partial(create_fully_connected_net, dims_intern=self.intermediate_dim,
+                                       num_layers=self.layers_per_block, dropout=self.dropout, bayesian=self.bayesian,
+                                       prior_prec= self.prior_prec)
+        # build INN
+        self.inn = self.build()
+
+        # build list of bayesian layers to keep track of kl term
+        if self.bayesian:
+            self.bayesian_modules = []
+            for module in self.modules():
+                if hasattr(module, "KL") and module != self:
+                    self.bayesian_modules.append(module)
+
+    def get_coupling_block(self):
+        # Define subnet construction function
+        block_kwargs = {
+            "subnet_constructor": self.constructor_fct }
+
+        # If true, build cubic spline blocks and set needed parameters
+        if self.use_splines == "cubic":
+            CouplingBlock = CubicSplineBlock
+            block_kwargs['num_bins'] = self.params.get("num_bins", 10)
+            block_kwargs['bounds_init'] = self.spline_bound
+            block_kwargs['permute_soft'] = self.params.get("permute_soft", True)
+
+        # If true, build quadratic spline blocks and set needed parameters
+        elif self.use_splines == "quadratic":
+            CouplingBlock = QuadraticSplineBlock
+            block_kwargs['num_bins'] = self.params.get("num_bins", 10)
+            block_kwargs['bounds_init'] = self.spline_bound
+            block_kwargs['permute_soft'] = self.params.get("permute_soft", True)
+
+        # Else build simple affine coupling blocks
+        else:
+            CouplingBlock = AllInOneBlock
+            block_kwargs['affine_clamping'] = self.clamping
+
+        return CouplingBlock, block_kwargs
+
+    def build(self):
+        # Define list of nodes
+        nodes = []
+
+        # if true, build conditional node and append to nodes
+        if self.conditional:
+            node_condition = ConditionNode(self.n_con)
+            nodes.append(node_condition)
+        else:
+            node_condition = []
+
+        # Define input node
+        nodes.append(InputNode(self.dim,1, name='input'))
+        nodes.append(Node(nodes[-1], Flatten, {}, name='flatten'))
+
+        # Define coupling blocks and needed arguments
+        CouplingBlock, block_kwargs = self.get_coupling_block()
+
+        # Create n additional intermediate nodes where the condition is fed into
+        for i in range(self.params.get("n_blocks", 10)):
+            nodes.append(Node(nodes[-1], CouplingBlock, block_kwargs, name=f"block_{i}", conditions=node_condition))
+
+        # Create output node
+        nodes.append(OutputNode(nodes[-1], name='out'))
+
+        # build INN out of list of nodes
+        model = GraphINN(nodes, verbose=False)
+
+        return model
+
+    def reset_weight_samples(self):
+        assert hasattr(self, "bayesian_modules")
+
+        # make sure that for each sample iteration new weights are sampled
+        for module in self.bayesian_modules:
+            module.random = None
+
+    def eval(self):
+        super().eval()
+        # reset weights for each bayesian layer
+        if self.bayesian:
+            self.reset_weight_samples()
+
+    def kl(self):
+        # if true, sums over the kl terms of all bayesian layers
+        if  hasattr(self, "bayesian_modules"):
+            kl = sum(module.KL() for module in self.bayesian_modules)
+        else:
+            kl = 0
+        return kl
+
+    def forward(self, x, c=[], rev=False, jac=True):
+        x_out, log_jacobian_det =self.inn(x,c,rev=rev, jac=jac)
+
+        if rev:
+            return x_out[...,0], log_jacobian_det
+
+        return x_out, log_jacobian_det
 
 
 class CubicSplineBlock(InvertibleModule):
@@ -348,94 +478,258 @@ class CubicSplineBlock(InvertibleModule):
         # number of elements of the first channel of the first batch member
         n_pixels = x_out[0, :1].numel()
         log_jac_det += (-1)**rev * n_pixels * global_scaling_jac
+        self.kl = self.subnet.kl
         return (x_out,), log_jac_det
 
     def output_dims(self, input_dims):
         return input_dims
 
 
-class SubnetConstructor(nn.Module):
-    """This class constructs a subnet for the inner parts of the GLOWCouplingBlocks
-    as well as the condition preprocessor.
-    size_in: input size of the subnet
-    size: output size of the subnet
-    intermediate_dim: hidden size of the subnet. If None, set to 2*size
-    dropout: dropout chance of the subnet
-    """
+class QuadraticSplineBlock(InvertibleModule):
+    BIN_WIDTH_MIN = 1e-3
+    BIN_HEIGHT_MIN = 1e-3
+    DELTA_MIN = 1e-3
 
-    def __init__(self, num_layers, size_in, size_out, intermediate_dim=None, dropout=0.0,
-                 layer_class=nn.Linear):
-        super().__init__()
-        if intermediate_dim is None:
-            intermediate_dim = size_out * 2
-        if num_layers < 1:
-            raise(ValueError("Subnet size has to be 1 or greater"))
-        self.layer_list = []
-        for n in range(num_layers):
-            input_dim, output_dim = intermediate_dim, intermediate_dim
-            if n == 0:
-                input_dim = size_in
-            if n == num_layers -1:
-                output_dim = size_out
+    def _softplus_with_min(self, x, min=1e-3):
+        # give one when x is zero, give min when softplus(x) is zero
+        return min + (1 - min) * F.softplus(x) / math.log(2)
 
-            self.layer_list.append(layer_class(input_dim, output_dim))
+    def _softmax_with_min(self, x, min=1e-3):
+        # give min when any softmax(x) is zero but still sum to one
+        return min + (1 - min * x.shape[-1]) * F.softmax(x, dim=-1)
 
-            if n < num_layers - 1:
-                if dropout > 0:
-                    self.layer_list.append(nn.Dropout(p=dropout))
-                self.layer_list.append(nn.ReLU())
+    def __init__(self, dims_in, dims_c=[],
+                 subnet_constructor=None, perm=None, bin_count=10,
+                 bound=1):
+        super().__init__(dims_in, dims_c)
 
-        self.layers = nn.Sequential(*self.layer_list)
-        self.layers.apply(_weight_init)
+        # only one dimensional data is supported (same for condition)
+        assert len(dims_in) == 1 and len(dims_in[0]) == 1
+        self.channel_count = dims_in[0][0]
 
-        final_layer_name = str(len(list(self.layers.modules())) - 2)
-        for name, param in self.layers.named_parameters():
-            if name[0] == final_layer_name:
-                param.data *= 0.02
+        if len(dims_c) == 0:
+            self.condition_channels = 0
+            self.conditional = False
+        else:
+            assert len(dims_c[0]) == 1
+            self.condition_channels = dims_c[0][0]
+            self.conditional = True
 
-    def forward(self, x):
-        return self.layers(x)
+        self.splits = (self.channel_count - self.channel_count // 2, self.channel_count // 2)
+
+        # declaring as parameter makes sense for subtle reasons like automatically
+        # moving to right device and updating when setting the state dict
+
+        self.apply_spline_funcs = self._apply_splin
+        self.unpack_spline_params_funcs = self._unpack_spline_params
+
+        # contrary to https://arxiv.org/abs/1906.04032, we have 3 * bin_count + 1
+        # instead of 3 * bin_count - 1, because we also want to learn derivatives at
+        # the boundary; we don't care about discontinuities if our data is (mostly)
+        # in bounds, and otherwise you have to fix something anyway
+        assert not subnet_constructor is None
+
+        self.subnet = subnet_constructor(self.splits[0] + self.condition_channels,
+                                         (3 * bin_count + 1) * self.splits[1])
+
+        if perm is None:
+            perm = np.random.permutation(self.channel_count)
+
+        channel_perm = np.zeros((self.channel_count, self.channel_count))
+        for i, j in enumerate(perm):
+            channel_perm[i, j] = 1.
+
+        channel_perm = torch.FloatTensor(channel_perm)
+        self.channel_perm = nn.Parameter(channel_perm, requires_grad=False)
+        channel_inv_perm = torch.FloatTensor(channel_perm.T)
+        self.channel_inv_perm = nn.Parameter(channel_inv_perm, requires_grad=False)
+
+        self.bin_count = bin_count
+        self.bound = bound
+
+    def spline(self, xy, x_knots, y_knots, bin_widths, bin_heights,
+               knot_slopes, inverse=False):
+        bin_count = bin_widths.shape[-1]
+
+        xy_knots = (x_knots, y_knots)[inverse]
+        # make x contiguous here (it becomes non-contiguous from the split in
+        # forward), otherwise we get a performance warning
+        bin_indices = torch.searchsorted(xy_knots,
+                                         xy[..., None].contiguous()).squeeze(-1)
+        # searchsorted returns the index of the knot after the value of xy, but
+        # we want the knot before xy
+        bin_indices = bin_indices - 1
+
+        in_bounds = (bin_indices >= 0) & (bin_indices < bin_count)
+        bin_indices_in_bounds = bin_indices[in_bounds]
+
+        x1 = x_knots[in_bounds, bin_indices_in_bounds]
+        y1 = y_knots[in_bounds, bin_indices_in_bounds]
+        x_width = bin_widths[in_bounds, bin_indices_in_bounds]
+        y_width = bin_heights[in_bounds, bin_indices_in_bounds]
+        delta_1 = knot_slopes[in_bounds, bin_indices_in_bounds]
+        delta_2 = knot_slopes[in_bounds, bin_indices_in_bounds + 1]
+
+        x_left_bound = x_knots[~in_bounds, [0]]
+        x_right_bound = x_knots[~in_bounds, [-1]]
+        y_bottom_bound = y_knots[~in_bounds, [0]]
+        y_top_bound = y_knots[~in_bounds, [-1]]
+
+        yx = torch.full_like(xy, np.nan)
+        log_jac_diag = torch.full_like(xy, 0)  # jac_diag is one when out of bounds
+        yx[~in_bounds] = self.linear(xy[~in_bounds], x_left_bound, x_right_bound,
+                                y_bottom_bound, y_top_bound, inverse=inverse)
+        yx[in_bounds], log_jac_diag[in_bounds] = self.rational_quadratic(xy[in_bounds],
+                                                                    x1, y1, x_width, y_width, delta_1, delta_2,
+                                                                    inverse=inverse)
+        log_jac_det = torch.sum(log_jac_diag, dim=-1)
+
+        return yx, log_jac_det
+
+    def rational_quadratic(self, xy, x1, y1, x_width, y_width,
+                           delta_1, delta_2, inverse=False):
+        # Compute rational quadratic spline between (x1, y1) and (x1 + x_width,
+        # y1 + y_width) with derivatives delta_1 and delta_2 at these points, or compute
+        # the inverse; compare https://arxiv.org/abs/1906.04032, eqs. (4)-(8)
+        s = y_width / x_width
+
+        if not inverse:
+            x = xy
+
+            eta = (x - x1) / x_width
+            rev_eta = 1 - eta
+            eta_rev_eta = eta * rev_eta
+
+            y_denom = (s + (delta_1 + delta_2 - 2 * s) * eta_rev_eta)
+            y = y1 + y_width * (s * eta ** 2 + delta_1 * eta_rev_eta) / y_denom
+            yx = y
+
+            # compute jacobian
+            jac_numer = s ** 2 * (delta_2 * eta ** 2
+                                  + 2 * s * eta_rev_eta + delta_1 * rev_eta ** 2)
+
+            # jac_diag = jac_diag_numer / jac_diag_denom,
+            # where jac_diag_denom = y_denom**2
+            log_jac = torch.log(jac_numer) - 2 * torch.log(y_denom)
+        else:
+            y = xy
+
+            y_shifted = y - y1
+            shifted_delta_sum = (delta_2 + delta_1 - 2 * s)
+
+            a = y_width * (s - delta_1) + y_shifted * shifted_delta_sum
+            b = y_width * delta_1 - y_shifted * shifted_delta_sum
+            c = -s * y_shifted
+
+            eta = 2 * c / (-b - torch.sqrt(b ** 2 - 4 * a * c))
+            rev_eta = 1 - eta
+            eta_rev_eta = eta * rev_eta
+
+            x = x1 + x_width * eta
+            yx = x
+
+            # compute jacobian identically to non-inverse case, just with different
+            # optimisations
+            inv_jac_numer = s ** 2 * (delta_2 * eta ** 2
+                                      + 2 * s * eta_rev_eta + delta_1 * rev_eta ** 2)
+            inv_jac_denom = (s + shifted_delta_sum * eta_rev_eta) ** 2
+
+            log_inv_jac = torch.log(inv_jac_numer) - torch.log(inv_jac_denom)
+            log_jac = -log_inv_jac
+
+        return yx, log_jac
+
+    def linear(self,xy, x1, x2, y1, y2, inverse=False):
+        if not inverse:
+            x = xy
+            return (y2 - y1) / (x2 - x1) * (x - x1) + y1
+        else:
+            y = xy
+            return (x2 - x1) / (y2 - y1) * (y - y1) + x1
+
+    def _unpack_spline_params(self, theta):
+        bin_widths_offset, bin_heights_offset, knot_slopes_offset \
+            = 0, self.bin_count, 2 * self.bin_count
+
+        bin_widths_unconstr = theta[..., bin_widths_offset: bin_heights_offset]
+        bin_heights_unconstr = theta[..., bin_heights_offset: knot_slopes_offset]
+        knot_slopes_unconstr = theta[..., knot_slopes_offset:]
+
+        bin_widths = 2 * self.bound * self._softmax_with_min(
+            bin_widths_unconstr, min=self.BIN_HEIGHT_MIN)
+        bin_heights = 2 * self.bound * self._softmax_with_min(
+            bin_heights_unconstr, min=self.BIN_WIDTH_MIN)
+        knot_slopes = self._softplus_with_min(
+            knot_slopes_unconstr, min=self.DELTA_MIN)
+
+        # cumsum starts at bin_widths[..., 0], but we want to start at zero
+        x_knots = F.pad(torch.cumsum(bin_widths, dim=-1),
+                          (1, 0), value=0) - self.bound
+        y_knots = F.pad(torch.cumsum(bin_heights, dim=-1),
+                          (1, 0), value=0) - self.bound
+
+        return dict(x_knots=x_knots, y_knots=y_knots, bin_widths=bin_widths,
+                    bin_heights=bin_heights, knot_slopes=knot_slopes)
+
+    def _apply_spline(self, xy, x_knots, y_knots,
+                           bin_widths, bin_heights, knot_slopes, inverse=False):
+        return self.spline(xy, x_knots, y_knots, bin_widths, bin_heights,
+                      knot_slopes, inverse=inverse)
 
 
-def _weight_init(m, gain=1.):
-    if isinstance(m, nn.Conv2d):
-        nn.init.kaiming_uniform_(m.weight.data)
-    if isinstance(m, nn.BatchNorm2d):
-        m.weight.data.zero_().add_(gain)
-        m.bias.data.zero_()
+    def forward(self, x, c=[], rev=False, jac=True):
+        x, = x
+
+        if rev:
+            x = F.linear(x, self.channel_inv_perm)
+
+        x1, x2 = torch.split(x, self.splits, dim=-1)
+
+        if self.conditional:
+            x1_with_cond = torch.cat([x1, *c], dim=1)
+        else:
+            x1_with_cond = x1
+
+        # we want to compute theta for each channel of the second split, but the
+        # output of the subnet will be a flattened version of theta, cramming
+        # together the channel and parameter dimension of theta; so reshape
+        theta = self.subnet(x1_with_cond)
+        theta = theta.reshape(-1, self.splits[1], 3 * self.bin_count + 1)
+
+        x2, log_jac_det_2 = self._apply_spline(x2,theta, inverse=rev)
+
+        log_jac_det = log_jac_det_2
+        x_out = torch.cat((x1, x2), dim=1)
+
+        if not rev:
+            x_out = F.linear(x_out, self.channel_perm)
+
+        return (x_out,), log_jac_det
+
+    def output_dims(self, input_dims):
+        return input_dims
 
 
-def get_constructor_func(params):
-    return lambda x_in, x_out: SubnetConstructor(
-            params.get("layers_per_block", 3),
-            x_in, x_out,
-            intermediate_dim=params.get("intermediate_dim"),
-            dropout=params.get("dropout", 0.))
+def create_fully_connected_net(dims_in, dims_out, dims_intern, num_layers, dropout, bayesian, prior_prec):
+    assert num_layers >= 2
 
+    Linear = partial(VBLinear, prior_prec=prior_prec) \
+    if bayesian else nn.Linear
+    use_dropout = False if dropout == 0.0 else True
 
-def get_coupling_block(params):
-    constructor_fct = get_constructor_func(params)
-    CouplingBlock = CubicSplineBlock
-    block_kwargs = {
-                    "num_bins": params.get("num_bins", 10),
-                    "subnet_constructor": constructor_fct,
-                    "bounds_init": params.get("bounds_init", 10),
-                    "permute_soft" : params.get("permute_soft")
-                   }
-    return CouplingBlock, block_kwargs
+    layers = []
 
+    layers.append(Linear(dims_in, dims_intern))
+    if use_dropout:
+        layers.append(nn.Dropout(p=dropout))
+        layers.append(nn.ReLU())
 
-def build_INN(params):
-    """Create a ReversibleGraphNet model based on the settings, using
-    SubnetConstructor as the subnet constructor"""
+    for n in range(num_layers-2):
+        layers.append(Linear(dims_intern,dims_intern))
+        if use_dropout:
+            layers.append(nn.Dropout(p=dropout))
+        layers.append(nn.ReLU())
 
-    input_dim = (params["dim"], 1)
-    nodes = [InputNode(*input_dim, name='inp')]
+    layers.append(Linear(dims_intern, dims_out))
 
-    nodes.append(Node([nodes[-1].out0], Flatten, {}, name='flatten'))
-    CouplingBlock, block_kwargs = get_coupling_block(params)
-    for i in range(params.get("n_blocks", 10)):
-        nodes.append(Node([nodes[-1].out0], CouplingBlock, block_kwargs, name = f"block_{i}"))
-    nodes.append(OutputNode([nodes[-1].out0], name='out'))
-    model = ReversibleGraphNet(nodes, verbose=False)
-    return model
+    return nn.Sequential(*layers)

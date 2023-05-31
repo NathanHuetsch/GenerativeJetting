@@ -1,16 +1,22 @@
 import math
-import sys
 import torch
 import torch.nn as nn
 import numpy as np
 
 class VBLinear(nn.Module):
     def __init__(self, in_features, out_features, prior_prec=1.0, _map=False, std_init=-9):
+        """
+        :param in_features: input dimension
+        :param out_features: output dimension
+        :param prior_prec: 1/sigma_prior^2, width of prior weight distribution
+        :param _map: if true weights will not be sampled but maximum-a-posteriori (mean) will be used instead
+        :param std_init: initialization of learned sigma
+        """
         super(VBLinear, self).__init__()
         self.n_in = in_features
         self.n_out = out_features
         self.map = _map
-        self.prior_prec = prior_prec # = 1/sigma_prior^2
+        self.prior_prec = prior_prec
         self.random = None
         self.bias = nn.Parameter(torch.Tensor(out_features))
         self.mu_w = nn.Parameter(torch.Tensor(out_features, in_features))

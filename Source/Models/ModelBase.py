@@ -661,7 +661,7 @@ class GenerativeModel(nn.Module):
                 R_test, phi_test = ToySimulator.getSpherical(self.data_test_raw)
                 R_gen, phi_gen = ToySimulator.getSpherical(samples)
                 obs_name = "R"
-                obs_range = [0.5,1.5]
+                obs_range = [0.65,1.35]
                 plot_obs(pp=out, obs_train=R_train, obs_test=R_test, obs_predict=R_gen,
                      name=obs_name, range=obs_range, weight_samples=iterations)
                 if get(self.params, "plot_sigma", False) and iterations > 1:

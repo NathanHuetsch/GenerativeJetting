@@ -96,7 +96,7 @@ class TBD(GenerativeModel):
         drift = self.net(x_t, t, condition)
 
         if self.magic_transformation:
-            loss = torch.mean((drift - x_t_dot) ** 2 * weights[:, None])/weights.sum()
+            loss = torch.mean((drift - x_t_dot) ** 2 * weights[:, None])/weights.mean()
         else:
             if self.loss_type=="l2":
                 loss = torch.mean((drift - x_t_dot) ** 2 * torch.exp(self.t_factor * t))
