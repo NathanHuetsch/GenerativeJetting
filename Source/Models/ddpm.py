@@ -179,7 +179,7 @@ class DDPM(GenerativeModel):
             # save loss for loss plot
             self.regular_loss.append((torch.mean(c*(model_pred - noise) ** 2 * weights[:, None])/weights.mean()).detach().cpu().numpy())
         else:
-            loss = torch.mean(c*(model_pred - noise)) + self.C*self.net.kl / (len(self.data_train)*T)
+            loss = torch.mean(c*(model_pred - noise)**2) + self.C*self.net.kl / (len(self.data_train)*T)
             # save loss for loss plot
             self.regular_loss.append(F.mse_loss(c*model_pred, c*noise).detach().cpu().numpy())
         try:
