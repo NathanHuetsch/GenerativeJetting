@@ -478,7 +478,6 @@ class CubicSplineBlock(InvertibleModule):
         # number of elements of the first channel of the first batch member
         n_pixels = x_out[0, :1].numel()
         log_jac_det += (-1)**rev * n_pixels * global_scaling_jac
-        self.kl = self.subnet.kl
         return (x_out,), log_jac_det
 
     def output_dims(self, input_dims):
