@@ -131,7 +131,7 @@ class INNnet(nn.Module):
 
     def kl(self):
         # if true, sums over the kl terms of all bayesian layers
-        if  hasattr(self, "bayesian_modules"):
+        if hasattr(self, "bayesian_modules"):
             kl = sum(module.KL() for module in self.bayesian_modules)
         else:
             kl = 0
@@ -148,6 +148,7 @@ class INNnet(nn.Module):
 
 class CubicSplineBlock(InvertibleModule):
 
+    # default parameters for bin properties
     DEFAULT_MIN_BIN_WIDTH = 1e-3
     DEFAULT_MIN_BIN_HEIGHT = 1e-3
     DEFAULT_EPS = 1e-5
@@ -162,11 +163,14 @@ class CubicSplineBlock(InvertibleModule):
                  bounds_type="SOFTPLUS"):
 
         super().__init__(dims_in, dims_c)
+        # specify input dimension
         channels = dims_in[0][0]
         # rank of the tensors means 1d, 2d, 3d tensor etc.
         self.input_rank = len(dims_in[0]) - 1
         # tuple containing all dims except for batch-dim (used at various points)
         self.sum_dims = tuple(range(1, 2 + self.input_rank))
+
+        # check for conditional dimensions
         if len(dims_c) == 0:
             self.conditional = False
             self.condition_channels = 0
@@ -174,12 +178,17 @@ class CubicSplineBlock(InvertibleModule):
             assert tuple(dims_c[0][1:]) == tuple(dims_in[0][1:]), \
                 F"Dimensions of input and condition don't agree: {dims_c} vs {dims_in}."
             self.conditional = True
+            # set numbers (dimension) of conditions
             self.condition_channels = sum(dc[0] for dc in dims_c)
 
+        # create two coupling blocks of equal length input_dimension/2 (+-1)
         split_len1 = channels - channels // 2
         split_len2 = channels // 2
         self.splits = [split_len1, split_len2]
+
+        # set num_bins
         self.num_bins = num_bins
+
         if self.DEFAULT_MIN_BIN_WIDTH * self.num_bins > 1.0:
             raise ValueError('Minimal bin width too large for the number of bins')
         if self.DEFAULT_MIN_BIN_HEIGHT * self.num_bins > 1.0:
@@ -193,6 +202,7 @@ class CubicSplineBlock(InvertibleModule):
         except KeyError:
             raise ValueError(f"Data is {1 + self.input_rank}D. Must be 1D-4D.")
 
+        # set domain bounds depending on the bounds_type
         if bounds_type == 'SIGMOID':
             bounds = 2. - np.log(10. / bounds_init - 1.)
             self.bounds_activation = (lambda a: 10 * torch.sigmoid(a - 2.))
@@ -211,6 +221,7 @@ class CubicSplineBlock(InvertibleModule):
         self.bounds =  self.bounds_activation(torch.ones(1, self.splits[1], *([1] * self.input_rank)) * float(bounds))
         self.tails = tails
 
+        # permute input channels, either by rotation or randomly
         if permute_soft:
             w = special_ortho_group.rvs(channels)
         else:
@@ -218,11 +229,13 @@ class CubicSplineBlock(InvertibleModule):
             for i, j in enumerate(np.random.permutation(channels)):
                 w[i, channels-i-1] = 1.
 
+        # apply permutation
         self.w_perm = nn.Parameter(torch.FloatTensor(w).view(channels, channels, *([1] * self.input_rank)),
                                    requires_grad=False)
         self.w_perm_inv = nn.Parameter(torch.FloatTensor(w.T).view(channels, channels, *([1] * self.input_rank)),
                                        requires_grad=False)
 
+        # define subnet (conditioner)
         if subnet_constructor is None:
             raise ValueError("Please supply a callable subnet_constructor"
                              "function or object (see docstring)")
@@ -233,63 +246,89 @@ class CubicSplineBlock(InvertibleModule):
                                    inputs,
                                    theta,
                                    rev=False):
+        """
+        :param inputs: untransformed coupling block
+        :param theta: transformed coupling block (output of subnet) [:,bin_widths + bin_heights + left_derivative +
+                      right_derivative)
+        :param rev: if true, process is reversed (for sampling <-)
+        :return: spline output (tau(input,theta)) and log|det(Jx)|
+        """
 
-
+        # get input values which are inside the spline domain
         inside_interval_mask = torch.all((inputs >= -self.bounds) & (inputs <= self.bounds),
                                          dim = -1)
+
+        # get input values which are outside the spline domain
         outside_interval_mask = ~inside_interval_mask
 
+        # define empty masks to store output and log|det(Jx)|
         masked_outputs = torch.zeros_like(inputs)
         masked_logabsdet = torch.zeros(inputs.shape[0], device=inputs.device)
 
         if self.tails == 'linear':
+            # transform input values outside of spline domain with identy matrix, i.e. return input value as output
             masked_outputs[outside_interval_mask] = inputs[outside_interval_mask]
+            # those input points don't contribute to the Jacobian
             masked_logabsdet[outside_interval_mask] = 0
         else:
             raise RuntimeError('{} tails are not implemented.'.format(self.tails))
 
+        # define input to only contain points in spline domain
         inputs = inputs[inside_interval_mask]
+
+        # define output from subnet to only contain points, where input is in spline domain
         theta = theta[inside_interval_mask, :]
 
+        # set spline parameters
         min_bin_width=self.DEFAULT_MIN_BIN_WIDTH
         min_bin_height=self.DEFAULT_MIN_BIN_HEIGHT
         eps=self.DEFAULT_EPS
         quadratic_threshold=self.DEFAULT_QUADRATIC_THRESHOLD
 
+        # set spline bound
         bound = torch.min(self.bounds)
         left = -bound
         right = bound
         bottom = -bound
         top = bound
+
         if not rev and (torch.min(inputs).item() < left or torch.max(inputs).item() > right):
             raise ValueError("Spline Block inputs are not within boundaries")
         elif rev and (torch.min(inputs).item() < bottom or torch.max(inputs).item() > top):
             raise ValueError("Spline Block inputs are not within boundaries")
 
+        # get predicted bin_widths and bin_heights for each bin (num_bins) as well as the derivative on left and right
+        # boundary
         unnormalized_widths = theta[...,:self.num_bins]
         unnormalized_heights = theta[...,self.num_bins:self.num_bins*2]
         unnorm_derivatives_left = theta[...,-2].reshape(theta.shape[0], self.splits[1], 1)
         unnorm_derivatives_right = theta[...,-1].reshape(theta.shape[0], self.splits[1], 1)
 
+        # if true axis are interchanged for normalization of input
         if rev:
             inputs = (inputs - bottom) / (top - bottom)
         else:
             inputs = (inputs - left) / (right - left)
 
+        # normalize bin widths
         widths = F.softmax(unnormalized_widths, dim=-1)
         widths = min_bin_width + (1 - min_bin_width * self.num_bins) * widths
 
+        # get cumulated bin width of all bins in num_bins
         cumwidths = torch.cumsum(widths, dim=-1)
         cumwidths[..., -1] = 1
         cumwidths = F.pad(cumwidths, pad=(1, 0), mode='constant', value=0.0)
 
+        # normalize bin heights
         heights = F.softmax(unnormalized_heights, dim=-1)
         heights = min_bin_height + (1 - min_bin_height * self.num_bins) * heights
 
+        # get cumulated bin height of all bins in num_bins
         cumheights = torch.cumsum(heights, dim=-1)
         cumheights[..., -1] = 1
         cumheights = F.pad(cumheights, pad=(1, 0), mode='constant', value=0.0)
 
+        # calculate slope in each bin
         slopes = heights / widths
         min_something_1 = torch.min(torch.abs(slopes[..., :-1]),
                                     torch.abs(slopes[..., 1:]))
@@ -299,6 +338,7 @@ class CubicSplineBlock(InvertibleModule):
         )
         min_something = torch.min(min_something_1, min_something_2)
 
+        # normalize left and right derivative
         derivatives_left = torch.sigmoid(unnorm_derivatives_left) * 3 * slopes[..., 0][..., None]
         derivatives_right = torch.sigmoid(unnorm_derivatives_right) * 3 * slopes[..., -1][..., None]
 
@@ -311,6 +351,7 @@ class CubicSplineBlock(InvertibleModule):
         c = derivatives[..., :-1]
         d = cumheights[..., :-1]
 
+        # if true, axis are interchanged
         if rev:
             bin_idx = self.searchsorted(cumheights, inputs)[..., None]
         else:
@@ -324,6 +365,7 @@ class CubicSplineBlock(InvertibleModule):
         input_left_cumwidths = cumwidths.gather(-1, bin_idx)[..., 0]
         input_right_cumwidths = cumwidths.gather(-1, bin_idx + 1)[..., 0]
 
+        # invert spline functions bin-wise
         if rev:
             # Modified coefficients for solving the cubic.
             inputs_b_ = (inputs_b / inputs_a) / 3.
@@ -424,10 +466,7 @@ class CubicSplineBlock(InvertibleModule):
 
     def searchsorted(self, bin_locations, inputs, eps=1e-6):
         bin_locations[..., -1] += eps
-        return torch.sum(
-            inputs[..., None] >= bin_locations,
-            dim=-1
-        ) - 1
+        return torch.sum(inputs[..., None] >= bin_locations,dim=-1) - 1
 
     def cbrt(self, x):
         """Cube root. Equivalent to torch.pow(x, 1/3), but numerically stable."""
@@ -449,11 +488,18 @@ class CubicSplineBlock(InvertibleModule):
                     perm_log_jac)
 
     def forward(self, x, c=[], rev=False, jac=True):
-        '''See base class docstring'''
+        """
+        :param x: Input
+        :param c: Condition
+        :param rev: If True, invert (sampling)
+        :param jac: Don't know
+        :return: log of determinate of Jacobian
+        """
         self.bounds = self.bounds.to(x[0].device)
         if rev:
             x, global_scaling_jac = self._permute(x[0], rev=True)
             x = (x,)
+        # get two coupling blocks
         x1, x2 = torch.split(x[0], self.splits, dim=1)
 
         if self.conditional:
@@ -462,7 +508,9 @@ class CubicSplineBlock(InvertibleModule):
             x1c = x1
 
         if not rev:
+            # Transform first coupling block with subnet
             theta = self.subnet(x1c).reshape(x1c.shape[0], self.splits[1], 2*self.num_bins + 2)
+            # Use transformed coupling block and second coupling block to feed to your spline function
             x2, j2 = self._unconstrained_cubic_spline(x2, theta, rev=False)
         else:
             theta = self.subnet(x1c).reshape(x1c.shape[0], self.splits[1], 2*self.num_bins + 2)
@@ -498,8 +546,8 @@ class QuadraticSplineBlock(InvertibleModule):
         return min + (1 - min * x.shape[-1]) * F.softmax(x, dim=-1)
 
     def __init__(self, dims_in, dims_c=[],
-                 subnet_constructor=None, perm=None, bin_count=10,
-                 bound=1):
+                 subnet_constructor=None, perm=None, num_bins=10,
+                 bounds_init=1.):
         super().__init__(dims_in, dims_c)
 
         # only one dimensional data is supported (same for condition)
@@ -529,7 +577,7 @@ class QuadraticSplineBlock(InvertibleModule):
         assert not subnet_constructor is None
 
         self.subnet = subnet_constructor(self.splits[0] + self.condition_channels,
-                                         (3 * bin_count + 1) * self.splits[1])
+                                         (3 * num_bins + 1) * self.splits[1])
 
         if perm is None:
             perm = np.random.permutation(self.channel_count)
@@ -543,8 +591,8 @@ class QuadraticSplineBlock(InvertibleModule):
         channel_inv_perm = torch.FloatTensor(channel_perm.T)
         self.channel_inv_perm = nn.Parameter(channel_inv_perm, requires_grad=False)
 
-        self.bin_count = bin_count
-        self.bound = bound
+        self.bin_count = num_bins
+        self.bound = bounds_init
 
     def spline(self, xy, x_knots, y_knots, bin_widths, bin_heights,
                knot_slopes, inverse=False):
@@ -721,7 +769,8 @@ def create_fully_connected_net(dims_in, dims_out, dims_intern, num_layers, dropo
     layers.append(Linear(dims_in, dims_intern))
     if use_dropout:
         layers.append(nn.Dropout(p=dropout))
-        layers.append(nn.ReLU())
+
+    layers.append(nn.ReLU())
 
     for n in range(num_layers-2):
         layers.append(Linear(dims_intern,dims_intern))

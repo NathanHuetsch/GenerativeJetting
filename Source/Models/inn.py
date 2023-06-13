@@ -67,7 +67,11 @@ class INN(GenerativeModel):
 
 
         # Get likelihood loss as defined in paper
-        regular_loss = torch.mean(z ** 2) / 2 - torch.mean(jac) / z.shape[1]
+        if self.magic_transformation:
+            regular_loss = (torch.mean(z ** 2 * weights[:, None]) / 2 -
+                            torch.mean(jac* weights[:, None])/ z.shape[1] )/weights.mean()
+        else:
+            regular_loss = torch.mean(z ** 2) / 2 - torch.mean(jac) / z.shape[1]
         kl_loss = self.C * self.net.kl() / (len(self.data_train))
 
 
