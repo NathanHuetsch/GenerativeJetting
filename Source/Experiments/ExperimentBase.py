@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from Source.Models.inn import INN
 from Source.Models.tbd import TBD
+from Source.Models.cnf import CNF
 from Source.Models.ddpm import DDPM
 from Source.Models.autoregGMM import AutoRegGMM
 from Source.Models.autoregBinned import AutoRegBinned
@@ -19,7 +20,7 @@ import sys
 import os
 import h5py
 import pandas
-from torch.optim import Adam, AdamW
+from torch.optim import Adam, AdamW, RAdam
 
 
 class Experiment:
@@ -56,12 +57,18 @@ class Experiment:
                           "p_{T,j2}", "\phi_{j2}", "\eta_{j2}", "\mu_{j2}",
                           "p_{T,j3}", "\phi_{j3}", "\eta_{j3}", "\mu_{j3}"]
 
+        self.obs_units = ["GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV"]
+
         # Ranges of the observables for plotting
         self.obs_ranges = [[0.5, 150], [-4, 4], [-6, 6], [0, 50],
                            [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50]]
+                           [17,  157], [-4, 4], [-6, 6], [0, 50],
+                           [17,  82], [-4, 4], [-6, 6], [0, 50],
+                           [17,  82], [-4, 4], [-6, 6], [0, 50]]
         self.params = params
         self.conditional = get(self.params, "conditional", False)
         if not self.conditional:
@@ -273,20 +280,22 @@ class Experiment:
                 optim = "Adam"
                 print(f"build_optimizer: optimizer not specified. Defaulting to {optim}")
 
-            if optim == "Adam" or optim == "AdamW":
-                lr = get(self.params, "lr", 0.0001)
-                betas = get(self.params, "betas", [0.9, 0.999])
-                weight_decay = get(self.params, "weight_decay", 0)
-                if optim == "Adam":
-                    self.model.optimizer = \
-                        Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
-                elif optim == "AdamW":
-                    self.model.optimizer = \
-                        AdamW(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
-                print(
-                    f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
+            lr = get(self.params, "lr", 0.0001)
+            betas = get(self.params, "betas", [0.9, 0.999])
+            weight_decay = get(self.params, "weight_decay", 0)
+            if optim == "Adam":
+                self.model.optimizer = \
+                    Adam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+            elif optim == "AdamW":
+                self.model.optimizer = \
+                    AdamW(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
+            elif optim == "RAdam":
+                self.model.optimizer = \
+                    RAdam(self.model.parameters(), lr=lr, betas=betas, weight_decay=weight_decay)
             else:
                 raise ValueError(f"build_optimizer: optimizer {optim} not implemented")
+            print(
+                f"build_optimizer: Built optimizer {optim} with lr {lr}, betas {betas}, weight_decay {weight_decay}")
         else:
             self.model.optimizer = None
             print("build_optimizer: train set to False. Not building optimizer")

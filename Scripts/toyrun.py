@@ -12,8 +12,7 @@ params = load_params(params_path)
 params["redirect_console"] = True
 params["log"] = False
 
-
-for i in range(10):
+for i in range(5):
     params["run_name"] = f"run_{i}"
     experiment = toy.Toy_Experiment(params)
     experiment.full_run()

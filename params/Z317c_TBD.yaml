@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/z317"
-run_name : "TBD_simple_2048_noCondition"
+runs_dir : "/remote/gpu05/palacios/GenerativeJetting/runs/OdeTolTest"
+run_name : "3j"
 redirect_console : True
 # #########
 # # Data: #
@@ -23,35 +23,42 @@ con_depth: 0
 train: True
 log: False
 conditional: False
-data_split: [0.9, 0.00, 0.1]
+data_split: [0.6, 0.00, 0.4]
 
 optimizer: Adam
-lr : 5.e-5
-batch_size : 2048
-weight_decay : 0.0
+lr : 1.e-3
+batch_size : 16384
+batch_size_sample : 100000
+weight_decay : 0
 betas : [0.9, 0.99]
+use_scheduler: True
+lr_scheduler: "CosineAnnealing"
+#eta_min: 1.e-6
+loss_type: "l2"
+C: 0
+multiple_t: False
 
-n_epochs : 10000
+n_epochs : 20000
 validate: False
 validate_every : 10
 
 sample_periodically: True
-sample_every: 500
+sample_every: 7000
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
 # #################
+
+encode_t: True
+encode_t_dim: 64
+
 model: TBD
 network: "Resnet"
 n_blocks : 1
-layers_per_block : 6
+layers_per_block : 8
 intermediate_dim : 1024
 n_head: 4
 trajectory: "linear_trajectory"
-encode_t: False
-encode_t_dim: 4
-encode_t_scale: 10
-
 # #################
 # # Loading/saving: #
 # ###################

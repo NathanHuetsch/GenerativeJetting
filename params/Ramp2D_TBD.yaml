@@ -1,19 +1,21 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/Likelihood"
-run_name : "7l40d"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/OdeTesting/NonBayes"
+run_name : "Bayes1"
 redirect_console : True
 
 # #########
 # # Data: #
 # #########
 istoy: True
-load_dataset : True
+load_dataset : False
 data_path: "/remote/gpu07/huetsch/data/2dRamp.npy"
 n_data: 1000000
 toy_type: "ramp"
 n_dim : 2
+n_lin : 1
+n_quad : 0
 # ##############
 # # Training:  #
 # ##############
@@ -21,8 +23,8 @@ train: True
 log: True
 
 data_split: [0.6, 0, 0.4]
-batch_size : 8192
-batch_size_sample : 50000
+batch_size : 25000
+batch_size_sample : 200000
 
 optimizer: Adam
 betas : [0.9, 0.99]
@@ -32,13 +34,14 @@ lr : 1.e-2
 use_scheduler: True
 lr_scheduler: "CosineAnnealing"
 
-n_epochs : 1000
+n_epochs : 2000
 validate: False
 validate_every : 10
 
-sample_periodically: False
-sample_every: 500
-sample_every_n_samples: 100000
+sample_periodically: True
+sample_every: 1001
+sample_every_n_samples: 1000000
+iterate_periodically: True
 # #################
 # # Architecture: #
 # #################
@@ -69,9 +72,10 @@ warm_start_path : "/remote/gpu05/palacios/GenerativeJetting/runs/z13/TBD_Visuali
 # #############
 sample: True
 load_best_checkpoint: False
-n_samples : 1000
+n_samples : 1000000
 save_samples: False
 rtol: 1.e-3
+atol: 1.e-6
 
 # #############
 # # Plotting: #
@@ -80,7 +84,5 @@ plot : True
 plot_sigma : True
 plot_mu_sigma: True
 plot_loss : True
-sigma_path: sigmamu
-iterate_periodically : True
 
-calculate_likelihoods : True
+calculate_likelihoods : False

@@ -139,7 +139,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
                     fontsize = FONTSIZE)
             if range is not None:
-                plt.xlim((range[0] + 0.1, range[1] - 0.1))
+                plt.xlim((range[0], range[1]))
 
             axs[2].set_ylim((0.05,20))
             axs[2].set_yscale("log")
@@ -156,8 +156,9 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             axs[0].tick_params(axis="both", labelsize=FONTSIZE)
             axs[1].tick_params(axis="both", labelsize=FONTSIZE)
             axs[2].tick_params(axis="both", labelsize=FONTSIZE)
-            corner_text(axs[0], f"Z+{n_jets} jet exclusive", horizontal_pos="right", vertical_pos="top",
-                        fontsize=FONTSIZE)
+            if n_jets is not None:
+                corner_text(axs[0], f"Z+{n_jets} jet exclusive", horizontal_pos="right", vertical_pos="top",
+                            fontsize=FONTSIZE)
             if ".png" in str(pp):
                 plt.savefig(pp, bbox_inches="tight", pad_inches=0.05)
                 plt.close()

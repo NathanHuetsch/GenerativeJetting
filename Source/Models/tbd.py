@@ -4,6 +4,8 @@ from scipy.integrate import solve_ivp
 import Source.Networks
 from Source.Util.util import get
 from Source.Models.ModelBase import GenerativeModel
+from torchdiffeq import odeint
+from torch.autograd import grad
 
 
 class TBD(GenerativeModel):
@@ -15,7 +17,7 @@ class TBD(GenerativeModel):
     def __init__(self, params):
 
         self.loss_type = get(params, "loss_type", "l2")
-        assert self.loss_type in ["l1", "l2", "mle"], "Unknown loss type"
+        assert self.loss_type in ["l1", "l2", "mle", "weighted"], "Unknown loss type"
         if self.loss_type == "mle":
             print("Using MLE loss. Setting out_dim to 2*dim")
             params["out_dim"] = 2*params["dim"]
@@ -71,6 +73,9 @@ class TBD(GenerativeModel):
             print(f"adding noise of scale {self.add_noise}")
 
         self.rtol = get(self.params, "rtol", 1.e-3)
+        self.atol = get(self.params, "atol", 1.e-6)
+
+        self.hutch = get(self.params, "hutch", False)
 
     def build_net(self):
         """
@@ -139,6 +144,14 @@ class TBD(GenerativeModel):
                     self.kl_loss.append(kl_loss.detach().cpu().numpy())
                     loss = loss + kl_loss
 
+            elif self.loss_type == "weighted":
+                loss = torch.mean((drift - x_t_dot) ** 2 * weighting(1-t))
+                self.regular_loss.append(loss.detach().cpu().numpy())
+                if self.C != 0:
+                    kl_loss = self.C * self.net.kl / self.n_traindata
+                    self.kl_loss.append(kl_loss.detach().cpu().numpy())
+                    loss = loss + kl_loss
+
             elif self.loss_type == "mle":
                 mu, logsigma = drift.chunk(2, dim=1)
 
@@ -155,7 +168,7 @@ class TBD(GenerativeModel):
                 loss = torch.mean(torch.abs(drift-x_t_dot)) + self.C*self.net.kl / self.n_traindata
         return loss
 
-    def sample_n(self, n_samples, prior_samples=None, con_depth=0):
+    def sample_n_scipy(self, n_samples, prior_samples=None, con_depth=0):
         """
         Generate n_samples new samples.
         Start from Gaussian random noise and solve the reverse ODE to obtain samples
@@ -170,8 +183,116 @@ class TBD(GenerativeModel):
 
         if self.conditional:
             if self.n_jets == 1 and con_depth == 0:
-                n_c = (n_samples + batch_size) // 3
-                n_r = (n_samples + batch_size) - 2 * n_c
+                #n_c = (n_samples + batch_size) // 3
+                #n_r = (n_samples + batch_size) - 2 * n_c
+                n_c = (n_samples) // 3
+                n_r = n_c + 1
+
+                c_1 = np.array([[1, 0, 0]] * n_c)
+                c_2 = np.array([[0, 1, 0]] * n_c)
+                c_3 = np.array([[0, 0, 1]] * n_r)
+
+                condition = np.concatenate([c_1, c_2, c_3])
+                print(len(condition))
+
+            elif self.n_jets == 1 and con_depth == 1:
+                n_c = (n_samples + batch_size) // 2
+                n_r = (n_samples + batch_size) - n_c
+
+                c_1 = np.array([[0, 1, 0]] * n_c)
+                c_2 = np.array([[0, 0, 1]] * n_r)
+
+                condition = np.concatenate([c_1, c_2])
+
+            elif self.n_jets == 1 and con_depth == 2:
+                n_c = n_samples + batch_size
+
+                condition = np.array([[0, 0, 1]] * n_c)
+
+            elif self.n_jets == 2:
+
+                condition_1 = prior_samples[:,3:12]
+                condition_2 = prior_samples[:, 1:3]
+
+                condition = np.concatenate([condition_1, condition_2], axis=1)
+                n_samples = len(condition)
+            elif self.n_jets == 3:
+                condition = prior_samples[:,:13]
+                n_samples = len(condition)
+        else:
+            condition = None
+
+        def f(t, x_t, c=None):
+            x_t_torch = torch.Tensor(x_t).reshape((batch_size, self.dim)).to(self.device)
+            t_torch = t * torch.ones_like(x_t_torch[:, [0]])
+
+            with torch.no_grad():
+                if c is not None:
+                    c_torch = torch.Tensor(c).reshape((batch_size, self.n_con)).to(self.device)
+                    f_t = self.net(x_t_torch, t_torch, c_torch)
+                else:
+                    f_t = self.net(x_t_torch, t_torch)
+
+                if self.loss_type == "mle":
+                    f_t, _ = f_t.chunk(2, dim=1)
+            return f_t.detach().cpu().numpy().flatten()
+
+        events = []
+        function_calls = []
+        with torch.no_grad():
+            for i in range(int(n_samples / batch_size)):
+                if self.conditional:
+
+                    c = condition[batch_size * i: batch_size * (i + 1)].flatten()
+
+                else:
+                    c = None
+                sol = solve_ivp(f,
+                                (0, 1),
+                                x_T[batch_size * i: batch_size * (i + 1)].flatten(),
+                                args=[c],
+                                rtol=self.rtol,
+                                atol=self.atol)
+
+                if self.conditional:
+                    c = condition[batch_size * i: batch_size * (i + 1)]
+                    if self.n_jets == 1:
+                        s = np.concatenate([c, sol.y[:, -1].reshape(batch_size, self.dim)], axis=1)
+                    elif self.n_jets == 2:
+                        s = np.concatenate([c[:,-2:], sol.y[:, -1].reshape(batch_size, self.dim)], axis=1)
+                    elif self.n_jets == 3:
+                        s = sol.y[:, -1].reshape(batch_size, self.dim)
+                else:
+                    s = sol.y[:, -1].reshape(batch_size, self.dim)
+                events.append(s)
+                function_calls.append(sol.nfev)
+
+        function_calls = np.array(function_calls)
+        self.params["function_calls_mean"] = float(function_calls.mean())
+        self.params["function_calls_std"] = float(function_calls.std())
+        self.params["function_calls_max"] = float(function_calls.max())
+        return np.concatenate(events, axis=0)[:n_samples]
+
+
+    def sample_n(self, n_samples, prior_samples=None, con_depth=0):
+        """
+        Generate n_samples new samples.
+        Start from Gaussian random noise and solve the reverse ODE to obtain samples
+        """
+        if self.net.bayesian:
+            self.net.map = get(self.params,"fix_mu", False)
+            for bay_layer in self.net.bayesian_layers:
+                bay_layer.random = None
+        self.eval()
+        batch_size = get(self.params, "batch_size_sample", 8192)
+        x_T = self.latent.sample((n_samples + batch_size, self.dim)).to(self.device)
+
+        if self.conditional:
+            if self.n_jets == 1 and con_depth == 0:
+                #n_c = (n_samples + batch_size) // 3
+                #n_r = (n_samples + batch_size) - 2 * n_c
+                n_c = (n_samples) // 3
+                n_r = n_c + 1
 
                 c_1 = np.array([[1, 0, 0]] * n_c)
                 c_2 = np.array([[0, 1, 0]] * n_c)
@@ -199,61 +320,53 @@ class TBD(GenerativeModel):
                 condition_2 = prior_samples[:, 1:3]
 
                 condition = np.concatenate([condition_1, condition_2], axis=1)
-
+                n_samples = len(condition)
             elif self.n_jets == 3:
                 condition = prior_samples[:,:13]
-
+                n_samples = len(condition)
         else:
             condition = None
 
-        def f(t, x_t, c=None):
-            x_t_torch = torch.Tensor(x_t).reshape((batch_size, self.dim)).to(self.device)
-            t_torch = t * torch.ones_like(x_t_torch[:, [0]])
 
-            with torch.no_grad():
-                if c is not None:
-                    c_torch = torch.Tensor(c).reshape((batch_size, self.n_con)).to(self.device)
-                    f_t = self.net(x_t_torch, t_torch, c_torch)
-                else:
-                    f_t = self.net(x_t_torch, t_torch)
-
-                if self.loss_type == "mle":
-                    f_t, _ = f_t.chunk(2, dim=1)
-            return f_t.detach().cpu().numpy().flatten()
+        def net_wrapper(t, x_t):
+            t_torch = t * torch.ones_like(x_t[:, [0]], dtype=x_t.dtype, device=x_t.device)
+            if self.conditional:
+                v = self.net(x_t, t_torch, c)
+            else:
+                v = self.net(x_t, t_torch)
+            return v
 
         events = []
-        function_calls = []
         with torch.no_grad():
-            for i in range(int(n_samples / batch_size) + 1):
+            for i in range(int(n_samples / batch_size)):
                 if self.conditional:
-                    c = condition[batch_size * i: batch_size * (i + 1)].flatten()
+                    c = condition[batch_size * i: batch_size * (i + 1)]
+                    c = torch.tensor(c, dtype=x_T.dtype, device=x_T.device)
                 else:
                     c = None
-                sol = solve_ivp(f,
-                                (0, 1),
-                                x_T[batch_size * i: batch_size * (i + 1)].flatten(),
-                                args=[c],
-                                rtol=self.rtol)
+
+                x_t = odeint(
+                    net_wrapper,
+                    x_T[batch_size * i: batch_size * (i + 1)],
+                    torch.tensor([0, 1], dtype=x_T.dtype, device=x_T.device),
+                    atol=self.atol,
+                    rtol=self.rtol,
+                    method='dopri5',
+                ).detach().cpu().numpy()
 
                 if self.conditional:
                     c = condition[batch_size * i: batch_size * (i + 1)]
                     if self.n_jets == 1:
-                        s = np.concatenate([c, sol.y[:, -1].reshape(batch_size, self.dim)], axis=1)
+                        s = np.concatenate([c, x_t[-1]], axis=1)
                     elif self.n_jets == 2:
-                        s = np.concatenate([c[:,-2:], sol.y[:, -1].reshape(batch_size, self.dim)], axis=1)
+                        s = np.concatenate([c[:,-2:], x_t[-1]], axis=1)
                     elif self.n_jets == 3:
-                        s = sol.y[:, -1].reshape(batch_size, self.dim)
+                        s = x_t[ -1]
                 else:
-                    s = sol.y[:, -1].reshape(batch_size, self.dim)
-
+                    s = x_t[ -1]
                 events.append(s)
-                function_calls.append(sol.nfev)
-
-        function_calls = np.array(function_calls)
-        self.params["function_calls_mean"] = float(function_calls.mean())
-        self.params["function_calls_std"] = float(function_calls.std())
-        self.params["function_calls_max"] = float(function_calls.max())
         return np.concatenate(events, axis=0)[:n_samples]
+
 
 
 
@@ -324,7 +437,7 @@ class TBD(GenerativeModel):
         return np.concatenate(events, axis=0)[:n_samples]
 
 
-    def calculate_likelihood(self, x, timesteps = 1000):
+    def calculate_likelihood_old(self, x, timesteps = 1000):
 
         self.eval()
         batch_size = get(self.params, "batch_size_sample", 8192)
@@ -362,6 +475,48 @@ class TBD(GenerativeModel):
         likelihoods.append(gaussian_density_2d(inverse_x) * jac)
 
         return torch.cat(likelihoods, dim=0).detach().numpy()
+
+    def log_prob(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Evaluate the log probability
+
+        Args:
+            x: input tensor, shape (n_events, dims_in)
+            c: condition tensor, shape (n_events, dims_c)
+        Returns:
+            log probabilities, shape (n_events, )
+        """
+        batch_size = x.size(0)
+        dtype = x.dtype
+        device = x.device
+
+        def net_wrapper(t, state):
+            with torch.set_grad_enabled(True):
+                x_t = state[0].requires_grad_(True)
+                t_torch = t * torch.ones_like(x_t[:, [0]], dtype=dtype, device=device)
+                v = self.net(t_torch, x_t)
+                if self.hutch:
+                    dlogp_dt = -hutch_trace(v, x_t).view(-1, 1)
+                else:
+                    dlogp_dt = -autograd_trace(v, x_t).view(-1, 1)
+            return v.detach(), dlogp_dt.detach()
+
+        # Sample from the latent distribution
+        logp_diff_1 = torch.zeros((batch_size, 1), dtype=dtype, device=device)
+        states = (x, logp_diff_1)
+        # Solve the ODE from t=1 to t=0 from the sampled initial condition
+        x_t, logp_diff_t = odeint(
+            net_wrapper,
+            states,
+            torch.tensor([0, 1], dtype=dtype, device=device),
+            atol=self.atol,
+            rtol=self.rtol,
+            method='dopri5',
+            )
+        x_0 = x_t[-1].detach()
+        jac = logp_diff_t[-1].detach()
+        latent_log_prob  = -(x_0**2 / 2 + 0.5 * np.log(2 * np.pi)).sum(dim=1)
+        return latent_log_prob.squeeze() + jac.squeeze()
 
 
 
@@ -434,3 +589,30 @@ def gaussian_density_2d(X):
     exponent = -0.5 * torch.sum(torch.square(X), axis=1)
     coefficient = 1 / (2 * torch.pi)
     return coefficient * torch.exp(exponent)
+
+def weighting(t):
+    return ((1.-t)/t).clip(min=0.1, max=10)
+
+
+def autograd_trace(x_out, x_in):
+    """Standard brute-force means of obtaining trace of the Jacobian, O(d) calls to autograd"""
+    trJ = 0.
+    for i in range(x_in.shape[1]):
+        trJ += grad(x_out[:, i].sum(), x_in, allow_unused=False, create_graph=True)[0][:, i]
+    return trJ
+
+
+def hutch_trace2(x_out, x_in):
+    """Hutchinson's trace Jacobian estimator, O(1) call to autograd"""
+    noise = torch.randint_like(x_in, low=0, high=2).float() * 2 - 1.
+    jvp = grad(x_out, x_in, noise, create_graph=True)[0]
+    trJ = torch.einsum('bi,bi->b', jvp, noise)
+
+    return trJ
+
+def hutch_trace(x_out, x_in):
+    """Hutchinson's trace Jacobian estimator, O(1) call to autograd"""
+    noise = torch.randint_like(x_in, low=0, high=2).float() * 2 - 1.
+    x_out_noise = torch.sum(x_out * noise)
+    gradient = grad(x_out_noise, x_in)[0]
+    return torch.sum(gradient * noise, dim=1)

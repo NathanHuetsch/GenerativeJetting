@@ -1,8 +1,8 @@
 # #########
 # # General: #
 # #########
-runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/MagicTrafo13Test"
-run_name : "bug?Testi"
+runs_dir : "/remote/gpu07/huetsch/GenerativeJetting/runs/OdeTolTest"
+run_name : "short_Run_to_test"
 redirect_console : True
 
 # #########
@@ -15,6 +15,7 @@ data_type: np
 preprocess : 3
 n_jets: 2
 load_dataset : False
+conditional : False
 #channels : [9, 10, 13, 14]
 #[0, 4, 8, 9, 10, 12, 13, 14]
 #dim : 4
@@ -24,11 +25,11 @@ load_dataset : False
 train: True
 log: True
 data_split: [0.6, 0, 0.4]
-conditional: False
 
 optimizer: Adam
 lr : 1.e-3
 batch_size : 16384
+batch_size_sample : 100000
 weight_decay : 0
 betas : [0.9, 0.99]
 use_scheduler: True
@@ -43,7 +44,7 @@ validate: False
 validate_every : 100
 
 sample_periodically: True
-sample_every: 2000
+sample_every: 3334
 sample_every_n_samples: 100000
 # #################
 # # Architecture: #
@@ -52,22 +53,17 @@ model: TBD
 trajectory: "linear_trajectory"
 beta_dist: False
 beta_dist_b: 0.5
-magic_transformation: True
+magic_transformation: False
 
 encode_t: True
 encode_t_dim: 64
 #encode_t_scale: 10
 
 #network: "AttentionNet"
-n_blocks : 2
-intermediate_dim: 128
-layers_per_block: 6
+n_blocks : 1
+intermediate_dim: 512
+layers_per_block: 8
 #normalization: "InstanceNorm1d"
-
-resid_pdrop: 0
-n_layers: 8
-n_head: 4
-
 #dropout: 0.2
 
 # ###################
@@ -81,7 +77,7 @@ warm_start_path : "/remote/gpu07/huetsch/GenerativeJetting/runs/Diff_4c_5interna
 # #############
 sample: True
 load_best_checkpoint: False
-n_samples : 10000
+n_samples : 1000000
 
 # #############
 # # Plotting: #

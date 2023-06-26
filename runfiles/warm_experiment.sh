@@ -1,5 +1,5 @@
-#PBS -q a30
-#PBS -l nodes=1:ppn=1:gpus=1:a30
+#PBS -q gshort
+#PBS -l nodes=1:ppn=1:gpus=1:gshort
 #PBS -l walltime=40:00:00
 #PBS -d /remote/gpu07/huetsch
 
@@ -14,5 +14,5 @@ module load cuda/11.7
 # cd into the project folder
 cd GenerativeJetting
 
-python run_Zn.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/Conditional/j3/BayesMT/2b_5l_64d_64EncodeAll_1e5C2859" --train=False --redirect_console=False --plot=True
+python run_toy.py --warm_start_path="/remote/gpu07/huetsch/GenerativeJetting/runs/Toy/OdeTesting/Bayes/run_06635" --train=False --redirect_console=False --plot=True
 

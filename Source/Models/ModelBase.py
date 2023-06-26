@@ -147,9 +147,7 @@ class GenerativeModel(nn.Module):
         train_losses = np.array([])
         for batch_id, x in enumerate(self.train_loader):
             self.optimizer.zero_grad()
-
             loss = self.batch_loss(x)
-
             if np.isfinite(loss.item()): # and (abs(loss.item() - loss_m) / loss_s < 5 or len(self.train_losses_epoch) == 0):
                 loss.backward()
                 self.optimizer.step()
@@ -165,7 +163,6 @@ class GenerativeModel(nn.Module):
 
             else:
                 print(f"train_model: Unstable loss. Skipped backprop for epoch {self.epoch}, batch_id {batch_id}")
-
         self.train_losses_epoch = np.append(self.train_losses_epoch, train_losses.mean())
         self.train_losses = np.concatenate([self.train_losses, train_losses], axis=0)
         if self.log:
@@ -182,7 +179,7 @@ class GenerativeModel(nn.Module):
 
     def sample_and_undo(self, n_samples, prior_model=None, prior_prior_model=None,n_jets=2):
         if self.conditional and n_jets ==2:
-            prior_samples = prior_model.sample_n(n_samples+self.batch_size_sample, con_depth=self.con_depth)
+            prior_samples = prior_model.sample_n(n_samples, con_depth=self.con_depth)
             samples = self.sample_n(n_samples, prior_samples=prior_samples,
                                con_depth=self.con_depth)
             prior_samples = undo_preprocessing(prior_samples, self.prior_mean, self.prior_std,
@@ -193,12 +190,12 @@ class GenerativeModel(nn.Module):
 
             samples = np.concatenate([prior_samples[:n_samples, :13], samples[:, 13:]], axis=1)
         elif self.conditional and n_jets == 3:
-            prior_prior_samples = prior_prior_model.sample_n(n_samples + 2*self.batch_size_sample,
+            prior_prior_samples = prior_prior_model.sample_n(n_samples,
                                                          con_depth=self.con_depth)
-            prior_samples = prior_model.sample_n(n_samples + self.batch_size_sample, prior_samples=prior_prior_samples,
+            prior_samples = prior_model.sample_n(n_samples, prior_samples=prior_prior_samples,
                                                  con_depth=self.con_depth)
 
-            priors = np.concatenate([prior_prior_samples[:n_samples + self.batch_size_sample,3:12],prior_samples[:,2:6]], axis=1)
+            priors = np.concatenate([prior_prior_samples[:n_samples,3:12],prior_samples[:,2:6]], axis=1)
             samples = self.sample_n(n_samples, prior_samples=priors, con_depth=self.con_depth)
             prior_prior_samples = undo_preprocessing(prior_prior_samples, self.prior_prior_mean, self.prior_prior_std,
                                            self.prior_prior_u, self.prior_prior_s, self.prior_prior_bin_edges,
@@ -551,6 +548,11 @@ class GenerativeModel(nn.Module):
                         obs_train = plot_train[j][:, channel1] - plot_train[j][:, channel2]
                         obs_test = plot_test[j][:, channel1] - plot_test[j][:, channel2]
                         obs_generated = plot_samples[j][:, channel1] - plot_samples[j][:, channel2]
+                        if channels in [[1, 5], [1, 9], [1, 13], [1, 17], [5, 9], [5, 13], [5, 17],
+                                        [9, 13], [9, 17], [13, 17]]:
+                            obs_train = (obs_train + np.pi)%(2*np.pi) - np.pi
+                            obs_test = (obs_test + np.pi)%(2*np.pi) - np.pi
+                            obs_generated = (obs_generated + np.pi) % (2 * np.pi) - np.pi
                         weights = plot_weights[j]
                         plot_obs(pp=out,
                                  obs_train=obs_train,
@@ -592,6 +594,7 @@ class GenerativeModel(nn.Module):
                 # Get the name and the range of the observable
                 obs_name = self.obs_names[i]
                 obs_range = None if self.obs_ranges==None else self.obs_ranges[i]
+                print(obs_range)
                 # Create the plot
                 plot_obs(pp=out,
                          obs_train=obs_train,

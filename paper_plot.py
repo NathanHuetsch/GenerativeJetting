@@ -37,9 +37,11 @@ data_test = data[cut1:]
 mus = []
 sigmas = []
 for i in range(0,10):
+    if i==1 or i==7 or i==9:
+        continue
     path_path = path + f"/run_0{i}/"
-    mu_path = path_path + "sigmamu_1_mu.npy"
-    sigma_path = path_path + "sigmamu_1_sigma.npy"
+    mu_path = path_path + "run_1_mu.npy"
+    sigma_path = path_path + "run_1_sigma.npy"
     mu = np.load(mu_path)
     sigma = np.load(sigma_path)
     mus.append(mu)
@@ -47,7 +49,7 @@ for i in range(0,10):
 
 mus = np.array(mus)
 sigmas = np.array(sigmas)
-def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,unit=None, ymaxAbs=1., ymaxRel=1.,):
+def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,unit=None, ymaxAbs=1., ymaxRel=1.):
 
     with PdfPages(out) as pp:
         y_t, bins = np.histogram(obs_test, bins=bins, range=range)
@@ -71,7 +73,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
         fig1, axs = plt.subplots(3, 1, sharex=True,
                                  gridspec_kw={"height_ratios": [3, 1, 1], "hspace": 0.00})
-        fig1.tight_layout(pad=0.9, w_pad=0.9, h_pad=0.5, rect=(0.1, 0.08, 1, 1))
+        fig1.tight_layout(pad=0.9, w_pad=0.9, h_pad=0.5, rect=(0.1, 0.09, 1, 1))
 
         for y, y_err, scale, label, color in zip(hists, hist_errors, scales,
                                                  labels, colors):
@@ -140,16 +142,16 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
         axs[2].set_ylabel(r"$\delta [\%]$", fontsize=FONTSIZE)
 
-        axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
-        axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
-        axs[2].tick_params(axis="both", labelsize=FONTSIZE-6)
+        axs[0].tick_params(axis="both", labelsize=FONTSIZE-3)
+        axs[1].tick_params(axis="both", labelsize=FONTSIZE-3)
+        axs[2].tick_params(axis="both", labelsize=FONTSIZE-3)
 
         plt.savefig(pp, format="pdf")
         plt.close()
 
         fig2, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1, 1], "hspace": 0.00})
         #fig2, axs = plt.subplots(1, 1)
-        fig2.tight_layout(pad=0.5, w_pad=0.5, h_pad=1.0, rect=(0.1, 0.08, 1, 1))
+        fig2.tight_layout(pad=0.5, w_pad=0.5, h_pad=1.0, rect=(0.1, 0.09, 1, 1))
 
         axs[0].set_ylabel(r"$\sigma$", fontsize=FONTSIZE)
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
@@ -175,7 +177,7 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
         #fig3, axs = plt.subplots(1, 1)
         #fig3.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0, rect=(0.07, 0.06, 0.99, 0.95))
 
-        axs[1].set_ylabel(r"$\sigma / \mu$", fontsize=FONTSIZE)
+        axs[1].set_ylabel(r"$\sigma / p$", fontsize=FONTSIZE)
         #axs.set_xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
         #               fontsize=FONTSIZE)
 
@@ -189,10 +191,9 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
                          alpha=0.3, step="post")
 
         axs[1].set_ylim(0., ymaxRel)
-        axs[1].set_yticks([0, 0.02, 0.04])
 
-        axs[0].tick_params(axis="both", labelsize=FONTSIZE-6)
-        axs[1].tick_params(axis="both", labelsize=FONTSIZE-6)
+        axs[0].tick_params(axis="both", labelsize=FONTSIZE-3)
+        axs[1].tick_params(axis="both", labelsize=FONTSIZE-3)
 
         fig2.align_labels()
         plt.xlabel(r"${%s}$ %s" % (name, ("" if unit is None else f"[{unit}]")),
@@ -206,11 +207,11 @@ def plot_paper(out, obs_train, obs_test, obs_predict, name, bins=60, range=None,
 
 # %%
 if toy_type == "ramp":
-    plot_paper(f"{path}paper_plots_new.pdf", data_train[:, 1], data_test[:, 1],
-               [mus,sigmas], "x_2", ymaxAbs=.05, ymaxRel=.05, range=[.1, .9])
+    plot_paper(f"{path}talk_ramp_sigma.pdf", data_train[:, 1], data_test[:, 1],
+               [mus,sigmas], "x_2", ymaxAbs=.05, ymaxRel=.05, range=[0.1, 0.9])
 
 if toy_type == "gauss_sphere":
     R_train, _ = ToySimulator.getSpherical(data_train)
     R_test, _ = ToySimulator.getSpherical(data_test)
     plot_paper(f"{path}paper_plots_new.pdf", R_train, R_test, [mus,sigmas],
-               "R", ymaxAbs=.05, ymaxRel=.15, range=[0.5, 1.5])
+               "R", ymaxAbs=.05, ymaxRel=.15, range=[0.65, 1.35])

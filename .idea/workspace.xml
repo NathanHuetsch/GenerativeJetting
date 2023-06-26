@@ -1,37 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/8l_512_2b_2k_00001C4216/paramfile.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/paper_plot_jets.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/paper_plots.pdf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_0.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_1.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_2.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_3.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_4.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_5.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_6.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_7.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_8.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples_final_9.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/bitstream-charter-ttf/Charter/Charter-Bold-Italic.ttf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/bitstream-charter-ttf/Charter/Charter-Bold.ttf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/bitstream-charter-ttf/Charter/Charter-Italic.ttf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/bitstream-charter-ttf/Charter/Charter-Regular.ttf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/example-plot.pdf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scipostphys-matplotlib/scipostphys-matplotlib.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="plot test with old code">
+      <change afterPath="$PROJECT_DIR$/Source/Models/cnf.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Experiments/toy.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/toy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Experiments/z2.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Experiments/z3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/toyrun.py" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/toyrun.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/tbd.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/lr_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/lr_scheduler.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Util/plots.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/plots.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper/toy_generate.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper/toy_plot.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/paper_generate.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/paper_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/paper_plot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_plot_jets.py" beforeDir="false" afterPath="$PROJECT_DIR$/paper_plot_jets.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/Z26c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z26c_TBD.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/Z317c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z317c_TBD.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/runfiles/experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/experiment.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/interactive.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/interactive.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/runfiles/warm_experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/warm_experiment.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -87,7 +76,7 @@
     &quot;WebServerToolWindowPanel.toolwindow.show.date&quot;: &quot;false&quot;,
     &quot;WebServerToolWindowPanel.toolwindow.show.permissions&quot;: &quot;false&quot;,
     &quot;WebServerToolWindowPanel.toolwindow.show.size&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting/params&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;ssh.settings&quot;
   }
 }</component>
@@ -174,6 +163,14 @@
       <workItem from="1681996043546" duration="148929000" />
       <workItem from="1682914304603" duration="119442000" />
       <workItem from="1683539328987" duration="7124000" />
+      <workItem from="1684303993029" duration="44638000" />
+      <workItem from="1684930282499" duration="43690000" />
+      <workItem from="1685532059813" duration="131000" />
+      <workItem from="1687191741409" duration="12232000" />
+      <workItem from="1687268234854" duration="2206000" />
+      <workItem from="1687276066092" duration="2009000" />
+      <workItem from="1687279562474" duration="591000" />
+      <workItem from="1687330658120" duration="14436000" />
     </task>
     <servers />
   </component>
@@ -191,8 +188,13 @@
       </map>
     </option>
   </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="plot test with old code" />
+    <option name="LAST_COMMIT_MESSAGE" value="plot test with old code" />
+  </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/GenerativeJetting$ModelBase.coverage" NAME="ModelBase Coverage Results" MODIFIED="1681201924630" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Source/Models" />
     <SUITE FILE_PATH="coverage/GenerativeJetting$toyrun.coverage" NAME="toyrun Coverage Results" MODIFIED="1677675922462" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Scripts" />
+    <SUITE FILE_PATH="coverage/GenerativeJetting$paper_generate.coverage" NAME="paper_generate Coverage Results" MODIFIED="1685359230402" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
