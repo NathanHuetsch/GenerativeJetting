@@ -1,9 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from Source.Models.inn import INN
-from Source.Models.tbd import TBD
-from Source.Models.ddpm import DDPM
+from Source.Models.cfm import CFM
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
@@ -53,43 +51,19 @@ class Toy_Experiment(Experiment):
         self.obs_names = ["x_{"+str(i)+"}" for i in range(self.n_dim)]
         self.data_raw = self.data.detach().cpu().numpy()
 
-        if self.iterations > 1 and not self.bayesian:
-            det_samples = []
-            for i in range(self.iterations):
-                self.total_epochs = 0
-                self.model = self.build_model(self.params, save_in_params=True)
-                print(f"build_model: Building Bayesian model is set to {self.bayesian}")
+        self.model = self.build_model(self.params)
+        print(f"build_model: Building Bayesian model is set to {self.bayesian}")
+        self.model.obs_names = self.obs_names
+        self.model.obs_ranges = self.obs_ranges
+        self.model.data = self.data
 
-                self.model.obs_names = self.obs_names
-                self.model.obs_ranges = self.obs_ranges
-                self.model.data = self.data
+        self.build_optimizer()
+        self.build_dataloaders()
 
-                self.build_optimizer()
-                self.build_dataloaders()
+        self.train_model()
+        self.generate_samples()
+        self.make_plots()
 
-                self.train_model()
-                self.generate_samples()
-                det_samples.append(self.samples)
-                self.runs += 1
-                self.model.runs += 1
-
-            self.samples = np.concatenate(det_samples)
-            self.make_plots()
-        else:
-            self.model = self.build_model(self.params, save_in_params=True, prior_path=self.warm_start_path)
-            print(f"build_model: Building Bayesian model is set to {self.bayesian}")
-            self.model.obs_names = self.obs_names
-            self.model.obs_ranges = self.obs_ranges
-            self.model.data = self.data
-
-            self.build_optimizer()
-            self.build_dataloaders()
-
-            self.train_model()
-            self.generate_samples()
-            self.make_plots()
-
-        self.make_video()
         self.calculate_likelihoods()
 
         self.finish_up()
@@ -172,27 +146,6 @@ class Toy_Experiment(Experiment):
             print("make_plots: Finished making plots")
         else:
             print("make_plots: plot set to False")
-
-    def make_video(self):
-        video = get(self.params, "video", False)
-
-        if video:
-            try:
-                n_samples = get(self.params, "n_samples", 1000000)
-                print(f"make_video: Starting generation of video frame samples")
-                t0 = time.time()
-                sample = self.model.sample_n_evolution(n_samples)
-                t1 = time.time()
-                videosampletime = t1 - t0
-                self.params["videosampletime"] = videosampletime
-                print(f"make_video: Drawing videos")
-                t0 = time.time()
-                self.model.toy_video(sample)
-                t1 = time.time()
-                videotime = t1 - t0
-                self.params["videotime"] = videotime
-            except:
-                print(f"make_video: failed")
 
     def calculate_likelihoods(self):
 

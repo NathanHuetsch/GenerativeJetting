@@ -2,25 +2,75 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="aaa3b581-0f6a-4e18-8ec9-36d00c8a5d45" name="Changes" comment="plot test with old code">
-      <change afterPath="$PROJECT_DIR$/Source/Models/cnf.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Source/Networks/mlp.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/toyrun.py" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/toyrun.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/classifier_examination.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/marginalizedLikelihood_grownUpSphere.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/marginalizedLikelihood_toy.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/paper_GMMtoy.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/reweighting.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/toyrun.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/ExperimentBase.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/classifier_experiment.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/toy.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/toy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z1.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z2.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Experiments/z3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Experiments/z3.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/ModelBase.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/ModelBase.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/tbd.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Util/lr_scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/lr_scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/autoregBinned.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/autoregGMM.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/binn.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/cnf.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/ddpm.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/inn.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/tbd.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Models/cfm.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Models/tbd_batch.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Networks/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attention_net.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attention_resnet.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attnet.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attnetBinned.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/attnetGMM.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/binn_net.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/classifier.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/inn_net.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Networks/resnet.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/correlationPlots.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/datasets.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/discretize.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/lr_scheduler.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Util/plots.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/plots.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/paper/toy_generate.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/paper/toy_plot.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/paper_generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/paper_generate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/paper_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/paper_plot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/paper_plot_jets.py" beforeDir="false" afterPath="$PROJECT_DIR$/paper_plot_jets.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/params/Z26c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z26c_TBD.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/params/Z317c_TBD.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/params/Z317c_TBD.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runfiles/experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/experiment.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/runfiles/interactive.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/interactive.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Util/preprocessing.py" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Util/preprocessing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/film.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/makeFilms.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mu_sigma_plot.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_generate.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_generate_plot.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_plot.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_plot_all.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_plot_inclusive.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/paper_plot_jets.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/Ramp2D_TBD.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/Z26c_DDPM.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/Z26c_INN.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/Z26c_TBD.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/Z317c_TBD.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/deprecated/DDPM_4c_test.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/deprecated/DDPM_6c.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/deprecated/INN_4c.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/deprecated/INN_4c_local.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/deprecated/INN_6c.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/deprecated/SBD_4c.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/deprecated/SBD_4c_local.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/deprecated/SBD_6c.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/documentation_and_test/Z2_ExampleWithDocumentation.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/documentation_and_test/Z2_MinimalParams.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/documentation_and_test/Z2_test_gpu.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/params/documentation_and_test/Z2_test_local.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_classifier.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/runfiles/experiment.sh" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/runfiles/warm_experiment.sh" beforeDir="false" afterPath="$PROJECT_DIR$/runfiles/warm_experiment.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -52,7 +102,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="Nathan_backup" />
+        <entry key="$PROJECT_DIR$" value="NathanDev" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -76,16 +126,19 @@
     &quot;WebServerToolWindowPanel.toolwindow.show.date&quot;: &quot;false&quot;,
     &quot;WebServerToolWindowPanel.toolwindow.show.permissions&quot;: &quot;false&quot;,
     &quot;WebServerToolWindowPanel.toolwindow.show.size&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/huetsch/Desktop/GenerativeJetting/params&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;ssh.settings&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/params" />
-      <recent name="$PROJECT_DIR$/Source/Models" />
       <recent name="$PROJECT_DIR$/Source/Networks" />
+      <recent name="$PROJECT_DIR$/Source/Models" />
       <recent name="$PROJECT_DIR$/runfiles" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/Scripts" />
     </key>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
@@ -171,6 +224,47 @@
       <workItem from="1687276066092" duration="2009000" />
       <workItem from="1687279562474" duration="591000" />
       <workItem from="1687330658120" duration="14436000" />
+      <workItem from="1689266917202" duration="5483000" />
+      <workItem from="1689346940195" duration="2021000" />
+      <workItem from="1689661743381" duration="3864000" />
+      <workItem from="1689781559713" duration="593000" />
+      <workItem from="1689783677792" duration="595000" />
+      <workItem from="1690451793529" duration="4146000" />
+      <workItem from="1690520060688" duration="973000" />
+      <workItem from="1692622918998" duration="1903000" />
+      <workItem from="1694789731313" duration="169000" />
+      <workItem from="1695718564810" duration="1455000" />
+      <workItem from="1695812657135" duration="713000" />
+      <workItem from="1696409234737" duration="27000" />
+      <workItem from="1696409275286" duration="23347000" />
+      <workItem from="1696497781023" duration="2300000" />
+      <workItem from="1696507276511" duration="1770000" />
+      <workItem from="1696577083662" duration="3501000" />
+      <workItem from="1696862157045" duration="1467000" />
+      <workItem from="1697007630351" duration="693000" />
+      <workItem from="1697012042627" duration="659000" />
+      <workItem from="1697098931165" duration="11039000" />
+      <workItem from="1697185558801" duration="1396000" />
+      <workItem from="1697205318229" duration="16003000" />
+      <workItem from="1697531240246" duration="5675000" />
+      <workItem from="1697612357613" duration="2304000" />
+      <workItem from="1697697119089" duration="4000" />
+      <workItem from="1697697132466" duration="98000" />
+      <workItem from="1697718417207" duration="844000" />
+      <workItem from="1697728002078" duration="1632000" />
+      <workItem from="1697889335399" duration="504000" />
+      <workItem from="1698410941139" duration="673000" />
+      <workItem from="1698663580175" duration="30000" />
+      <workItem from="1699118599928" duration="78000" />
+      <workItem from="1700475945839" duration="266000" />
+      <workItem from="1701703206555" duration="1287000" />
+      <workItem from="1701778294731" duration="164000" />
+      <workItem from="1701883801232" duration="7000" />
+      <workItem from="1704721004113" duration="1507000" />
+      <workItem from="1708963782274" duration="652000" />
+      <workItem from="1709910706811" duration="71000" />
+      <workItem from="1716307764972" duration="22771000" />
+      <workItem from="1716414638141" duration="256000" />
     </task>
     <servers />
   </component>
