@@ -2,6 +2,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from Source.Models.cfm import CFM
+from Source.Models.cm import CM
+
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from Source.Util.preprocessing import preprocess, undo_preprocessing
@@ -41,12 +43,21 @@ class Z1_Experiment(Experiment):
 
         self.model = self.build_model(self.params)
 
+        # Load teacher model
+        teacher_model_params = get(self.params, "teacher_model_params", None)
+
+
+        self.teacher_model = None # solves problem with undefined variable fast. not optimal solution
+        if  get(self.params, "model", "CM") == "CM": 
+            self.teacher_model_params = load_params(teacher_model_params)
+            self.teacher_model = self.load_model(self.teacher_model_params)
+
         self.model.data_mean, self.model.data_std = self.data_mean, self.data_std
         self.model.obs_names = self.obs_names
         self.model.obs_ranges = self.obs_ranges
         self.build_optimizer()
         self.build_dataloaders()
-        self.train_model()
+        self.train_model(self.teacher_model)
         self.generate_samples()
         self.make_plots()
         self.finish_up()

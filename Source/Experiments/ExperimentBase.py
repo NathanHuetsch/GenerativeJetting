@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from Source.Models.cfm import CFM
+from Source.Models.cm import CM
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -176,6 +177,20 @@ class Experiment:
         print(f"build_model: Built model {model_type}. Total number of parameters: {model_parameters}")
 
         return model
+    
+    def load_model(self,p):
+        #Load model ohne hyperparameter? 
+        model_path = get(p, "model_path", None)
+        model_type = get(p, "model_type", 'CFM')
+        if model_path is None:
+            raise ValueError("Model path must be specified")
+
+        # Load the model directly
+        model = eval(model_type)(p)
+        model.load_state_dict(torch.load(model_path, map_location=self.device))
+        model.to(self.device)
+        print(f"load_model: Loaded model from {model_path}")
+        return model
 
     def build_optimizer(self):
         """
@@ -262,12 +277,12 @@ class Experiment:
         else:
             print("build_dataloaders: train set to False. Not building dataloaders")
 
-    def train_model(self):
+    def train_model(self, teacher_model=None): 
+
         """
         The train_model method performs the model training.
         Currently the training code is hidden as part of the model classes to keep the ExperimentClass shorter.
         """
-
         # Read in the "train" parameter. If it is set to True, perform the training, otherwise skip it.
         train = get(self.params, "train", True)
         if train:
@@ -276,7 +291,7 @@ class Experiment:
             # Keep track of the time and perform the model training
             # See the model classes for documentation on the run_training() method
             t0 = time.time()
-            self.model.run_training()
+            self.model.run_training(teacher_model)
             t1 = time.time()
             traintime = t1 - t0
             n_epochs = get(self.params,"n_epochs",100)

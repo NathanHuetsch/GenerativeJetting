@@ -128,7 +128,7 @@ class CFM(GenerativeModel):
             else:
                 v = self.net(x_t, t_torch)
             return v
-
+    
         events = []
         batches = torch.split(x_T, batch_size)
         with torch.no_grad():

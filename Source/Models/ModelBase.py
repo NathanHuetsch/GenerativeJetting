@@ -94,8 +94,8 @@ class GenerativeModel(nn.Module):
         else:
             print("train_model: log set to False. No logs will be written")
 
-    def run_training(self, prior_model=None, prior_prior_model=None):
-
+    def run_training(self, teacher_model= None, prior_model=None, prior_prior_model=None):
+        
         self.prepare_training()
         n_epochs = get(self.params, "n_epochs", 100)
         print_every = get(self.params, "print_every", int(n_epochs/20))
@@ -108,11 +108,11 @@ class GenerativeModel(nn.Module):
             self.epoch =  e
             self.train()
             t0 = time.time()
-            self.train_one_epoch()
+            self.train_one_epoch(teacher_model)
             t1 = time.time()
             if e % print_every == 0:
                 print(f"train_model: Finished epoch {len(self.train_losses_epoch)}"
-                      f" with average loss {np.round(self.train_losses_epoch[-1], 5)} "
+                      f" with average loss {self.train_losses_epoch[-1]} "
                       f"in {np.round(t1 - t0, 1)} seconds")
 
             if self.sample_periodically:
@@ -137,13 +137,19 @@ class GenerativeModel(nn.Module):
                 dtEst= (t1-t0) * n_epochs
                 print(f"Training time estimate: {dtEst/60:.2f} min = {dtEst/60**2:.2f} h")
 
-    def train_one_epoch(self):
+    def train_one_epoch(self, teacher_model = None):
+        def batch_loss(data):
+            if teacher_model is None: 
+                return self.batch_loss(data)
+            else: 
+                return self.batch_loss(data, teacher_model)
+
         self.train()
         self.net.train()
         train_losses = np.array([])
         for batch_id, x in enumerate(self.train_loader):
             self.optimizer.zero_grad()
-            loss = self.batch_loss(x)
+            loss = batch_loss(x)
             if np.isfinite(loss.item()):
                 loss.backward()
                 self.optimizer.step()
@@ -498,10 +504,11 @@ class GenerativeModel(nn.Module):
 
         if get(self.params,"plot_loss", True):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            try:
-                plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
-            except:
-                print("plot_loss failed")
+            plot_loss(out, self.train_losses)
+            #try:
+            #    plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
+            #except:
+            #    print("plot_loss failed")
     def plot_toy(self, samples = None, finished=False):
         self.sigma_path = get(self.params, "sigma_path", None)
         os.makedirs(f"plots", exist_ok=True)
@@ -570,7 +577,7 @@ class GenerativeModel(nn.Module):
             plot_obs_2d(pp=out, data_train=self.data_train, data_test=self.data_test, data_generated=samples,
                         obs_ranges=self.obs_ranges, obs_names=self.obs_names, n_epochs=n_epochs)
 
-        if get(self.params,"plot_loss", False):
+        if get(self.params,"plot_loss", True):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
-            plot_loss(out, self.train_losses, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
+            plot_loss(out, self.train_losses) #, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
 
