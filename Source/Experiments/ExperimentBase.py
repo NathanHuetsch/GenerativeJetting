@@ -178,15 +178,15 @@ class Experiment:
 
         return model
     
-    def load_model(self,p):
+    def load_model(self, p):
         #Load model ohne hyperparameter? 
         model_path = get(p, "model_path", None)
-        model_type = get(p, "model_type", 'CFM')
+        model_type = get(p, "model", 'CFM')
         if model_path is None:
             raise ValueError("Model path must be specified")
 
         # Load the model directly
-        model = eval(model_type)(p)
+        model = eval(model_type)(p)#
         model.load_state_dict(torch.load(model_path, map_location=self.device))
         model.to(self.device)
         print(f"load_model: Loaded model from {model_path}")

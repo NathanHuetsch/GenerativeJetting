@@ -33,8 +33,8 @@ class CM(GenerativeModel):
         v_theta = parent_model.net(x_t, t).detach()
 
         # Euler Step
-        x_t_step = x_t - stepsize * v_theta
-        t_step = t - stepsize
+        x_t_step = x_t + stepsize * v_theta
+        t_step = t + stepsize
 
         # Consitency model forward
         f_theta = self.forward(x_t, t)

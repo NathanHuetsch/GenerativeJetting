@@ -107,9 +107,9 @@ class GenerativeModel(nn.Module):
 
             self.epoch =  e
             self.train()
-            t0 = time.time()
+            t0 = time.perf_counter()
             self.train_one_epoch(teacher_model)
-            t1 = time.time()
+            t1 = time.perf_counter()
             if e % print_every == 0:
                 print(f"train_model: Finished epoch {len(self.train_losses_epoch)}"
                       f" with average loss {self.train_losses_epoch[-1]} "

@@ -46,11 +46,12 @@ class Z1_Experiment(Experiment):
         # Load teacher model
         teacher_model_params = get(self.params, "teacher_model_params", None)
 
-
+        
         self.teacher_model = None # solves problem with undefined variable fast. not optimal solution
         if  get(self.params, "model", "CM") == "CM": 
             self.teacher_model_params = load_params(teacher_model_params)
             self.teacher_model = self.load_model(self.teacher_model_params)
+
 
         self.model.data_mean, self.model.data_std = self.data_mean, self.data_std
         self.model.obs_names = self.obs_names
