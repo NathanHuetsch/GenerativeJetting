@@ -71,7 +71,7 @@ class CM(GenerativeModel):
             for batch in batches:
                 t = torch.ones(batch.shape[0], 1, device = self.device).float()
                 x = self.forward(batch, t)
-                for _ in range(steps):
+                for s in range(steps):
                     z = torch.randn(batch.shape[0], self.dim_x, device = self.device)
                     t -= 1/steps
                     x = (1-t) * x + t * z
