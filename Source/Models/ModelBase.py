@@ -189,7 +189,13 @@ class GenerativeModel(nn.Module):
         return samples
 
     # cfm_samples
-    def plot_samples(self, samples, finished=False):
+    def plot_samples(self, samples, teacher_samples = None, finished=False):
+        teacher_label = 'CFM'
+        if teacher_samples is None: 
+            teacher_samples = self.data_test
+            test_label = 'True'
+
+            
         os.makedirs(f"plots", exist_ok=True)
         if finished:
             path = f"plots/run{self.runs}"
@@ -208,7 +214,7 @@ class GenerativeModel(nn.Module):
         weights = None
 
         plot_train.append(self.data_train)
-        plot_test.append(self.data_test)
+        plot_test.append(teacher_samples)
         plot_samples.append(samples)
 
         if get(self.params, "magic_transformation", False):

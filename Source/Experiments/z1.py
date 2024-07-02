@@ -59,6 +59,7 @@ class Z1_Experiment(Experiment):
         self.build_optimizer()
         self.build_dataloaders()
         self.train_model(self.teacher_model)
+
         self.generate_samples()
         self.make_plots()
         self.finish_up()

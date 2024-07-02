@@ -82,22 +82,24 @@ class Experiment:
 
     def prepare_experiment(self):
         """
-                The prepare_experiment method gets the necessary parameters and sets up an out_dir directory for the experiment.
-                All results will be saved in this directory.
-                """
+        The prepare_experiment method gets the necessary parameters and sets up an out_dir directory for the experiment.
+        All results will be saved in this directory.
+        """
         # If we start fresh, we read in the "runs_dir" and "run_name" parameters and set up an out_dir
-        # All out_dir names get a random number added to avoid unintentionally overwriting old experiments
         runs_dir = get(self.params, "runs_dir", None)
         if runs_dir is None:
             runs_dir = os.path.join(os.getcwd(), "runs")
             print("prepare_experiment: runs_dir not specified. Working in ", runs_dir)
-        run_name = get(self.params, "run_name", None)
-        rnd_number = np.random.randint(low=1000, high=9999)
-        if run_name is None:
-            self.out_dir = os.path.join(runs_dir, str(rnd_number))
-            print("prepare_experiment: run_name not specified. Using random number")
-        else:
-            self.out_dir = os.path.join(runs_dir, run_name + str(rnd_number))
+        
+        run_name = get(self.params, "run_name", "run")
+        # Find the next available run number
+        existing_dirs = [d for d in os.listdir(runs_dir) if os.path.isdir(os.path.join(runs_dir, d))]
+        run_numbers = [int(d[len(run_name):]) for d in existing_dirs if d.startswith(run_name) and d[len(run_name):].isdigit()]
+        next_run_number = max(run_numbers, default=0) + 1
+        
+        self.out_dir = os.path.join(runs_dir, f"{run_name}{next_run_number}")
+        print(f"prepare_experiment: using {self.out_dir} as the output directory")
+        
         os.makedirs(self.out_dir)
         os.chdir(self.out_dir)
         self.params["out_dir"] = self.out_dir
@@ -164,7 +166,6 @@ class Experiment:
         """
         The build_model method gets the necessary parameters and defines and builds the model.
         """
-
         # Read in the model class and try to build the model. Raise an error if it is not specified
         model_type = get(p, "model", None)
         if model_type is None:
@@ -180,7 +181,7 @@ class Experiment:
     
     def load_model(self, p):
         #Load model ohne hyperparameter? 
-        model_path = get(p, "model_path", None)
+        model_path = get(self.params, "model_path", None)
         model_type = get(p, "model", 'CFM')
         if model_path is None:
             raise ValueError("Model path must be specified")
@@ -341,18 +342,56 @@ class Experiment:
             #print(self.data_raw.mean(0), self.data_raw.std(0))
         else:
             print("generate_samples: sample set to False")
+        
+    def generate_teacher_samples(self):
+        """
+        The generate_samples method uses the trained or loaded model to generate samples.
+        Currently, the sampling code is hidden as part of the model classes to keep the ExperimentClass shorter.
+        """
+        # Read in the "sample" parameter. If it is set to True, perform the sampling, otherwise skip it.
+        sample = get(self.params, "sample", True)
+        iterations = self.iterations if self.bayesian else 1
+
+        if sample:
+            bay_samples = []
+            for i in range(0, iterations):
+                # Read in the "n_samples" parameter specifying how many samples to generate
+                # Call the model.sample_n_parallel(n_samples) method to perform the sampling
+                n_samples = get(self.params, "n_samples", 1000000)
+                print(f"generate_samples: Starting generation of {n_samples} samples")
+                t0 = time.time()
+                sample = self.teacher_model.sample_and_undo(n_samples)
+                t1 = time.time()
+                sampletime = t1 - t0
+                self.params["CFM_sampletime"] = sampletime
+                bay_samples.append(sample)
+
+                print(f"generate_samples: CFM Finished generation of {n_samples} samples after {sampletime:.2f} s = {sampletime/60:.2f} min.")
+                if get(self.params, "save_samples", False):
+                    os.makedirs('samples', exist_ok=True)
+                    np.save(f"samples/samples_teacher_{i}.npy", sample)
+                    print(f"save_samples: generated samples have been saved")
+
+            self.teacher_samples = np.concatenate(bay_samples)
+            #print(self.samples.mean(0), self.samples.std(0))
+            #print(self.data_raw.mean(0), self.data_raw.std(0))
+
 
     def make_plots(self):
+        self.teacher_samples = None
+        if get(self.params, "model", None) == "CM":
+                self.teacher_model.data_mean, self.teacher_model.data_std = self.data_mean, self.data_std
+                self.teacher_model.obs_names = self.obs_names
+                self.generate_teacher_samples()
         """
         The make_plots method uses the train data, the test data and the generated samples to draw a range of plots.
         """
-
         # Read in the "plot" and "sample" parameters. If both are set to True, perform make the plots, otherwise skip it.
         plot = get(self.params, "plot", True)
         sample = get(self.params, "sample", True)
         if plot and sample:
             print(f"make_plots: plotting {self.plot_channels}")
-            self.model.plot_samples(self.samples, finished=True)
+            self.model.plot_samples(self.samples, self.teacher_samples, finished=True)
 
             print("make_plots: Finished making plots")
         else:
