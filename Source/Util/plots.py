@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import warnings
 import matplotlib as mpl
 import matplotlib.font_manager as font_manager
+from Source.Util.util import get_device, save_params, get
 font_dir = ['paper/bitstream-charter-ttf/Charter/']
 for font in font_manager.findSystemFonts(font_dir):
     font_manager.fontManager.addfont(font)
@@ -46,6 +47,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
                 If weight_samples!=None, assume that obs_predict has the form [dataset1, dataset2, ...]
         :predict_weights: Weights of the predicted events (for e.g. discriminator reweighting)
         '''
+        
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
 
@@ -70,7 +72,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             scales = [1 / integral if integral != 0. else 1. for integral in integrals]
 
             FONTSIZE = 16
-            labels = ["True", "CFM", "Train"]
+            labels = ["True", "model", "Train"]
             colors = ["black","#A52A2A", "#0343DE"]
             dup_last = lambda a: np.append(a, a[-1])
 
@@ -128,7 +130,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             if "p_{T" in name or "mu" in name:
                 axs[0].set_yscale("log")
 
-            axs[1].set_ylabel(r"$\frac{\mathrm{CFM}}{\mathrm{True}}$",
+            axs[1].set_ylabel(r"$\frac{\mathrm{model}}{\mathrm{True}}$",
                     fontsize = FONTSIZE)
 
             axs[1].set_yticks(y_ticks)

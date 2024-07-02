@@ -23,11 +23,12 @@ class CM(GenerativeModel):
     def batch_loss(self, x, parent_model):
         '''cal. batch_loss for CM '''
         stepsize = 0.01       
+        parent_model.eval()
 
         # Gen random punkt zwischen noise und data
         epsilon = torch.randn_like(x, device = x.device)
         t = torch.rand(x.shape[0], 1, device= x.device)
-        x_t = (1 - t) * x + t * epsilon
+        x_t = t * x + (1-t) * epsilon
 
         # Velocity
         v_theta = parent_model.net(x_t, t).detach()
@@ -46,7 +47,7 @@ class CM(GenerativeModel):
 
     def forward(self, x0, t):
         """Res. Net mit Formel aus Apendix B paper"""
-
+        t = 1-t
         sigma = torch.tensor(0.5, dtype=x0.dtype, device=x0.device)
         epsilon = torch.tensor(1e-4, dtype=x0.dtype, device=x0.device)
         
@@ -58,7 +59,6 @@ class CM(GenerativeModel):
 
     def sample_n(self, nsamples, steps=None):
         if steps is None: steps = 1
-
         """
         Sample Data in N steps
         from t = 1 and x(1) = noise to t = 0 and x(0) = noise

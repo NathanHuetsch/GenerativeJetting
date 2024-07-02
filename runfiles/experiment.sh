@@ -1,15 +1,17 @@
-#PBS -q a30
-#PBS -l nodes=1:ppn=1:gpus=1:a30
-#PBS -l walltime=40:00:00
-#PBS -d /remote/gpu07/huetsch
-#PBS -o output.txt
-#PBS -e error.txt
+#!/bin/bash                                                                     
+#PBS -l walltime=30:00:00                                                        
+#PBS -l nodes=1:ppn=1:gpus=1:a30                                        
+#PBS -q a30                                                                 
 
-export CUDA_VISIBLE_DEVICES=$(cat $PBS_GPUFILE | sed s/.*-gpu// )
-export PYTHONPATH=$PYTHONPATH:/remote/gpu07/huetsch/lib/python3.9/site-packages
+module load cuda/12.1
+export PATH=/remote/gpu03/anaconda3/bin:$PATH
+source activate /remote/gpu03/hoelzl/conda/venv
 
-source venv/bin/activate
-cd GenerativeJetting
+mydev=`cat $PBS_GPUFILE | sed s/.*-gpu// `
+export CUDA_VISIBLE_DEVICES=$mydev
 
-python run_Zn.py $1
+cd /remote/gpu03/hoelzl/scripts/GenerativeJetting
 
+nice -19 python run_Zn.py /remote/gpu03/hoelzl/scripts/GenerativeJetting/params/gpu_test.yaml
+
+echo "job done"

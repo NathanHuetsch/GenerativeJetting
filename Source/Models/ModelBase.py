@@ -55,6 +55,7 @@ class GenerativeModel(nn.Module):
         self.device = get(self.params, "device", get_device())
         self.dim_x = self.params["dim_x"]
         self.conditional = get(self.params,'conditional',False)
+        
 
         self.n_jets = get(self.params,'n_jets',2)
 
@@ -67,6 +68,7 @@ class GenerativeModel(nn.Module):
         self.regular_loss = []
         self.kl_loss = []
         self.runs = get(self.params, "runs", 0)
+        self.model_type = get(self.params, "model", None)
 
     def build_net(self):
         pass
@@ -107,9 +109,9 @@ class GenerativeModel(nn.Module):
 
             self.epoch =  e
             self.train()
-            t0 = time.perf_counter()
+            t0 = time.time()
             self.train_one_epoch(teacher_model)
-            t1 = time.perf_counter()
+            t1 = time.time()
             if e % print_every == 0:
                 print(f"train_model: Finished epoch {len(self.train_losses_epoch)}"
                       f" with average loss {self.train_losses_epoch[-1]} "
@@ -186,6 +188,7 @@ class GenerativeModel(nn.Module):
 
         return samples
 
+    # cfm_samples
     def plot_samples(self, samples, finished=False):
         os.makedirs(f"plots", exist_ok=True)
         if finished:
@@ -225,7 +228,7 @@ class GenerativeModel(nn.Module):
 
         plot_weights.append(weights)
 
-        with PdfPages(f"{path}/1d_hist_epoch_{n_epochs}.pdf") as out:
+        with PdfPages(f"{path}/1d_hist_{self.model_type}epoch_{n_epochs}.pdf") as out:
             for j, _ in enumerate(plot_train):
                 # Loop over the plot_channels
                 for i, channel in enumerate(self.params["plot_channels"]):
@@ -334,7 +337,7 @@ class GenerativeModel(nn.Module):
                                n_epochs=n_epochs)
 
         if get(self.params, "plot_deltaR_all", True):
-            with PdfPages(f"{path}/deltaR_all_epoch_{n_epochs}.pdf") as out:
+            with PdfPages(f"{path}/deltaR_all_epoch_{n_epochs}_{self.model_type}.pdf") as out:
                 for j, _ in enumerate(plot_train):
                     obs_name = "\Delta R_{l_1 l_2}"
                     obs_train = delta_r(plot_train[j], idx_phi1=1, idx_eta1=2, idx_phi2=5, idx_eta2=6)
@@ -446,7 +449,7 @@ class GenerativeModel(nn.Module):
 
 
         if get(self.params, "plot_Mll", True):
-            with PdfPages(f"{path}/M_ll_epochs_{n_epochs}.pdf") as out:
+            with PdfPages(f"{path}/M_ll_epochs_{n_epochs}_{self.model_type}.pdf") as out:
                 for j,_ in enumerate(plot_train):
                     obs_name = "M_{\ell \ell}"
                     obs_range = [75,110]
@@ -466,7 +469,7 @@ class GenerativeModel(nn.Module):
                              weight_samples=iterations,
                              predict_weights=weights)
 
-        plot_1d_differences = get(self.params, "plot_1d_differences", True)
+        plot_1d_differences = get(self.params, f"plot_1d_differences", True)
         if plot_1d_differences:
             if self.n_jets == 1:
                 differences = [[2, 6], [2, 10], [6, 10], [5, 9], [1,5], [1,9]]
@@ -476,7 +479,7 @@ class GenerativeModel(nn.Module):
                 differences = [[2, 6], [2, 10], [2, 14], [6, 10], [6, 14], [10, 14], [5, 9], [5, 13], [9, 13],
                                [2, 18], [6, 18], [10, 18], [14, 18], [5, 17], [9, 17], [13, 17], [1,5], [1,9], [1,13], [1,17]]
     #
-            with PdfPages(f"{path}/1d_differences_{n_epochs}.pdf") as out:
+            with PdfPages(f"{path}/1d_differences_{n_epochs}_{self.model_type}.pdf") as out:
                 for j, _ in enumerate(plot_train):
                     for channels in differences:
                         channel1 = channels[0]

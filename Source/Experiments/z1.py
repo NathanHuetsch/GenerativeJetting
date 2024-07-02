@@ -62,3 +62,5 @@ class Z1_Experiment(Experiment):
         self.generate_samples()
         self.make_plots()
         self.finish_up()
+
+
