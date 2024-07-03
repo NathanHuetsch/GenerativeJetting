@@ -511,7 +511,7 @@ class GenerativeModel(nn.Module):
                                  predict_weights=weights)
 
 
-        if get(self.params,"plot_loss", True):
+        if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
             plot_loss(out, self.train_losses)
             #try:
@@ -586,7 +586,7 @@ class GenerativeModel(nn.Module):
             plot_obs_2d(pp=out, data_train=self.data_train, data_test=self.data_test, data_generated=samples,
                         obs_ranges=self.obs_ranges, obs_names=self.obs_names, n_epochs=n_epochs)
 
-        if get(self.params,"plot_loss", True):
+        if get(self.params,"plot_loss", False):
             out = f"{path}/loss_epoch_{n_epochs}.pdf"
             plot_loss(out, self.train_losses) #, self.regular_loss, self.kl_loss, self.regularizeGMM_loss, loss_log=get(self.params, "loss_log", True))
 

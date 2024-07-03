@@ -42,9 +42,9 @@ class Z1_Experiment(Experiment):
         self.n_data = len(self.data)
 
         self.model = self.build_model(self.params)
-        #self.model = self.load_model()
+        self.load_model()
 
-        if self.model_type == "CM": self.load_teacher_model()
+        self.load_teacher_model()
 
 
         self.model.data_mean, self.model.data_std = self.data_mean, self.data_std

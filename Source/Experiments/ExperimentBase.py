@@ -185,25 +185,41 @@ class Experiment:
         Load teacher model (CFM) for CM
         retuns teacher model from teacher_model_path
         '''
-        self.teacher_model_params = load_params(get(self.params, "teacher_model_params", None))
-        model_path = get(self.params, "teacher_model_path", None)
-        model_type = get(self.teacher_model_params, "model", 'CFM')
-        if model_path is None:
-            raise ValueError("Model path must be specified")
+        if self.model_type == "CM":
+            try:
+                self.teacher_model_params = load_params(get(self.params, "teacher_model_params", None))
+                model_path = get(self.params, "teacher_model_path", None)
+                model_type = get(self.teacher_model_params, "model", 'CFM')
+                if model_path is None:
+                    raise ValueError("Model path must be specified")
 
-        # Load the model directly
-        self.teacher_model = eval(model_type)(self.teacher_model_params)
-        self.teacher_model.load_state_dict(torch.load(model_path, map_location=self.device))
-        self.teacher_model.to(self.device)
-        print(f"load_model: Loaded model from {model_path}")
+                # Load the model directly
+                self.teacher_model = eval(model_type)(self.teacher_model_params)
+                self.teacher_model.load_state_dict(torch.load(model_path, map_location=self.device))
+                self.teacher_model.to(self.device)
+                print(f"load_teacher_model: Loaded model from {model_path}")
+            except Exception as e:
+                print('failed load model_teacher')
 
     
-    def load_model(self,p):
+    def load_model(self):
         """
         The load_model method gets the necessary parameters and loads a model from a specified path.
-        NOT IMPLEMENTED YET
         """
-        pass
+        load_model_flag = get(self.params, "load_model", False)
+        if load_model_flag: 
+            try: 
+                # loadd path
+                model_path = get(self.params, "model_path", None)
+                if model_path is None: raise ValueError("Model path must be specified")
+
+                # Load the model directly
+                self.model = eval(self.model_type)(self.params)
+                self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+                self.model.to(self.device)
+                print(f"load_model: Loaded model from {model_path}")
+            except Exception as e:
+                print(f"Failed to load model: {e}")
     
 
     def build_optimizer(self):
@@ -348,7 +364,7 @@ class Experiment:
                 self.params["sampletime"] = sampletime
                 bay_samples.append(sample)
 
-                print(f"generate_samples: Finished generation of {n_samples} samples after {sampletime:.2f} s = {sampletime/60:.2f} min.")
+                print(f"generate_samples: {self.model_type} Finished generation of {n_samples} samples after {sampletime:.2f} s = {sampletime/60:.2f} min.")
                 if get(self.params, "save_samples", False):
                     os.makedirs('samples', exist_ok=True)
                     np.save(f"samples/samples_final_{i}.npy", sample)

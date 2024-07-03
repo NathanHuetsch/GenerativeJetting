@@ -1,0 +1,120 @@
+# #########
+# # General: #
+# #########
+# directory where to save results
+runs_dir : /remote/gpu03/hoelzl/scripts/GenerativeJetting/runs
+# name of the run
+run_name : "CM_Transformerv2"
+# if true, writes output to a textfile instead of the console
+redirect_console : False
+# model
+model: CM
+
+#Load Model
+load_model: False
+model_path: 
+# Note that the model params has 
+
+#load teacher model
+teacher_model_path: /remote/gpu03/hoelzl/GenerativeJetting/runs/GPU_test1890/models/model.pt
+teacher_model_params: /remote/gpu03/hoelzl/GenerativeJetting/runs/GPU_test1890/paramfile.yaml
+# #########
+# # Data: #
+data_path : /remote/gpu03/hoelzl/scripts/GenerativeJetting/z_1jet.npy
+# #########
+# make network bayesian
+bayesian: False
+# bayesian loss factor
+C: 0
+# how many bayesian iterations
+#iterations: 30
+# from where to load the data
+
+# how many jets
+n_jets: 1
+# do jet prepocessing?
+jet_preprocessing : True
+# specify which channels to use?
+#channels : [0,2,4]
+
+
+# ##############
+# # Training:  #
+# ##############
+# train the network?
+train: True
+# write Tensorboard logs?
+log: True
+# split train-val-test
+data_split: [0.6, 0, 0.4]
+# optimizer
+optimizer: Adam
+# lr
+lr : 1.e-3
+# batch size for training
+batch_size : 16384
+# batch size for generation
+batch_size_sample : 16384
+# weight decay
+weight_decay : 0
+# Adam parameters
+betas : [0.9, 0.99]
+# use LR scheduler?
+use_scheduler: True
+# which one?
+lr_scheduler: "CosineAnnealing"
+# train epochs
+n_epochs : 1000
+
+# periodcially interupt the training to make plots
+sample_periodically: False
+# how often?
+sample_every: 10
+# how many samples?
+sample_every_n_samples: 100000
+
+# #################
+# # Architecture: #
+# #################
+
+# trajectory
+trajectory: "linear_trajectory"
+# tim sampling distribution
+beta_dist: False
+beta_dist_b: 0.5
+# magic trafo
+magic_transformation: False
+
+# network architecture
+#network: "MLP"
+#layers: 8
+#intermediate_dim: 512
+#encode_t: False
+#encode_t_dim: 64
+#encode_x: False
+#encode_x_dim: 64
+#normalization: None
+#dropout: None
+
+network: Transformer
+dim_embedding: 64
+n_encoder_layers: 1
+n_decoder_layers: 6
+dim_feedforward: 256
+dropout: 0.
+n_head: 4
+embeds: False
+
+# #############
+# # Sampling: #
+# #############
+sample: True
+load_best_checkpoint: False
+n_samples : 1000000
+sample_steps: 1
+
+# #############
+# # Plotting: #
+# #############
+plot : True
+plot_loss: True 

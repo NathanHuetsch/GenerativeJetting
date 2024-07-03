@@ -49,42 +49,43 @@ class CM(GenerativeModel):
         return loss
     
 
-    def forward(self, x0, t):
+    def forward(self, x, t):
         t = 1-t
         """Res. Net mit Formel aus Apendix B paper"""
-        sigma = torch.tensor(0.5, dtype=x0.dtype, device=x0.device)
-        epsilon = torch.tensor(1e-4, dtype=x0.dtype, device=x0.device)
+        sigma = torch.tensor(0.5, dtype=x.dtype, device=x.device)
+        epsilon = torch.tensor(1e-4, dtype=x.dtype, device=x.device)
         
         c_skip = sigma ** 2 / ((t - epsilon) ** 2 + sigma ** 2)
         c_out = sigma * (t - epsilon) / torch.sqrt(sigma ** 2 + t ** 2)
 
-        return c_skip * x0 + c_out * self.net(x0, t)  ##Forward statt 
+        return c_skip * x + c_out * self.net(x, t)  ##Forward statt 
     
 
-    def sample_n(self, nsamples:int, steps:int=0):
+    def sample_n(self, nsamples:int):
+        steps = get(self.params, "sample_steps", 1)
         """
         Sample Data in N steps
         from t = 1 and x(1) = noise to t = 0 and x(0) = noise
         """
         epsilon = torch.randn(nsamples, self.dim_x, device=self.device)
-        batch_size = 1000
+        batch_size = get(self.params, "batch_size_sample", 8192)
+
         batches = torch.split(epsilon, batch_size)
         events = []
         with torch.no_grad():
             for batch in batches:
                 t = torch.zeros(batch.shape[0], 1, device = self.device).float()
                 x = self.forward(batch, t) #Hier self.net oder forward?? 
-                
                 for s in range(steps):
+                    if steps == 1: break 
                     z = torch.randn(batch.shape[0], self.dim_x, device = self.device)
-                    t = 1/steps
+                    t += 1/steps 
                     x = t * x + (1-t) * z
                     x = self.forward(x, t)
-                    
                 x = x.to('cpu')
                 events.append(x)
 
-            print(f"generate_samples: Finished generation of {nsamples} samples with {steps}  s")
+            print(f"generate_samples: Finished generation of {nsamples} samples with {steps} steps")
             return np.concatenate(events)       
 
 
