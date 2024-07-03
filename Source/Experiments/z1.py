@@ -42,15 +42,9 @@ class Z1_Experiment(Experiment):
         self.n_data = len(self.data)
 
         self.model = self.build_model(self.params)
+        #self.model = self.load_model()
 
-        # Load teacher model
-        teacher_model_params = get(self.params, "teacher_model_params", None)
-
-        
-        self.teacher_model = None # solves problem with undefined variable fast. not optimal solution
-        if  get(self.params, "model", "CM") == "CM": 
-            self.teacher_model_params = load_params(teacher_model_params)
-            self.teacher_model = self.load_model(self.teacher_model_params)
+        if self.model_type == "CM": self.load_teacher_model()
 
 
         self.model.data_mean, self.model.data_std = self.data_mean, self.data_std
@@ -58,7 +52,7 @@ class Z1_Experiment(Experiment):
         self.model.obs_ranges = self.obs_ranges
         self.build_optimizer()
         self.build_dataloaders()
-        self.train_model(self.teacher_model)
+        self.train_model()
 
         self.generate_samples()
         self.make_plots()

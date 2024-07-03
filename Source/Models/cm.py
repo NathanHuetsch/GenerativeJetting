@@ -21,7 +21,11 @@ class CM(GenerativeModel):
 
 
     def batch_loss(self, x, parent_model):
-        '''cal. batch_loss for CM '''
+        '''
+        cal. batch_loss for CM 
+        t=0 -> x(0) noise t=1 -x(1)data
+        '''
+
         stepsize = 0.01       
         parent_model.eval()
 
@@ -46,8 +50,8 @@ class CM(GenerativeModel):
     
 
     def forward(self, x0, t):
-        """Res. Net mit Formel aus Apendix B paper"""
         t = 1-t
+        """Res. Net mit Formel aus Apendix B paper"""
         sigma = torch.tensor(0.5, dtype=x0.dtype, device=x0.device)
         epsilon = torch.tensor(1e-4, dtype=x0.dtype, device=x0.device)
         
@@ -57,8 +61,7 @@ class CM(GenerativeModel):
         return c_skip * x0 + c_out * self.net(x0, t)  ##Forward statt 
     
 
-    def sample_n(self, nsamples, steps=None):
-        if steps is None: steps = 1
+    def sample_n(self, nsamples:int, steps:int=0):
         """
         Sample Data in N steps
         from t = 1 and x(1) = noise to t = 0 and x(0) = noise
@@ -69,13 +72,15 @@ class CM(GenerativeModel):
         events = []
         with torch.no_grad():
             for batch in batches:
-                t = torch.ones(batch.shape[0], 1, device = self.device).float()
-                x = self.forward(batch, t)
+                t = torch.zeros(batch.shape[0], 1, device = self.device).float()
+                x = self.forward(batch, t) #Hier self.net oder forward?? 
+                
                 for s in range(steps):
                     z = torch.randn(batch.shape[0], self.dim_x, device = self.device)
-                    t -= 1/steps
-                    x = (1-t) * x + t * z
+                    t = 1/steps
+                    x = t * x + (1-t) * z
                     x = self.forward(x, t)
+                    
                 x = x.to('cpu')
                 events.append(x)
 

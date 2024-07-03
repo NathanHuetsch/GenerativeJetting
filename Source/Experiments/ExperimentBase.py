@@ -79,6 +79,7 @@ class Experiment:
 
         self.n_jets = get(self.params, "n_jets", 2)
         self.starttime = time.time()
+        self.model_type = get(self.params, "model", None)
 
     def prepare_experiment(self):
         """
@@ -167,31 +168,43 @@ class Experiment:
         The build_model method gets the necessary parameters and defines and builds the model.
         """
         # Read in the model class and try to build the model. Raise an error if it is not specified
-        model_type = get(p, "model", None)
-        if model_type is None:
+        self.model_type = get(p, "model", None)
+        if self.model_type is None:
             raise ValueError("build_model: model not specified")
-        model = eval(model_type)(p)
+        model = eval(self.model_type)(p)
 
         # Keep track of the total number of trainable model parameters
         model_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
         self.params["model_parameters"] = model_parameters
-        print(f"build_model: Built model {model_type}. Total number of parameters: {model_parameters}")
+        print(f"build_model: Built model {self.model_type}. Total number of parameters: {model_parameters}")
 
         return model
     
-    def load_model(self, p):
-        #Load model ohne hyperparameter? 
-        model_path = get(self.params, "model_path", None)
-        model_type = get(p, "model", 'CFM')
+    def load_teacher_model(self):
+        '''
+        Load teacher model (CFM) for CM
+        retuns teacher model from teacher_model_path
+        '''
+        self.teacher_model_params = load_params(get(self.params, "teacher_model_params", None))
+        model_path = get(self.params, "teacher_model_path", None)
+        model_type = get(self.teacher_model_params, "model", 'CFM')
         if model_path is None:
             raise ValueError("Model path must be specified")
 
         # Load the model directly
-        model = eval(model_type)(p)#
-        model.load_state_dict(torch.load(model_path, map_location=self.device))
-        model.to(self.device)
+        self.teacher_model = eval(model_type)(self.teacher_model_params)
+        self.teacher_model.load_state_dict(torch.load(model_path, map_location=self.device))
+        self.teacher_model.to(self.device)
         print(f"load_model: Loaded model from {model_path}")
-        return model
+
+    
+    def load_model(self,p):
+        """
+        The load_model method gets the necessary parameters and loads a model from a specified path.
+        NOT IMPLEMENTED YET
+        """
+        pass
+    
 
     def build_optimizer(self):
         """
@@ -278,12 +291,16 @@ class Experiment:
         else:
             print("build_dataloaders: train set to False. Not building dataloaders")
 
-    def train_model(self, teacher_model=None): 
-
+    def train_model(self): 
         """
         The train_model method performs the model training.
         Currently the training code is hidden as part of the model classes to keep the ExperimentClass shorter.
         """
+        def run_training():
+            if self.model_type == "CM":
+                self.model.run_training(self.teacher_model)
+            else:
+                self.model.run_training()
         # Read in the "train" parameter. If it is set to True, perform the training, otherwise skip it.
         train = get(self.params, "train", True)
         if train:
@@ -292,7 +309,7 @@ class Experiment:
             # Keep track of the time and perform the model training
             # See the model classes for documentation on the run_training() method
             t0 = time.time()
-            self.model.run_training(teacher_model)
+            run_training()
             t1 = time.time()
             traintime = t1 - t0
             n_epochs = get(self.params,"n_epochs",100)
@@ -378,14 +395,15 @@ class Experiment:
 
 
     def make_plots(self):
+        """
+        The make_plots method uses the train data, the test data and the generated samples to draw a range of plots.
+        """
         self.teacher_samples = None
         if get(self.params, "model", None) == "CM":
                 self.teacher_model.data_mean, self.teacher_model.data_std = self.data_mean, self.data_std
                 self.teacher_model.obs_names = self.obs_names
                 self.generate_teacher_samples()
-        """
-        The make_plots method uses the train data, the test data and the generated samples to draw a range of plots.
-        """
+        
         # Read in the "plot" and "sample" parameters. If both are set to True, perform make the plots, otherwise skip it.
         plot = get(self.params, "plot", True)
         sample = get(self.params, "sample", True)
