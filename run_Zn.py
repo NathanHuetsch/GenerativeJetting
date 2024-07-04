@@ -112,6 +112,7 @@ def main(argv):
     # Run the experiment
     experiment.full_run()
 
+## TEST remote 
 
 if __name__ == '__main__':
     # Read in the flags
