@@ -56,6 +56,8 @@ class Z1_Experiment(Experiment):
 
         self.generate_samples()
         self.make_plots()
+        self.classify_measurement()
+
         self.finish_up()
 
 

@@ -8,6 +8,7 @@ from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
 from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
+from Source.Util.classify import measure_class 
 import time
 from datetime import datetime
 import sys
@@ -430,6 +431,21 @@ class Experiment:
             print("make_plots: Finished making plots")
         else:
             print("make_plots: plot set to False")
+
+    def classify_measurement(self):
+        n_samples = get(self.params, "n_samples", 1000000)
+        A = self.data
+        B = self.model.sample_n(n_samples)
+        
+        classify_flag = get(self.params, "classification", True)
+        if classify_flag:
+            try:
+                measure_class(
+                    x = A,
+                    y = B,
+                    params = self.params,) 
+            except Exception as e:
+                print(f"Failed to classify: {e}")
 
     def finish_up(self):
         """
