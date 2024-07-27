@@ -8,7 +8,7 @@ from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
 from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
-from Source.Util.classify import measure_class 
+from Source.Util.classify import MeasureClass
 import time
 from datetime import datetime
 import sys
@@ -264,7 +264,7 @@ class Experiment:
 
         # Read in the "train" parameter. If it is set to True, build the dataloaders, otherwise skip it.
         train = get(self.params, "train", True)
-        n_data = get(self.params, "n_data", 1000000)
+        n_data = get(self.params, "n_data", 1_000_000)
         # Read in the "data_split" parameter, specifying which parts of the data to use for training, validation and test
         cut1 = int(n_data * self.data_split[0])
         cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
@@ -433,17 +433,23 @@ class Experiment:
             print("make_plots: plot set to False")
 
     def classify_measurement(self):
-        n_samples = get(self.params, "n_samples", 1000000)
-        A = self.data
-        B = self.model.sample_n(n_samples)
-        
+        n_samples = get(self.params, "class_samples", 1000000)
+        True_data = self.model.data_train
+        False_data = self.model.sample_and_undo(n_samples)
+        label = 'CM'
+
+        if get(self.params, "class_teacher", False) is True:
+            False_data = self.teacher_model.sample_and_undo(n_samples)
+            label = 'CFM'
+
         classify_flag = get(self.params, "classification", True)
         if classify_flag:
             try:
-                measure_class(
-                    x = A,
-                    y = B,
-                    params = self.params,) 
+                MeasureClass(
+                    x = True_data,
+                    y = False_data,
+                    params = self.params,
+                    label = label) 
             except Exception as e:
                 print(f"Failed to classify: {e}")
 
