@@ -61,8 +61,8 @@ class CM(GenerativeModel):
         return c_skip * x + c_out * self.net(x, t)  ##Forward statt 
     
 
-    def sample_n(self, nsamples:int):
-        steps = get(self.params, "sample_steps", 1)
+    def sample_n(self, nsamples:int, steps = None):
+        if steps is None: steps = get(self.params, "sample_steps", 1)
         """
         Sample Data in N steps
         from t = 1 and x(1) = noise to t = 0 and x(0) = noise

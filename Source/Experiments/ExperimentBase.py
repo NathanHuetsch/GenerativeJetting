@@ -16,6 +16,7 @@ import os
 import h5py
 import pandas
 from torch.optim import Adam, AdamW, RAdam
+import csv
 
 
 class Experiment:
@@ -433,7 +434,7 @@ class Experiment:
             print("make_plots: plot set to False")
 
     def classify_measurement(self):
-        n_samples = get(self.params, "class_samples", 1000000)
+        n_samples = get(self.params, "n_samples", 100000)
         True_data = self.model.data_train
         False_data = self.model.sample_and_undo(n_samples)
         label = 'CM'
@@ -452,6 +453,65 @@ class Experiment:
                     label = label) 
             except Exception as e:
                 print(f"Failed to classify: {e}")
+
+    def time_measurement(self):
+        ITERATIONS = 3
+        STEPS = 15
+        N_SAMPLES = 3_000_000
+            
+        def CM_sample_time(n_samples, steps):
+            t_start = time.time()
+            self.model.sample_n(n_samples, steps)
+            t_stop = time.time()
+            sample_time = t_stop - t_start
+            return sample_time
+
+        def CFM_sample_time(n_samples):
+            t_start = time.time()
+            self.teacher_model.sample_n(n_samples)
+            t_stop = time.time()
+            sample_time = t_stop - t_start
+            return sample_time
+        
+        if get(self.params, "time_meassurement", False) is True: 
+            results = []
+
+            CFM_sample_time_list = []
+            for i in range(ITERATIONS):
+                t = CFM_sample_time(N_SAMPLES)
+                CFM_sample_time_list.append(t)
+            mean_sample_time = np.mean(CFM_sample_time_list)
+            std_sample_time = np.std(CFM_sample_time_list)
+            results.append(("CFM", mean_sample_time, std_sample_time))
+
+
+            for step in range(STEPS):
+                sample_time_list = []
+                for i in range(ITERATIONS):
+                    t = CM_sample_time(N_SAMPLES, step+1)
+                    sample_time_list.append(t)
+
+                mean_sample_time = np.mean(sample_time_list)
+                std_sample_time = np.std(sample_time_list)
+            
+                results.append((step + 1, mean_sample_time, std_sample_time))
+
+            # Ensure the output directory exists
+            os.makedirs(self.out_dir, exist_ok=True)
+            csv_filename = 'sample_times.csv'
+            csv_filepath = os.path.join(self.out_dir, csv_filename)
+
+            # Export to CSV
+            with open(csv_filepath, 'w', newline='') as csvfile:
+                fieldnames = ['Step', 'Mean_Sample_Time', 'Std_Deviation']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                writer.writeheader()
+                for step, mean, std in results:
+                    writer.writerow({'Step': step, 'Mean_Sample_Time': mean, 'Std_Deviation': std})
+
+            # Print the path of the CSV file
+            print(f"CSV file has been saved to: {csv_filepath}")
 
     def finish_up(self):
         """

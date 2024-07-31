@@ -1,7 +1,7 @@
 #!/bin/bash                                                                     
 #PBS -l walltime=30:00:00                                                        
-#PBS -l nodes=1:ppn=1:gpus=1:a30                                      
-#PBS -q a30                                                                 
+#PBS -l nodes=1:ppn=1:gpus=1:a30                             
+#PBS -q a30                                        
 
 module load cuda/12.1
 export PATH=/remote/gpu03/anaconda3/bin:$PATH
