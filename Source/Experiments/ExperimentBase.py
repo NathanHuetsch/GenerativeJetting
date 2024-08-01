@@ -265,10 +265,10 @@ class Experiment:
 
         # Read in the "train" parameter. If it is set to True, build the dataloaders, otherwise skip it.
         train = get(self.params, "train", True)
-        n_data = get(self.params, "n_data", 1_000_000)
+        n_data = get(self.params, "n_data", 10_000)
         # Read in the "data_split" parameter, specifying which parts of the data to use for training, validation and test
         cut1 = int(n_data * self.data_split[0])
-        cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
+        cut2 = int(n_data * (self.data_split[0] + self.data_split[1]))
         self.model.data_train = self.data_raw[:cut1]
         self.model.data_test = self.data_raw[cut2:]
 
@@ -434,8 +434,8 @@ class Experiment:
             print("make_plots: plot set to False")
 
     def classify_measurement(self):
-        n_samples = get(self.params, "n_samples", 100000)
-        True_data = self.model.data_train
+        n_samples = get(self.params, "n_samples", 100_000)
+        True_data = self.data_raw
         False_data = self.model.sample_and_undo(n_samples)
         label = 'CM'
 
@@ -445,14 +445,11 @@ class Experiment:
 
         classify_flag = get(self.params, "classification", True)
         if classify_flag:
-            try:
-                MeasureClass(
-                    x = True_data,
-                    y = False_data,
-                    params = self.params,
-                    label = label) 
-            except Exception as e:
-                print(f"Failed to classify: {e}")
+            MeasureClass(
+                x = True_data,
+                y = False_data,
+                params = self.params,
+                label = label) 
 
     def time_measurement(self):
         ITERATIONS = 3

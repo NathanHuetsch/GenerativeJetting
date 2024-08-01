@@ -32,8 +32,26 @@ class ClassNN(nn.Module):
 
     def batch_loss(self, input, label):
         output = self.forward(input)
-        loss = nn.BCELoss()(output, label.float())
-        
+        c = torch.isnan(output)
+        i = torch.isnan(input)
+        a = output > 1 
+        b = output < 0
+
+        try:
+            loss = nn.BCELoss()(output, label.float())
+        except: 
+            print(f"error{output.min()},{output.max()}")
+            print(i.sum())
+            print(c.sum())
+            print(a.sum())
+            print(b.sum())
+
+        if torch.isnan(output).sum() > 0:
+            print(f"error{output.min()},{output.max()}")
+            print(i.sum())
+            print(c.sum())
+            print(a.sum())
+            print(b.sum())
         return loss
     
 class MeasureClass:
@@ -52,31 +70,41 @@ class MeasureClass:
     def prepare_data(self, x, y):
         samples_n = self.params.get('n_samples', 100_000)
         channels = self.params.get('plot_channels', [2, 4, 5])
+
         self.BATCHSIZE = self.params.get("class_batch_size", 128)
 
-        x = x[:samples_n]
+        self.mass_x, self.mass_y = get_M_ll(x), get_M_ll(y)
 
-        # Ensure x and y are numpy arrays and not lists
-
-        # Compute mass_x and mass_y
-        #mass_x, mass_y = get_M_ll(x), get_M_ll(y)
-        #print(f"mass_x shape: {mass_x.shape}, mass_y shape: {mass_y.shape}")
+        print(f"measure_class: mass_x shape: {self.mass_x.shape}, mass_y shape: {self.mass_y.shape}")
 
         # Convert to tensors and add a dimension for concatenation
-        #mass_x, mass_y = torch.Tensor(mass_x), torch.Tensor(mass_y)
-        #mass_x, mass_y = mass_x.unsqueeze(1), mass_y.unsqueeze(1)
-        #print(f"mass_x tensor shape: {mass_x.shape}, mass_y tensor shape: {mass_y.shape}")
+        mass_x, mass_y = torch.Tensor(self.mass_x), torch.Tensor(self.mass_y)
+        mass_x, mass_y = mass_x.unsqueeze(1), mass_y.unsqueeze(1)
+        a = torch.isnan(mass_x).squeeze(1)
+        b = torch.isnan(mass_y).squeeze(1)
+        
+        print(a.sum())
+        print(b.sum())
+        print(f'mass_x min{mass_x.min()} max:{mass_x.max()} mass_y min{mass_y.min()} max:{mass_y.max()}')
+        print(f"measure_class: mass_x tensor shape: {mass_x.shape}, mass_y tensor shape: {mass_y.shape}")
+
+        mass_x = mass_x[~a]
+        x = x[~a]
+
+        mass_x = mass_x[:samples_n]
+        x = x[:samples_n]
 
         # Select the specified channels
         x, y = x[:, channels], y[:, channels]
         self.x, self.y = torch.Tensor(x), torch.Tensor(y)
         print(f"measure_class: x shape after channel selection is {self.x.shape}, y shape is {self.y.shape}")
 
+
         # Concatenate mass_x and mass_y
         
-        #self.x = torch.cat((self.x, mass_x), dim=1)
-        #self.y = torch.cat((self.y, mass_y), dim=1)
-        #self.dim = self.x.shape[1]  # Update dimension based on new feature set
+        self.x = torch.cat((self.x, mass_x), dim=1)
+        self.y = torch.cat((self.y, mass_y), dim=1)
+        self.dim = 10  
         
         print(f"measure_class: final x shape is {self.x.shape}, y shape is {self.y.shape}")
         self.train = torch.cat((self.x, self.y), axis=0).to(self.device)
@@ -93,8 +121,8 @@ class MeasureClass:
         train_size = len(self.dataset) - val_size
         
         self.train_dataset, self.val_dataset = random_split(self.dataset, [train_size, val_size])
-        self.train_dataloader = DataLoader(self.train_dataset, batch_size=self.BATCHSIZE, shuffle=True)
-        self.val_dataloader = DataLoader(self.val_dataset, batch_size=self.BATCHSIZE, shuffle=False)
+        self.train_dataloader = DataLoader(self.dataset, batch_size=self.BATCHSIZE, shuffle=True)
+        #self.val_dataloader = DataLoader(self.val_dataset, batch_size=self.BATCHSIZE, shuffle=False)
 
     def build_model(self):
         self.model = ClassNN(self.dim).to(self.device)
@@ -117,11 +145,11 @@ class MeasureClass:
                 data = data.to(self.device)
                 label = label.to(self.device)
                 loss = model.batch_loss(data, label)
-                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
                 losses.append(loss.item())
+                optimizer.zero_grad()
             train_epoch_losses.append(np.mean(losses))
             return np.mean(losses)
 
@@ -142,9 +170,9 @@ class MeasureClass:
         patience = 0
         for epoch in range(class_epochs):
             t_loss = train_class_epoch(self.model, self.train_dataloader, self.losses)
-            # v_loss = val_class_epoch(self.model, self.val_dataloader, self.val_loss)
+            v_loss = val_class_epoch(self.model, self.val_dataloader, self.val_loss)
             print(f"{epoch}/{class_epochs} loss: {t_loss} val_loss: ")
-            """
+            
             if v_loss > t_loss:
                 patience += 1
                 if patience > 10:
@@ -152,7 +180,7 @@ class MeasureClass:
                     break
             else:
                 patience = 0
-            """
+            
                 
     def plot_eval(self):
         self.model = self.model.to('cpu')
@@ -183,7 +211,7 @@ class MeasureClass:
             predicted_probs = self.model.forward(self.train).cpu().numpy().flatten()
             true_labels = self.labels.cpu().numpy().flatten()
 
-        pdf_path = f"{self.out_dir}/plots/evaluation_plots.pdf"
+        pdf_path = f"{self.out_dir}/evaluation_plots.pdf"
         with PdfPages(pdf_path) as pdf:
             # Plot Histrograms
             fig1, ax1 = plt.subplots(figsize=(10, 6))
@@ -218,10 +246,10 @@ class MeasureClass:
             plt.close(fig2)
 
             # Save ROC data to a file
-            roc_data_path = f"{self.out_dir}/plots/roc_data.npz"
+            roc_data_path = f"{self.out_dir}/roc_data.npz"
             np.savez(roc_data_path, fpr=fpr, tpr=tpr, thresholds=thresholds)
             print(f"ROC data saved to {roc_data_path}")
-
+            
             # Plot loss curves
             fig3, ax3 = plt.subplots(figsize=(10, 6))
             ax3.plot(self.losses, label='Train Loss')
@@ -245,36 +273,42 @@ class MeasureClass:
 
             # Plot histograms for the first 20 dimensions
             for i, channel in enumerate(channels):
-                fig, ax = plt.subplots(figsize=(8, 6))
-                fig.tight_layout(pad=0.6, w_pad=0.5, h_pad=0.6, rect=(0.07, 0.06, 0.99, 0.95))
-
+                obs_train = self.x[:,i]
+                obs_test = self.y[:,i]
+                obs_generated = self.y[:,i]
+                obs_name = self.obs_names[channel]
                 obs_range = self.obs_ranges[channel]
-                bins = np.linspace(obs_range[0], obs_range[1], 60)  # Ensure bins match obs_range
-                y_t, _ = np.histogram(self.x[:, i], bins=bins, range=obs_range)
-                y_g, _ = np.histogram(self.y[:, i], bins=bins, weights=weights) if weights.size > 0 else np.histogram(self.y[:, i], bins=bins, range=obs_range)
-                y_tr, _ = np.histogram(self.y[:, i], bins=bins, range=obs_range)
+                label = ["REWEIGHTGEN GEN", "GEN", "DATA"]
+                
+                # Create the plot
+                plot_obs(pp=pdf,
+                            obs_train=obs_train,
+                            obs_test=obs_test,
+                            obs_predict=obs_generated,
+                            name=obs_name,
+                            range=obs_range,
+                            n_epochs=0,
+                            n_jets=1,
+                            weight_samples=1,
+                            predict_weights=weights,
+                            lab = label)
 
-                hists = [y_t, y_g, y_tr]
-                hist_errors = [np.sqrt(y_t), np.sqrt(y_g), np.sqrt(y_tr)]
 
-                integrals = [np.sum((bins[1:] - bins[:-1]) * y) for y in hists]
-                scales = [1 / integral if integral != 0. else 1. for integral in integrals]
+            obs_name = "M_{\ell \ell}"
+            obs_range = [75,110]
+            bin_num = 40
+            data_train = self.mass_x
+            data_test = self.mass_y
+            data_generated = self.mass_y
 
-                FONTSIZE = 16
-                labels = ['Data', 'reweighted samples', 'Sampled data']
-                colors = ["black","#0343DE", "#A52A2A"]
-                dup_last = lambda a: np.append(a, a[-1])
-
-                for y, y_err, scale, label, color in zip(hists, hist_errors, scales, labels, colors):
-                    ax.step(bins, dup_last(y) * scale, label=label, color=color, linewidth=1.0, where="post")
-                    ax.step(bins, dup_last(y + y_err) * scale, color=color, alpha=0.5, linewidth=0.5, where="post")
-                    ax.step(bins, dup_last(y - y_err) * scale, color=color, alpha=0.5, linewidth=0.5, where="post")
-                    ax.fill_between(bins, dup_last(y - y_err) * scale, dup_last(y + y_err) * scale, facecolor=color, alpha=0.3, step="post")
-
-                ax.legend(loc="center right", frameon=False, fontsize=FONTSIZE)
-                ax.set_ylabel("Normalized", fontsize=FONTSIZE)
-                ax.set_xlabel(f"dimension{i+1}", fontsize=FONTSIZE)
-
-                ax.tick_params(axis="both", labelsize=FONTSIZE)
-                pdf.savefig(fig)  # Save the histogram for each dimension to the PDF
-                plt.close(fig)
+            plot_obs(pp=pdf,
+                        obs_train=data_train,
+                        obs_test=data_test,
+                        obs_predict=data_generated,
+                        name=obs_name,
+                        n_epochs=0,
+                        range=obs_range,
+                        n_jets=1,
+                        weight_samples=1,
+                        predict_weights=weights,
+                        lab = label)  

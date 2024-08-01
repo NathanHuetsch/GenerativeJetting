@@ -3,6 +3,7 @@ from Source.Util.util import get
 from Source.Models.ModelBase import GenerativeModel
 import numpy as np
 import torch
+import time
 
 class CM(GenerativeModel):
 #MUST OVERWRITE 
@@ -67,6 +68,7 @@ class CM(GenerativeModel):
         Sample Data in N steps
         from t = 1 and x(1) = noise to t = 0 and x(0) = noise
         """
+        start_time = time.time()
         epsilon = torch.randn(nsamples, self.dim_x, device=self.device)
         batch_size = get(self.params, "batch_size_sample", 8192)
 
@@ -84,8 +86,9 @@ class CM(GenerativeModel):
                     x = self.forward(x, t)
                 x = x.to('cpu')
                 events.append(x)
+            stop_time = time.time()
 
-            print(f"generate_samples: Finished generation of {nsamples} samples with {steps} steps")
+            print(f"generate_samples: Finished generation of {nsamples} samples with {steps} steps after {(stop_time-start_time):.2f}s ")
             return np.concatenate(events)       
 
 
