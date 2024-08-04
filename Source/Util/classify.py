@@ -11,34 +11,42 @@ from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, pl
 import os 
 
 class ClassNN(nn.Module):
-    def __init__(self, data_dim):
-        super(ClassNN, self).__init__()
-
+    def __init__(self, n_layers=5, dim_in=10, n_hidden=128, dropout=0.1):
+        super().__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
         layers = []
-        layers.append(nn.Linear(data_dim, 256))
-        layers.append(nn.ReLU())
-        layers.append(nn.Linear(256, 128))        
-        layers.append(nn.ReLU())
-        layers.append(nn.Linear(128, 64))   
-        layers.append(nn.ReLU())
-        layers.append(nn.Linear(64, 16))   
-        layers.append(nn.ReLU())
-        layers.append(nn.Linear(16, 1))  
-        layers.append(nn.Sigmoid())        
+        layers.append(nn.Linear(dim_in, n_hidden))
+        layers.append(nn.LeakyReLU())
+        layers.append(nn.Dropout(dropout))
+        for _ in range(n_layers):
+            layers.append(nn.Linear(n_hidden, n_hidden))
+            layers.append(nn.LeakyReLU())
+            layers.append(nn.Dropout(dropout))
+        layers.append(nn.Linear(n_hidden, 1))
         self.net = nn.Sequential(*layers)
-
+    
     def forward(self, input):
-        return self.net(input)
+        input = input.to(self.device)
+        output = self.net(input)
+        return output
 
-    def batch_loss(self, input, label):
+    def batch_loss(self, data):
+        input, label = data
+        input = input.to(self.device)
+        label = label.to(self.device)
         output = self.forward(input)
+
+        loss_fn = nn.BCEWithLogitsLoss()
+
+        loss = loss_fn(output, label)
+        """
         c = torch.isnan(output)
         i = torch.isnan(input)
         a = output > 1 
         b = output < 0
-
         try:
-            loss = nn.BCELoss()(output, label.float())
+            
         except: 
             print(f"error{output.min()},{output.max()}")
             print(i.sum())
@@ -52,6 +60,7 @@ class ClassNN(nn.Module):
             print(c.sum())
             print(a.sum())
             print(b.sum())
+        """
         return loss
     
 class MeasureClass:
@@ -59,8 +68,7 @@ class MeasureClass:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.out_dir = params['out_dir']
         self.params = params
-        self.label = label
-        self.dim = 9  # Default dimension without mass_x and mass_y
+        self.label = label # Default dimension without mass_x and mass_y
 
         self.prepare_data(x, y)
         self.build_model()
@@ -70,62 +78,73 @@ class MeasureClass:
     def prepare_data(self, x, y):
         samples_n = self.params.get('n_samples', 100_000)
         channels = self.params.get('plot_channels', [2, 4, 5])
-
         self.BATCHSIZE = self.params.get("class_batch_size", 128)
 
-        self.mass_x, self.mass_y = get_M_ll(x), get_M_ll(y)
+        def add_mass_to_data(data):
+            mass = get_M_ll(data)
 
-        print(f"measure_class: mass_x shape: {self.mass_x.shape}, mass_y shape: {self.mass_y.shape}")
+            mass = torch.Tensor(mass)
+            data = torch.Tensor(data)
 
-        # Convert to tensors and add a dimension for concatenation
-        mass_x, mass_y = torch.Tensor(self.mass_x), torch.Tensor(self.mass_y)
-        mass_x, mass_y = mass_x.unsqueeze(1), mass_y.unsqueeze(1)
-        a = torch.isnan(mass_x).squeeze(1)
-        b = torch.isnan(mass_y).squeeze(1)
+            mass = mass.unsqueeze(1)
+
+            corupt_mass = torch.isnan(mass).squeeze(1)
+            mass = mass[~corupt_mass]
+            data = data[~corupt_mass]
+
+            mass = mass[:samples_n]
+            data = data[:samples_n]
+
+            data = data[:, channels]
+
+            data = torch.cat((data, mass), dim=1)
+            print(f'shape after adding mass to data: {data.shape}')
+            return data.numpy()
+
+        self.x = add_mass_to_data(x)
+        self.y = add_mass_to_data(y)
+
+ 
+        self.data_real = self.x
+        self.data_gen = self.y
+        print(self.data_real.shape, self.data_gen.shape)
+
+        self.data = np.concatenate((self.data_real, self.data_gen), axis=0)
+        self.labels = np.concatenate((np.zeros(self.data_real.shape[0]), np.ones(self.data_gen.shape[0])), axis=0)
+        idx = np.random.permutation(len(self.data))
+        self.data = self.data[idx,:]
+        self.labels=self.labels[idx,None]
+
+        def preprocess(event, mean=None, std=None):
+            if mean is None or std is None:
+                mean = event.mean(axis=0, keepdims=True)
+                std = event.std(axis=0, keepdims=True)
+            event = (event - mean) / std
+            return event, mean, std
+
+        def create_dataloader(data, labels, batchsize, shuffle, mean=None, std=None):
+            data, mean, std = preprocess(data, mean, std)
+            data = torch.tensor(data).float()
+            labels = torch.tensor(labels)
+            loader = DataLoader(TensorDataset(data, labels), batch_size=batchsize, shuffle=shuffle)
+            return loader, mean, std
         
-        print(a.sum())
-        print(b.sum())
-        print(f'mass_x min{mass_x.min()} max:{mass_x.max()} mass_y min{mass_y.min()} max:{mass_y.max()}')
-        print(f"measure_class: mass_x tensor shape: {mass_x.shape}, mass_y tensor shape: {mass_y.shape}")
+        total_data_points = self.data.shape[0]
+        n1 = int(0.6 * total_data_points) 
+        n_val = int(0.5 * (total_data_points - n1))  # 50% of the remaining 40% for validation
+        n2 = n1 + n_val
 
-        mass_x = mass_x[~a]
-        x = x[~a]
+        batchsize = self.BATCHSIZE
+        self.data_trn, self.data_val, self.data_tst = self.data[:n1,:], self.data[n1:n2,:], self.data[n2:,:]
+        self.labels_trn, self.labels_val, self.labels_tst = self.labels[:n1,:], self.labels[n1:n2,:], self.labels[n2:,:]
 
-        mass_x = mass_x[:samples_n]
-        x = x[:samples_n]
-
-        # Select the specified channels
-        x, y = x[:, channels], y[:, channels]
-        self.x, self.y = torch.Tensor(x), torch.Tensor(y)
-        print(f"measure_class: x shape after channel selection is {self.x.shape}, y shape is {self.y.shape}")
-
-
-        # Concatenate mass_x and mass_y
-        
-        self.x = torch.cat((self.x, mass_x), dim=1)
-        self.y = torch.cat((self.y, mass_y), dim=1)
-        self.dim = 10  
-        
-        print(f"measure_class: final x shape is {self.x.shape}, y shape is {self.y.shape}")
-        self.train = torch.cat((self.x, self.y), axis=0).to(self.device)
-        print(f"measure_class: train shape is {self.train.shape}")
-
-        self.labels = torch.cat((torch.zeros(self.x.shape[0]), torch.ones(self.y.shape[0])), axis=0).unsqueeze(1).to(self.device)
-        print(f"measure_class: labels shape is {self.labels.shape}")
-
-        self.dataset = TensorDataset(self.train, self.labels)
-        
-        # Split dataset into training and validation sets
-        val_split = 0.2  # Define the validation split
-        val_size = int(val_split * len(self.dataset))
-        train_size = len(self.dataset) - val_size
-        
-        self.train_dataset, self.val_dataset = random_split(self.dataset, [train_size, val_size])
-        self.train_dataloader = DataLoader(self.dataset, batch_size=self.BATCHSIZE, shuffle=True)
-        #self.val_dataloader = DataLoader(self.val_dataset, batch_size=self.BATCHSIZE, shuffle=False)
+        mean, std = None, None
+        self.loader_trn, mean, std = create_dataloader(self.data_trn, self.labels_trn, batchsize, True, mean=mean, std=std)
+        self.loader_tst, mean, std = create_dataloader(self.data_tst, self.labels_tst, batchsize, False, mean=mean, std=std)
+        self.loader_val, mean, std = create_dataloader(self.data_val, self.labels_val, batchsize, False, mean=mean, std=std)
 
     def build_model(self):
-        self.model = ClassNN(self.dim).to(self.device)
+        self.model = ClassNN().to(self.device)
         total_parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         print(f"build_model: Model has {total_parameters:d} trainable parameters")
 
@@ -136,101 +155,78 @@ class MeasureClass:
         LEARNING_RATE = 1e-4
 
         optimizer = torch.optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=3e-4, steps_per_epoch=len(self.train_dataloader), epochs=class_epochs)
+        scheduler =torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,len(self.loader_trn))
         
-        def train_class_epoch(model, loader, train_epoch_losses):
-            model.train()
-            losses = []
-            for batch, (data, label) in enumerate(loader):
-                data = data.to(self.device)
-                label = label.to(self.device)
-                loss = model.batch_loss(data, label)
+        def train_epoch(loader, losses):
+            self.model.train()
+            for data in loader:
+                loss = self.model.batch_loss(data)                
+                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
+                
                 losses.append(loss.item())
-                optimizer.zero_grad()
-            train_epoch_losses.append(np.mean(losses))
-            return np.mean(losses)
 
-        def val_class_epoch(model, loader, val_epoch_losses):
-            model.eval()
+        def val_epoch(loader):
             losses = []
+            self.model.eval()
             with torch.no_grad():
-                for batch, (data, label) in enumerate(loader):
-                    data = data.to(self.device)
-                    label = label.to(self.device)
-                    loss = model.batch_loss(data, label)
+                for data in loader:
+                    loss = self.model.batch_loss(data)
                     losses.append(loss.item())
-            val_epoch_losses.append(np.mean(losses))
             return np.mean(losses)
 
         self.losses = []
         self.val_loss = []
-        patience = 0
+
         for epoch in range(class_epochs):
-            t_loss = train_class_epoch(self.model, self.train_dataloader, self.losses)
-            v_loss = val_class_epoch(self.model, self.val_dataloader, self.val_loss)
-            print(f"{epoch}/{class_epochs} loss: {t_loss} val_loss: ")
-            
-            if v_loss > t_loss:
-                patience += 1
-                if patience > 10:
-                    print(f"train_model: Early stopping at epoch {epoch}")
-                    break
-            else:
-                patience = 0
-            
-                
+            train_epoch(self.loader_trn, self.losses)
+
+            val_loss = val_epoch(self.loader_val)
+            self.val_loss.append(val_loss)
+
+            print(f"{epoch}/{class_epochs} val_loss:{val_loss:0.5f}")
+    
     def plot_eval(self):
-        self.model = self.model.to('cpu')
-        self.train = self.train.to('cpu')
-        self.labels = self.labels.to('cpu')
-        self.x = self.x.cpu()
-        self.y = self.y.cpu()
+        truth, pred = [], []
 
-        self.obs_names = ["p_{T,l1}", "\phi_{l1}", "\eta_{l1}", "\mu_{l1}",
-                          "p_{T,l2}", "\phi_{l2}", "\eta_{l2}", "\mu_{l2}",
-                          "p_{T,j1}", "\phi_{j1}", "\eta_{j1}", "\mu_{j1}",
-                          "p_{T,j2}", "\phi_{j2}", "\eta_{j2}", "\mu_{j2}",
-                          "p_{T,j3}", "\phi_{j3}", "\eta_{j3}", "\mu_{j3}"]
-
-        self.obs_units = ["GeV", None, None, "GeV",
-                          "GeV", None, None, "GeV",
-                          "GeV", None, None, "GeV",
-                          "GeV", None, None, "GeV",
-                          "GeV", None, None, "GeV"]
-
-        self.obs_ranges = [[0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [0.5, 150], [-4, 4], [-6, 6], [0, 50],
-                           [17,  157], [-4, 4], [-6, 6], [0, 50],
-                           [17,  82], [-4, 4], [-6, 6], [0, 50],
-                           [17,  82], [-4, 4], [-6, 6], [0, 50]]
-
+        self.model.eval()
         with torch.no_grad():
-            predicted_probs = self.model.forward(self.train).cpu().numpy().flatten()
-            true_labels = self.labels.cpu().numpy().flatten()
+            for (x, y) in self.loader_tst:
+                x = x.to('cpu')
+                y = y.to('cpu')
+                y_pred = self.model(x).cpu()
+                truth.append(y.flatten().numpy())
+                pred.append(y_pred.flatten().numpy())
+        pred = np.concatenate(pred)
+        truth = np.concatenate(truth)
+        print(pred.shape, truth.shape)
+
+        
+
+        pred_sig = 1/ (1+np.exp(-pred))
 
         pdf_path = f"{self.out_dir}/evaluation_plots.pdf"
         with PdfPages(pdf_path) as pdf:
             # Plot Histrograms
             fig1, ax1 = plt.subplots(figsize=(10, 6))
-            ax1.hist(predicted_probs[true_labels == 0], range=(0, 1), density=True, bins=100, alpha=0.4, label='Data 0', color='blue')
-            ax1.hist(predicted_probs[true_labels == 1], range=(0, 1), density=True, bins=100, alpha=0.4, label='Sampled Data 1', color='red')
+            ax1.hist(pred_sig[truth == 0], range=(0, 1), bins=100, alpha=0.4, label='Data 0', color='blue') #density=True
+            ax1.hist(pred_sig[truth == 1], range=(0, 1), bins=100, alpha=0.4, label='Sampled Data 1', color='red')
             ax1.set_yscale('log')
             ax1.legend()
             ax1.set_xlim([0.0, 1.0])
-            ax1.set_title(f'{self.label} Histogram of Predicted Probabilities')
-            ax1.set_xlabel('Predicted Probability')
-            ax1.set_ylabel('Density')
+            ax1.set_title(f'{self.label} Histogram of predicted events')
+            ax1.set_xlabel('classifier score')
+            ax1.set_ylabel('Events')
             pdf.savefig(fig1)  # Save the histogram to the PDF
             plt.close(fig1)
 
 
             # Plot ROC curve
-            fpr, tpr, thresholds = roc_curve(true_labels, predicted_probs)
+            fpr, tpr, thresholds = roc_curve(truth, pred)
             roc_auc = auc(fpr, tpr)
-            auc_score = roc_auc_score(true_labels, predicted_probs)
+            auc_score = roc_auc_score(truth, pred)
 
             fig2, ax2 = plt.subplots(figsize=(10, 6))
             lw = 2
@@ -252,8 +248,8 @@ class MeasureClass:
             
             # Plot loss curves
             fig3, ax3 = plt.subplots(figsize=(10, 6))
-            ax3.plot(self.losses, label='Train Loss')
-            ax3.plot(self.val_loss, label='Val Loss')
+            ax3.plot(np.arange(len(self.losses)),self.losses, label='Train Loss')
+            ax3.plot(np.arange(len(self.val_loss))*len(self.loader_trn),self.val_loss, label='Vall Loss')
             ax3.set_title(f'{self.label} Loss Curve')
             ax3.set_xlabel('Epoch')
             ax3.set_ylabel('Loss')
@@ -261,24 +257,93 @@ class MeasureClass:
             pdf.savefig(fig3)  # Save the loss curves to the PDF
             plt.close(fig3)
 
+            weights = np.exp(pred)
+            print(f"all weights shape {weights.shape}")
+            #weights_GEN_to_DATA = weights[truth==1]
             # Reweighting based on predicted probabilities
-            weights = predicted_probs / (1 - predicted_probs)
-            weights = weights[true_labels == 1]
+            #weights = predicted_probs / (1 - predicted_probs)
+            #weights=weights[truth == 1]
 
-                        
-                        
+            print(f"all weights after label cut {weights.shape}")
+            print(self.y.shape)
+            
+
+            test_REAL = self.data_tst[self.labels_tst[:,0]==0]
+            test_GEN = self.data_tst[self.labels_tst[:,0]==1]
+            print(f"test_REAL shape {test_REAL.shape}")
+            print(f"test_GEN shape {test_GEN.shape}")
+
+
+
+            weights_GENtoDATA = weights[self.labels_tst[:,0]==1]
+            print(f"WEIGHTS shape {weights_GENtoDATA.shape}")
+            
+            """
+            def plot_hist(ax, data, label, color, bins=40, weights=None, xrange=None):
+                dup_last = lambda a: np.append(a, a[-1])
+                
+                hist, bins = np.histogram(data, bins, weights=weights, range=xrange)
+                hist_raw, _ = np.histogram(data, bins)
+                hist_err = np.sqrt(hist_raw) # correct uncertainties for weighted events
+                integral = np.sum((bins[1:] - bins[:-1])*hist)
+                scale = 1/integral
+                
+                ax.step(bins, dup_last(hist)*scale, label=label, linewidth=1.0, where="post", color=color)
+                ax.fill_between(bins, dup_last(hist+hist_err)*scale, dup_last(hist-hist_err)*scale,
+                            facecolor=color, step="post", alpha=.3)
+                return bins
+                
+            fig4, axs4 = plt.subplots(1,2,figsize=(16,6))
+
+            xrange = (75, 110)
+            bins = plot_hist(axs4[0], test_GEN[:,9], label="LO", color="b", bins=40, weights=None, xrange=xrange)
+            plot_hist(axs4[0], test_REAL[:,9], label="NLO", color="g", bins=bins, weights=None)
+            plot_hist(axs4[0], test_GEN[:,9], label="Rew. LO", color="r", bins=bins, weights=weights_GENtoDATA)
+            axs4[0].legend()
+            axs4[0].set_xlim(xrange)
+            axs4[0].set_xlabel(r"$M_ll$ of leading top")
+
+            
+            pdf.savefig(fig4)  # Save the loss curves to the PDF
+            plt.close(fig4)
+            """
+            
+
+
+            
+            self.obs_names = ["p_{T,l1}", "\phi_{l1}", "\eta_{l1}", "\mu_{l1}",
+                    "p_{T,l2}", "\phi_{l2}", "\eta_{l2}", "\mu_{l2}",
+                    "p_{T,j1}", "\phi_{j1}", "\eta_{j1}", "\mu_{j1}",
+                    "p_{T,j2}", "\phi_{j2}", "\eta_{j2}", "\mu_{j2}",
+                    "p_{T,j3}", "\phi_{j3}", "\eta_{j3}", "\mu_{j3}"]
+
+            self.obs_units = ["GeV", None, None, "GeV",
+                            "GeV", None, None, "GeV",
+                            "GeV", None, None, "GeV",
+                            "GeV", None, None, "GeV",
+                            "GeV", None, None, "GeV"]
+
+            self.obs_ranges = [[0.5, 150], [-4, 4], [-6, 6], [0, 50],
+                            [0.5, 150], [-4, 4], [-6, 6], [0, 50],
+                            [17,  157], [-4, 4], [-6, 6], [0, 50],
+                            [17,  82], [-4, 4], [-6, 6], [0, 50],
+                            [17,  82], [-4, 4], [-6, 6], [0, 50]]
+            
             channels = get(self.params, "channels", None)
             if channels is None:
                 channels = np.array([i for i in range(self.n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
-
+            
+            label = ["REWEIGHTGEN GEN", "GEN", "DATA"]
+            
+           
             # Plot histograms for the first 20 dimensions
             for i, channel in enumerate(channels):
-                obs_train = self.x[:,i]
-                obs_test = self.y[:,i]
-                obs_generated = self.y[:,i]
+                obs_train = test_REAL[:,i]
+                obs_test = test_GEN[:,i]
+                obs_generated = test_GEN[:,i]
                 obs_name = self.obs_names[channel]
                 obs_range = self.obs_ranges[channel]
-                label = ["REWEIGHTGEN GEN", "GEN", "DATA"]
+                
                 
                 # Create the plot
                 plot_obs(pp=pdf,
@@ -290,16 +355,18 @@ class MeasureClass:
                             n_epochs=0,
                             n_jets=1,
                             weight_samples=1,
-                            predict_weights=weights,
+                            predict_weights=weights_GENtoDATA,
                             lab = label)
-
-
+            
+            
+            
             obs_name = "M_{\ell \ell}"
             obs_range = [75,110]
             bin_num = 40
-            data_train = self.mass_x
-            data_test = self.mass_y
-            data_generated = self.mass_y
+            data_train = test_REAL[:,9]
+            data_test = test_GEN[:,9]
+            data_generated = test_GEN[:,9]
+            print(f"data generated shappe{data_generated.shape}")
 
             plot_obs(pp=pdf,
                         obs_train=data_train,
@@ -310,5 +377,8 @@ class MeasureClass:
                         range=obs_range,
                         n_jets=1,
                         weight_samples=1,
-                        predict_weights=weights,
+                        predict_weights=weights_GENtoDATA,
                         lab = label)  
+            
+
+            
