@@ -435,16 +435,30 @@ class Experiment:
 
     def classify_measurement(self):
         n_samples = get(self.params, "n_samples", 100_000)
-        True_data = self.data_raw
-        False_data = self.model.sample_and_undo(n_samples)
-        label = 'CM'
+        class_mode = get(self.params, "class_mode", False)
+        classify_flag = get(self.params, "classification", False)
 
-        if get(self.params, "class_teacher", False) is True:
-            False_data = self.teacher_model.sample_and_undo(n_samples)
-            label = 'CFM'
-
-        classify_flag = get(self.params, "classification", True)
         if classify_flag:
+            if class_mode == 1:
+                True_data = self.data_raw
+                False_data = self.teacher_model.sample_and_undo(n_samples)
+                label = ['Data','CFM']
+                print("classify_measurement: training classifer on DATA AND CFM")
+            
+            elif class_mode ==2:
+                True_data = self.data_raw
+                False_data = self.model.sample_and_undo(n_samples)
+                label = ['Data','CM']
+                print("classify_measurement: training classifer on DATA AND CM")
+
+            elif class_mode == 3:
+                True_data = self.teacher_model.sample_and_undo(n_samples)
+                False_data = self.model.sample_and_undo(n_samples)
+                label = ['CFM','CM']
+                print("classify_measurement: training classifer on CFM and CM")
+
+            else: print('invalde mode selection')
+
             MeasureClass(
                 x = True_data,
                 y = False_data,

@@ -127,12 +127,17 @@ class CFM(GenerativeModel):
                 v = self.net(x_t, t_torch, c)
             else:
                 v = self.net(x_t, t_torch)
+
+            self.eval = self.eval + 1 
+            # 160 
             return v
     
         events = []
+        calls = []
         batches = torch.split(x_T, batch_size)
         with torch.no_grad():
             for batch in batches:
+                self.eval = 0
                 c = None
                 ode_solution = odeint(
                     net_wrapper,
@@ -143,6 +148,9 @@ class CFM(GenerativeModel):
                     method='dopri5',
                 ).detach().cpu().numpy()
                 events.append(ode_solution[-1])
+                calls.append(self.eval)
+        
+        print(f"CFM CALLS: {np.mean(calls)}")
         return np.concatenate(events, axis=0)
 
     def log_prob(self, x: torch.Tensor) -> torch.Tensor:

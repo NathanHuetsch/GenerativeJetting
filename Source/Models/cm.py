@@ -59,6 +59,7 @@ class CM(GenerativeModel):
         c_skip = sigma ** 2 / ((t - epsilon) ** 2 + sigma ** 2)
         c_out = sigma * (t - epsilon) / torch.sqrt(sigma ** 2 + t ** 2)
 
+        self.eval2 = self.eval2 + 1
         return c_skip * x + c_out * self.net(x, t)  ##Forward statt 
     
 
@@ -74,20 +75,25 @@ class CM(GenerativeModel):
 
         batches = torch.split(epsilon, batch_size)
         events = []
+        calls = []
         with torch.no_grad():
             for batch in batches:
                 t = torch.zeros(batch.shape[0], 1, device = self.device).float()
+                self.eval2 = 0 
                 x = self.forward(batch, t) #Hier self.net oder forward?? 
-                for s in range(steps):
-                    if steps == 1: break 
-                    z = torch.randn(batch.shape[0], self.dim_x, device = self.device)
-                    t += 1/steps 
-                    x = t * x + (1-t) * z
-                    x = self.forward(x, t)
+                
+                if steps > 1:
+                    for s in range(steps-1):
+                        z = torch.randn(batch.shape[0], self.dim_x, device = self.device)
+                        t += 1/steps 
+                        x = t * x + (1-t) * z
+                        x = self.forward(x, t)
+                    
                 x = x.to('cpu')
+                calls.append(self.eval2)
                 events.append(x)
             stop_time = time.time()
-
+            print(f'CM CALLS: {np.mean(calls)}')
             print(f"generate_samples: Finished generation of {nsamples} samples with {steps} steps after {(stop_time-start_time):.2f}s ")
             return np.concatenate(events)       
 

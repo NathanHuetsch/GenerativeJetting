@@ -11,7 +11,7 @@ from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, pl
 import os 
 
 class ClassNN(nn.Module):
-    def __init__(self, n_layers=5, dim_in=10, n_hidden=128, dropout=0.1):
+    def __init__(self, n_layers=8, dim_in=10, n_hidden=256, dropout=0.1):
         super().__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
@@ -40,27 +40,6 @@ class ClassNN(nn.Module):
         loss_fn = nn.BCEWithLogitsLoss()
 
         loss = loss_fn(output, label)
-        """
-        c = torch.isnan(output)
-        i = torch.isnan(input)
-        a = output > 1 
-        b = output < 0
-        try:
-            
-        except: 
-            print(f"error{output.min()},{output.max()}")
-            print(i.sum())
-            print(c.sum())
-            print(a.sum())
-            print(b.sum())
-
-        if torch.isnan(output).sum() > 0:
-            print(f"error{output.min()},{output.max()}")
-            print(i.sum())
-            print(c.sum())
-            print(a.sum())
-            print(b.sum())
-        """
         return loss
     
 class MeasureClass:
@@ -104,10 +83,11 @@ class MeasureClass:
         self.x = add_mass_to_data(x)
         self.y = add_mass_to_data(y)
 
- 
         self.data_real = self.x
         self.data_gen = self.y
-        print(self.data_real.shape, self.data_gen.shape)
+ 
+        #self.data_real = np.load("/remote/gpu03/hoelzl/data09/ttbarj_LO.npy")
+        #self.data_gen =  np.load("/remote/gpu03/hoelzl/data09/ttbarj_NLO.npy")
 
         self.data = np.concatenate((self.data_real, self.data_gen), axis=0)
         self.labels = np.concatenate((np.zeros(self.data_real.shape[0]), np.ones(self.data_gen.shape[0])), axis=0)
@@ -130,12 +110,18 @@ class MeasureClass:
             return loader, mean, std
         
         total_data_points = self.data.shape[0]
-        n1 = int(0.6 * total_data_points) 
-        n_val = int(0.5 * (total_data_points - n1))  # 50% of the remaining 40% for validation
-        n2 = n1 + n_val
+        n1 = 2_000_000
+        #n_val = int(0.5 * (total_data_points - n1))  # 50% of the remaining 40% for validation
+        n2 = 2_500_000
+
+        #n1 = 50_000 
+        #n2 = 60_000 
 
         batchsize = self.BATCHSIZE
         self.data_trn, self.data_val, self.data_tst = self.data[:n1,:], self.data[n1:n2,:], self.data[n2:,:]
+        print(f"TRAIN_DATA SHAPE: {self.data_trn.shape}")
+        print(f"VAL_DATA SHAPE: {self.data_val.shape}")
+        print(f"TEST_DATA SHAPE: {self.data_tst.shape}")
         self.labels_trn, self.labels_val, self.labels_tst = self.labels[:n1,:], self.labels[n1:n2,:], self.labels[n2:,:]
 
         mean, std = None, None
@@ -150,7 +136,7 @@ class MeasureClass:
 
     def train_model(self):
         class_epochs = get(self.params, "class_epochs", 20)
-        print(f"train_model: Training Class Model on Data and {self.label}...")
+        print(f"train_model: Training Class Model on {self.label}...")
 
         LEARNING_RATE = 1e-4
 
@@ -180,14 +166,29 @@ class MeasureClass:
         self.losses = []
         self.val_loss = []
 
+        patience = 10
+        es_epochs = 0
+        min_val_loss = 1e20
+
         for epoch in range(class_epochs):
             train_epoch(self.loader_trn, self.losses)
 
             val_loss = val_epoch(self.loader_val)
             self.val_loss.append(val_loss)
-
             print(f"{epoch}/{class_epochs} val_loss:{val_loss:0.5f}")
-    
+
+            if val_loss < min_val_loss:
+                min_val_loss = val_loss
+                es_epochs = 0
+            else:
+                es_epochs += 1
+                if es_epochs == patience:
+                    print(f"Early stopping in epoch {epoch} after no improvement in {es_epochs} epochs")
+                    break
+
+        os.makedirs("models", exist_ok=True)
+        torch.save(self.model.state_dict(), f"models/CLASSmodel.pt")
+
     def plot_eval(self):
         truth, pred = [], []
 
@@ -203,20 +204,18 @@ class MeasureClass:
         truth = np.concatenate(truth)
         print(pred.shape, truth.shape)
 
-        
-
         pred_sig = 1/ (1+np.exp(-pred))
 
         pdf_path = f"{self.out_dir}/evaluation_plots.pdf"
         with PdfPages(pdf_path) as pdf:
             # Plot Histrograms
             fig1, ax1 = plt.subplots(figsize=(10, 6))
-            ax1.hist(pred_sig[truth == 0], range=(0, 1), bins=100, alpha=0.4, label='Data 0', color='blue') #density=True
-            ax1.hist(pred_sig[truth == 1], range=(0, 1), bins=100, alpha=0.4, label='Sampled Data 1', color='red')
-            ax1.set_yscale('log')
+            ax1.hist(pred_sig[truth == 0], range=(0, 1), bins=100, alpha=0.4, label=self.label[0], color='blue') #density=True
+            ax1.hist(pred_sig[truth == 1], range=(0, 1), bins=100, alpha=0.4, label=self.label[1], color='red')
+            #ax1.set_yscale('log')
             ax1.legend()
             ax1.set_xlim([0.0, 1.0])
-            ax1.set_title(f'{self.label} Histogram of predicted events')
+            ax1.set_title(f'{self.label[0]} Histogram of predicted events')
             ax1.set_xlabel('classifier score')
             ax1.set_ylabel('Events')
             pdf.savefig(fig1)  # Save the histogram to the PDF
@@ -236,7 +235,7 @@ class MeasureClass:
             ax2.set_ylim([0.0, 1.0])
             ax2.set_xlabel('False Positive Rate')
             ax2.set_ylabel('True Positive Rate')
-            ax2.set_title(f'{self.label} Receiver Operating Characteristic (ROC) Curve: AUC = {auc_score:.3f}')
+            ax2.set_title(f'{self.label[0]},{self.label[1]} Receiver Operating Characteristic (ROC) Curve: AUC = {auc_score:.3f}')
             ax2.legend(loc="lower right")
             pdf.savefig(fig2)  # Save the ROC curve to the PDF
             plt.close(fig2)
@@ -250,35 +249,26 @@ class MeasureClass:
             fig3, ax3 = plt.subplots(figsize=(10, 6))
             ax3.plot(np.arange(len(self.losses)),self.losses, label='Train Loss')
             ax3.plot(np.arange(len(self.val_loss))*len(self.loader_trn),self.val_loss, label='Vall Loss')
-            ax3.set_title(f'{self.label} Loss Curve')
+            ax3.set_title(f'{self.label[0]},{self.label[1]} Loss Curve')
             ax3.set_xlabel('Epoch')
             ax3.set_ylabel('Loss')
             ax3.legend()
             pdf.savefig(fig3)  # Save the loss curves to the PDF
             plt.close(fig3)
 
+            #cal WEIGHTS
             weights = np.exp(pred)
             print(f"all weights shape {weights.shape}")
-            #weights_GEN_to_DATA = weights[truth==1]
-            # Reweighting based on predicted probabilities
-            #weights = predicted_probs / (1 - predicted_probs)
-            #weights=weights[truth == 1]
 
-            print(f"all weights after label cut {weights.shape}")
-            print(self.y.shape)
-            
+            #PLOTTING DATA; GEN; AND REWEIGHTED DATA
+            test_LO = self.data_tst[self.labels_tst[:,0]==0]
+            test_NLO = self.data_tst[self.labels_tst[:,0]==1]
 
-            test_REAL = self.data_tst[self.labels_tst[:,0]==0]
-            test_GEN = self.data_tst[self.labels_tst[:,0]==1]
-            print(f"test_REAL shape {test_REAL.shape}")
-            print(f"test_GEN shape {test_GEN.shape}")
+            mass_top1_LO = test_LO[:,9]
+            mass_top1_NLO = test_NLO[:,9]
 
+            weights_LOtoNLO = weights[self.labels_tst[:,0]==0]
 
-
-            weights_GENtoDATA = weights[self.labels_tst[:,0]==1]
-            print(f"WEIGHTS shape {weights_GENtoDATA.shape}")
-            
-            """
             def plot_hist(ax, data, label, color, bins=40, weights=None, xrange=None):
                 dup_last = lambda a: np.append(a, a[-1])
                 
@@ -293,24 +283,6 @@ class MeasureClass:
                             facecolor=color, step="post", alpha=.3)
                 return bins
                 
-            fig4, axs4 = plt.subplots(1,2,figsize=(16,6))
-
-            xrange = (75, 110)
-            bins = plot_hist(axs4[0], test_GEN[:,9], label="LO", color="b", bins=40, weights=None, xrange=xrange)
-            plot_hist(axs4[0], test_REAL[:,9], label="NLO", color="g", bins=bins, weights=None)
-            plot_hist(axs4[0], test_GEN[:,9], label="Rew. LO", color="r", bins=bins, weights=weights_GENtoDATA)
-            axs4[0].legend()
-            axs4[0].set_xlim(xrange)
-            axs4[0].set_xlabel(r"$M_ll$ of leading top")
-
-            
-            pdf.savefig(fig4)  # Save the loss curves to the PDF
-            plt.close(fig4)
-            """
-            
-
-
-            
             self.obs_names = ["p_{T,l1}", "\phi_{l1}", "\eta_{l1}", "\mu_{l1}",
                     "p_{T,l2}", "\phi_{l2}", "\eta_{l2}", "\mu_{l2}",
                     "p_{T,j1}", "\phi_{j1}", "\eta_{j1}", "\mu_{j1}",
@@ -332,53 +304,31 @@ class MeasureClass:
             channels = get(self.params, "channels", None)
             if channels is None:
                 channels = np.array([i for i in range(self.n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
-            
-            label = ["REWEIGHTGEN GEN", "GEN", "DATA"]
-            
-           
-            # Plot histograms for the first 20 dimensions
-            for i, channel in enumerate(channels):
-                obs_train = test_REAL[:,i]
-                obs_test = test_GEN[:,i]
-                obs_generated = test_GEN[:,i]
+
+            for i,channel in enumerate(channels):
                 obs_name = self.obs_names[channel]
                 obs_range = self.obs_ranges[channel]
-                
-                
-                # Create the plot
-                plot_obs(pp=pdf,
-                            obs_train=obs_train,
-                            obs_test=obs_test,
-                            obs_predict=obs_generated,
-                            name=obs_name,
-                            range=obs_range,
-                            n_epochs=0,
-                            n_jets=1,
-                            weight_samples=1,
-                            predict_weights=weights_GENtoDATA,
-                            lab = label)
-            
-            
-            
-            obs_name = "M_{\ell \ell}"
-            obs_range = [75,110]
-            bin_num = 40
-            data_train = test_REAL[:,9]
-            data_test = test_GEN[:,9]
-            data_generated = test_GEN[:,9]
-            print(f"data generated shappe{data_generated.shape}")
+                unit = None
 
-            plot_obs(pp=pdf,
-                        obs_train=data_train,
-                        obs_test=data_test,
-                        obs_predict=data_generated,
-                        name=obs_name,
-                        n_epochs=0,
-                        range=obs_range,
-                        n_jets=1,
-                        weight_samples=1,
-                        predict_weights=weights_GENtoDATA,
-                        lab = label)  
-            
+                fig, ax = plt.subplots(figsize=(10, 6))
+                xrange1 = obs_range
+                bins1 = plot_hist(ax, test_LO[:, i], label=self.label[0], color="black", bins=40, weights=None, xrange=xrange1)
+                plot_hist(ax, test_NLO[:, i], label=self.label[1], color="#A52A2A", bins=bins1, weights=None)
+                plot_hist(ax, test_LO[:, i], label="Reweighted", color="#0343DE", bins=bins1, weights=weights_LOtoNLO)
+                ax.legend()
+                ax.set_xlim(xrange1)
+                ax.set_xlabel(r"${%s}$ %s" % (obs_name, ("" if unit is None else f"[{unit}]")), fontsize = 16)
+                pdf.savefig(fig)  # Save the first histogram to the PDF
+                plt.close(fig)
 
-            
+            # Second figure
+            fig2, ax2 = plt.subplots(figsize=(10, 6))
+            xrange2 = (75, 110)
+            bins2 = plot_hist(ax2, mass_top1_LO, label="Truth", color="black", bins=40, weights=None, xrange=xrange2)
+            plot_hist(ax2, mass_top1_NLO, label="Gen", color="#A52A2A", bins=bins2, weights=None)
+            plot_hist(ax2, mass_top1_LO, label="Reweighted", color="#0343DE", bins=bins2, weights=weights_LOtoNLO)
+            ax2.legend()
+            ax2.set_xlim(xrange2)
+            ax2.set_xlabel(r"$M_{ll}$")
+            pdf.savefig(fig2)  # Save the second histogram to the PDF
+            plt.close(fig2)
