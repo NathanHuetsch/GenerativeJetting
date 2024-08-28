@@ -6,13 +6,9 @@ import torch
 import time
 
 class CM(GenerativeModel):
-#MUST OVERWRITE 
-    #def build_net(self): should register some NN architecture as self.net
-    #def batch_loss(self, x): takes a batch of samples as input and returns the loss
-    #def sample_n_parallel(self, n_samples): generates and returns n_samples new samples
     def __init__(self, params):
         super().__init__(params)
-
+        
     def build_net(self):
         network = get(self.params, "network", "MLP")
         try:
@@ -20,13 +16,11 @@ class CM(GenerativeModel):
         except AttributeError:
             raise NotImplementedError(f"build_model: Network class {network} not recognised")
 
-
     def batch_loss(self, x, parent_model):
         '''
         cal. batch_loss for CM 
         t=0 -> x(0) noise t=1 -x(1)data
         '''
-
         stepsize = 0.01       
         parent_model.eval()
 
@@ -42,6 +36,11 @@ class CM(GenerativeModel):
         x_t_step = x_t + stepsize * v_theta
         t_step = t + stepsize
 
+        v_theta_step =  parent_model.net(x_t_step, t_step).detach()
+        
+        # Heun Verfahren
+        x_t_step = x_t + 1/2 * stepsize * (v_theta + v_theta_step)
+
         # Consitency model forward
         f_theta = self.forward(x_t, t)
         f_theta2 = self.forward(x_t_step, t_step)
@@ -51,47 +50,49 @@ class CM(GenerativeModel):
     
 
     def forward(self, x, t):
-        t = 1-t
         """Res. Net mit Formel aus Apendix B paper"""
+        t = 1-t
         sigma = torch.tensor(0.5, dtype=x.dtype, device=x.device)
         epsilon = torch.tensor(1e-4, dtype=x.dtype, device=x.device)
         
         c_skip = sigma ** 2 / ((t - epsilon) ** 2 + sigma ** 2)
         c_out = sigma * (t - epsilon) / torch.sqrt(sigma ** 2 + t ** 2)
-
-        self.eval2 = self.eval2 + 1
+                
         return c_skip * x + c_out * self.net(x, t)  ##Forward statt 
     
 
     def sample_n(self, nsamples:int, steps = None):
-        if steps is None: steps = get(self.params, "sample_steps", 1)
         """
         Sample Data in N steps
         from t = 1 and x(1) = noise to t = 0 and x(0) = noise
         """
+        if steps is None: steps = get(self.params, "sample_steps", 1)
+        
         start_time = time.time()
         epsilon = torch.randn(nsamples, self.dim_x, device=self.device)
         batch_size = get(self.params, "batch_size_sample", 8192)
-
+        
         batches = torch.split(epsilon, batch_size)
         events = []
         calls = []
         with torch.no_grad():
+            self.eval2 = 0 
             for batch in batches:
                 t = torch.zeros(batch.shape[0], 1, device = self.device).float()
-                self.eval2 = 0 
                 x = self.forward(batch, t) #Hier self.net oder forward?? 
-                
+                self.eval2 = self.eval2 + 1
                 if steps > 1:
                     for s in range(steps-1):
                         z = torch.randn(batch.shape[0], self.dim_x, device = self.device)
                         t += 1/steps 
                         x = t * x + (1-t) * z
                         x = self.forward(x, t)
+                        self.eval2 = self.eval2 + 1
                     
                 x = x.to('cpu')
                 calls.append(self.eval2)
                 events.append(x)
+                self.eval2 = 0
             stop_time = time.time()
             print(f'CM CALLS: {np.mean(calls)}')
             print(f"generate_samples: Finished generation of {nsamples} samples with {steps} steps after {(stop_time-start_time):.2f}s ")

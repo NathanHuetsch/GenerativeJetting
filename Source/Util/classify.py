@@ -11,7 +11,7 @@ from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, pl
 import os 
 
 class ClassNN(nn.Module):
-    def __init__(self, n_layers=8, dim_in=10, n_hidden=256, dropout=0.1):
+    def __init__(self, n_layers=8, dim_in=15, n_hidden=256, dropout=0.1):
         super().__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
@@ -61,24 +61,30 @@ class MeasureClass:
 
         def add_mass_to_data(data):
             mass = get_M_ll(data)
+            delta_R = delta_r(data)
 
             mass = torch.Tensor(mass)
+            delta_R = torch.Tensor(delta_R)
             data = torch.Tensor(data)
 
             mass = mass.unsqueeze(1)
-
+            delta_R = delta_R.unsqueeze(1)
             corupt_mass = torch.isnan(mass).squeeze(1)
             mass = mass[~corupt_mass]
             data = data[~corupt_mass]
+            delta_R = delta_R[~corupt_mass]
 
             mass = mass[:samples_n]
             data = data[:samples_n]
+            delta_R = delta_R[:samples_n]
 
             data = data[:, channels]
 
             data = torch.cat((data, mass), dim=1)
+            data = torch.cat((data, delta_R), dim=1)
             print(f'shape after adding mass to data: {data.shape}')
             return data.numpy()
+        
 
         self.x = add_mass_to_data(x)
         self.y = add_mass_to_data(y)
@@ -192,6 +198,8 @@ class MeasureClass:
     def plot_eval(self):
         truth, pred = [], []
 
+        FONTSIZE = 16 
+
         self.model.eval()
         with torch.no_grad():
             for (x, y) in self.loader_tst:
@@ -209,50 +217,57 @@ class MeasureClass:
         pdf_path = f"{self.out_dir}/evaluation_plots.pdf"
         with PdfPages(pdf_path) as pdf:
             # Plot Histrograms
-            fig1, ax1 = plt.subplots(figsize=(10, 6))
-            ax1.hist(pred_sig[truth == 0], range=(0, 1), bins=100, alpha=0.4, label=self.label[0], color='blue') #density=True
-            ax1.hist(pred_sig[truth == 1], range=(0, 1), bins=100, alpha=0.4, label=self.label[1], color='red')
+            fig1 = plt.figure(figsize=(10, 6))
+            plt.hist(pred_sig[truth == 0], range=(0, 1), bins=100, alpha=0.4, label=self.label[0], color='blue') 
+            plt.hist(pred_sig[truth == 1], range=(0, 1), bins=100, alpha=0.4, label=self.label[1], color='red')
             #ax1.set_yscale('log')
-            ax1.legend()
-            ax1.set_xlim([0.0, 1.0])
-            ax1.set_title(f'{self.label[0]} Histogram of predicted events')
-            ax1.set_xlabel('classifier score')
-            ax1.set_ylabel('Events')
+            plt.legend(fontsize=FONTSIZE)
+            plt.tick_params(axis="both", labelsize=FONTSIZE)
+            plt.xlim([0.0, 1.0])
+            plt.title(f'Classifer predicted events of {self.label[0]} or {self.label[1]} ', fontsize = FONTSIZE )
+            plt.xlabel('Preditced label', fontsize=FONTSIZE)
+            plt.ylabel('Normalized Events',fontsize=FONTSIZE)
+            plt.tight_layout()
             pdf.savefig(fig1)  # Save the histogram to the PDF
             plt.close(fig1)
 
 
-            # Plot ROC curve
+            #--------------------- Plot ROC-#-----------------------------
+            FONTSIZE = 25 
             fpr, tpr, thresholds = roc_curve(truth, pred)
             roc_auc = auc(fpr, tpr)
             auc_score = roc_auc_score(truth, pred)
 
-            fig2, ax2 = plt.subplots(figsize=(10, 6))
-            lw = 2
-            ax2.plot(fpr, tpr, color='darkorange', lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
-            ax2.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
-            ax2.set_xlim([0.0, 1.0])
-            ax2.set_ylim([0.0, 1.0])
-            ax2.set_xlabel('False Positive Rate')
-            ax2.set_ylabel('True Positive Rate')
-            ax2.set_title(f'{self.label[0]},{self.label[1]} Receiver Operating Characteristic (ROC) Curve: AUC = {auc_score:.3f}')
-            ax2.legend(loc="lower right")
+            fig2 = plt.figure(figsize=(9, 9))
+            plt.plot(fpr, tpr, lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            plt.plot([0, 1], [0, 1], color='black', lw=2, linestyle='--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.0])
+            plt.xlabel('False Positive Rate',fontsize=FONTSIZE)
+            plt.ylabel('True Positive Rate', fontsize=FONTSIZE)
+            plt.title('(ROC) Curve', fontsize=FONTSIZE)
+            plt.xticks([0, 0.5, 1], fontsize=FONTSIZE)
+            plt.yticks([0.5, 1], fontsize=FONTSIZE)
+            plt.text(0.05, 0.95, f"{self.label[1]} Z+2Jets" , ha='left', va='top', fontsize=FONTSIZE, transform=plt.gca().transAxes)
+            plt.text(0.95, 0.05, f"AUC = {auc(fpr, tpr):0.3}", ha='right', va='bottom', fontsize=FONTSIZE, transform=plt.gca().transAxes)
+            plt.tight_layout()
             pdf.savefig(fig2)  # Save the ROC curve to the PDF
             plt.close(fig2)
 
+            FONTSIZE = 16
             # Save ROC data to a file
-            roc_data_path = f"{self.out_dir}/roc_data.npz"
-            np.savez(roc_data_path, fpr=fpr, tpr=tpr, thresholds=thresholds)
-            print(f"ROC data saved to {roc_data_path}")
+            #roc_data_path = f"{self.out_dir}/roc_data.npz"
+            #np.savez(roc_data_path, fpr=fpr, tpr=tpr, thresholds=thresholds)
+            #print(f"ROC data saved to {roc_data_path}")
             
             # Plot loss curves
-            fig3, ax3 = plt.subplots(figsize=(10, 6))
-            ax3.plot(np.arange(len(self.losses)),self.losses, label='Train Loss')
-            ax3.plot(np.arange(len(self.val_loss))*len(self.loader_trn),self.val_loss, label='Vall Loss')
-            ax3.set_title(f'{self.label[0]},{self.label[1]} Loss Curve')
-            ax3.set_xlabel('Epoch')
-            ax3.set_ylabel('Loss')
-            ax3.legend()
+            fig3 = plt.figure(figsize=(12, 6))
+            plt.plot(np.arange(len(self.losses)),self.losses, label='Train Loss')
+            plt.plot(np.arange(len(self.val_loss))*len(self.loader_trn),self.val_loss, label='Vall Loss')
+            plt.title(f'{self.label[0]},{self.label[1]} Loss Curve')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.legend(fontsize = FONTSIZE)
             pdf.savefig(fig3)  # Save the loss curves to the PDF
             plt.close(fig3)
 
@@ -260,12 +275,15 @@ class MeasureClass:
             weights = np.exp(pred)
             print(f"all weights shape {weights.shape}")
 
+
             #PLOTTING DATA; GEN; AND REWEIGHTED DATA
             test_LO = self.data_tst[self.labels_tst[:,0]==0]
             test_NLO = self.data_tst[self.labels_tst[:,0]==1]
 
-            mass_top1_LO = test_LO[:,9]
-            mass_top1_NLO = test_NLO[:,9]
+            mass_top1_LO = test_LO[:,13]
+            mass_top1_NLO = test_NLO[:,13]
+            delta_R_LO =  test_LO[:,14]
+            delta_R_NLO = test_NLO[:,14]
 
             weights_LOtoNLO = weights[self.labels_tst[:,0]==0]
 
@@ -308,27 +326,63 @@ class MeasureClass:
             for i,channel in enumerate(channels):
                 obs_name = self.obs_names[channel]
                 obs_range = self.obs_ranges[channel]
-                unit = None
+                unit = self.obs_units[channel]
 
                 fig, ax = plt.subplots(figsize=(10, 6))
                 xrange1 = obs_range
                 bins1 = plot_hist(ax, test_LO[:, i], label=self.label[0], color="black", bins=40, weights=None, xrange=xrange1)
                 plot_hist(ax, test_NLO[:, i], label=self.label[1], color="#A52A2A", bins=bins1, weights=None)
-                plot_hist(ax, test_LO[:, i], label="Reweighted", color="#0343DE", bins=bins1, weights=weights_LOtoNLO)
-                ax.legend()
+                plot_hist(ax, test_LO[:, i], label=f"Rew. {self.label[0]} to {self.label[1]}", color="#0343DE", bins=bins1, weights=weights_LOtoNLO)
+                ax.legend(fontsize = FONTSIZE)
+                ax.tick_params(axis="both", labelsize=FONTSIZE)
+                ax.text(0.05, 0.95, f"{self.label[1]} Z+2Jets" , ha='left', va='top', fontsize=FONTSIZE, transform=plt.gca().transAxes)
                 ax.set_xlim(xrange1)
-                ax.set_xlabel(r"${%s}$ %s" % (obs_name, ("" if unit is None else f"[{unit}]")), fontsize = 16)
+                ax.set_ylabel('Normalized', fontsize = FONTSIZE)
+                ax.set_xlabel(r"${%s}$ %s" % (obs_name, ("" if unit is None else f"[{unit}]")), fontsize = FONTSIZE)
                 pdf.savefig(fig)  # Save the first histogram to the PDF
                 plt.close(fig)
 
             # Second figure
             fig2, ax2 = plt.subplots(figsize=(10, 6))
             xrange2 = (75, 110)
-            bins2 = plot_hist(ax2, mass_top1_LO, label="Truth", color="black", bins=40, weights=None, xrange=xrange2)
-            plot_hist(ax2, mass_top1_NLO, label="Gen", color="#A52A2A", bins=bins2, weights=None)
-            plot_hist(ax2, mass_top1_LO, label="Reweighted", color="#0343DE", bins=bins2, weights=weights_LOtoNLO)
-            ax2.legend()
+            bins2 = plot_hist(ax2, mass_top1_LO, label=f"{self.label[0]}", color="black", bins=40, weights=None, xrange=xrange2)
+            plot_hist(ax2, mass_top1_NLO, label=f"{self.label[1]} Gen.", color="#A52A2A", bins=bins2, weights=None)
+            plot_hist(ax2, mass_top1_LO, label=f"Rew. {self.label[0]} to {self.label[1]}", color="#0343DE", bins=bins2, weights=weights_LOtoNLO)
+            ax2.legend(fontsize = FONTSIZE)
+            ax2.tick_params(axis="both", labelsize=FONTSIZE)
+            ax2.text(0.05, 0.95, f"{self.label[1]} Z+2Jets" , ha='left', va='top', fontsize=FONTSIZE, transform=plt.gca().transAxes)
             ax2.set_xlim(xrange2)
-            ax2.set_xlabel(r"$M_{ll}$")
+            ax2.set_ylabel('Normalized')
+            ax2.set_xlabel(r"$M_{ll}$", fontsize = FONTSIZE)
             pdf.savefig(fig2)  # Save the second histogram to the PDF
             plt.close(fig2)
+        
+            # Second figure
+            fig2, ax2 = plt.subplots(figsize=(10, 6))
+            xrange2 = (0, 8)
+            bins2 = plot_hist(ax2, delta_R_LO, label=f"{self.label[0]}", color="black", bins=40, weights=None, xrange=xrange2)
+            plot_hist(ax2, delta_R_NLO, label=f"{self.label[1]} Gen.", color="#A52A2A", bins=bins2, weights=None)
+            plot_hist(ax2, delta_R_LO, label=f"Rew. {self.label[0]} to {self.label[1]}", color="#0343DE", bins=bins2, weights=weights_LOtoNLO)
+            ax2.legend(fontsize = FONTSIZE)
+            ax2.text(0.05, 0.95, f"{self.label[1]} Z+2Jets" , ha='left', va='top', fontsize=FONTSIZE, transform=plt.gca().transAxes)
+            ax2.set_xlim(xrange2)
+            ax2.tick_params(axis="both", labelsize=FONTSIZE)
+            ax2.set_ylabel('Normalized')
+            ax2.set_xlabel(r"$R_{ij}$", fontsize = FONTSIZE)
+            pdf.savefig(fig2)  # Save the second histogram to the PDF
+            plt.close(fig2)
+
+
+def delta_phi(y, idx1, idx2):
+    # return y[:,idx1] - y[:,idx2]
+    dphi = np.abs(y[:,idx1] - y[:,idx2])
+    return np.where(dphi > np.pi, 2*np.pi - dphi, dphi)
+
+def delta_eta(y, idx1, idx2):
+    return y[:,idx1] - y[:, idx2]
+    # return np.abs(y[:,idx1] - y[:,idx2])
+
+def delta_r(y, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14):
+    dphi = delta_phi(y, idx_phi1, idx_phi2)
+    deta = delta_eta(y, idx_eta1, idx_eta2)
+    return np.sqrt(dphi**2 + deta**2)

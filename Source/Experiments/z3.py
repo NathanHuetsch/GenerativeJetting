@@ -18,7 +18,7 @@ from torch.optim import Adam
 
 class Z3_Experiment(Experiment):
     """
-    Class to run Z+2jet generative modelling experiments
+    Class to run Z+3jet generative modelling experiments
 
     TODO: Implement logging
     """
@@ -54,6 +54,10 @@ class Z3_Experiment(Experiment):
 
         self.model = self.build_model(self.params)
 
+        self.load_model()
+        self.load_teacher_model()
+
+
         self.model.data_mean, self.model.data_std = self.data_mean, self.data_std
 
         self.model.obs_names = self.obs_names
@@ -63,4 +67,8 @@ class Z3_Experiment(Experiment):
         self.train_model()
         self.generate_samples()
         self.make_plots()
+
+        self.classify_measurement()
+        self.time_measurement()
+        self.metrik_measurement()
         self.finish_up()

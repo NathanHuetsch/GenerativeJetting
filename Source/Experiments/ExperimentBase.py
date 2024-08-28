@@ -17,7 +17,8 @@ import h5py
 import pandas
 from torch.optim import Adam, AdamW, RAdam
 import csv
-
+import scipy 
+from Source.Util.physics import get_M_ll
 
 class Experiment:
     """
@@ -264,12 +265,14 @@ class Experiment:
         """
 
         # Read in the "train" parameter. If it is set to True, build the dataloaders, otherwise skip it.
+        print(f"data_raw shape is : {self.data_raw.shape}")
         train = get(self.params, "train", True)
-        n_data = get(self.params, "n_data", 1_000_000)
+        n_data = get(self.params, "n_data", 315_903)
         # Read in the "data_split" parameter, specifying which parts of the data to use for training, validation and test
         cut1 = int(n_data * self.data_split[0])
-        cut2 = int(n_data * (self.data_split[0] + self.data_split[1]))
-        self.model.data_train = self.data_raw 
+        cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
+        self.model.data_train = self.data_raw[cut1:]
+        print(f"training shape is : {self.model.data_train.shape}")
         self.model.data_test = self.data_raw[cut2:]
 
 
@@ -466,9 +469,9 @@ class Experiment:
                 label = label) 
 
     def time_measurement(self):
-        ITERATIONS = 3
+        ITERATIONS = 5
         STEPS = 15
-        N_SAMPLES = 3_000_000
+        N_SAMPLES = 1_000_000
             
         def CM_sample_time(n_samples, steps):
             t_start = time.time()
@@ -523,6 +526,102 @@ class Experiment:
 
             # Print the path of the CSV file
             print(f"CSV file has been saved to: {csv_filepath}")
+    
+
+    def metrik_measurement(self):
+        metrik_measurement = get(self.params, "metrik_measurement", False)
+        n_samples = get(self.params, "n_samples", 100_000)
+        iterations = 2
+        steps = 15
+
+        def sample_and_undo(n_samples, steps):
+            samples = self.model.sample_n(n_samples, steps)
+            samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.params)
+            return samples
+        
+        def get_mass(data):
+            mass = get_M_ll(data)
+            mass = torch.Tensor(mass)
+            mass = mass.unsqueeze(1)
+            corupt_mass = torch.isnan(mass).squeeze(1)
+            mass = mass[~corupt_mass]
+            print(mass.shape)
+            mass = mass.squeeze()
+            return mass.numpy()
+
+        if metrik_measurement:
+            TRUE_data = self.data_raw[:n_samples]
+            #print(f"CFM_SHAPE: {CFM_data.shape}")
+            print(f"True_SHAPE: {TRUE_data.shape}")
+
+            def Wasserstein_distance(data_A, data_B):
+                value = 0
+                #for channel in self.channels:
+                #    value += scipy.stats.wasserstein_distance(data_A[:, channel], data_B[:, channel])
+                #    print(f"wasser {value}")
+                mass_A = get_mass(data_A)
+                mass_B = get_mass(data_B)
+                value += scipy.stats.wasserstein_distance(mass_A, mass_B)
+                print(f"wasser {value}")
+                return value
+
+            def Energy_distance(data_A, data_B):
+                value = 0
+                #for channel in self.channels:
+                #    value += scipy.stats.energy_distance(data_A[:, channel], data_B[:, channel])
+                #    print(value)
+                mass_A = get_mass(data_A)
+                mass_B = get_mass(data_B)
+                value += scipy.stats.energy_distance(mass_A, mass_B)
+                print(value)
+                return value
+
+            results = []
+            CFM_wasser = []
+            CFM_energy = []
+
+            for n in range(iterations):
+                CFM_data = self.teacher_model.sample_and_undo(n_samples)
+                wasserstein = Wasserstein_distance(CFM_data, TRUE_data)
+                energy = Energy_distance(CFM_data, TRUE_data)
+                CFM_wasser.append(wasserstein)
+                CFM_energy.append(energy)
+
+            results.append(('CFM', np.mean(CFM_wasser), np.std(CFM_wasser), np.mean(CFM_energy), np.std(CFM_energy)))
+            print(f'CFM Metrik: WATER {np.mean(CFM_wasser)}, {np.std(CFM_wasser)}, ENERGY {np.mean(CFM_energy)}, {np.std(CFM_energy)}')
+
+            for i in range(1, steps + 1):
+                print(f'generation CM sampling with steps {i}')
+                wasser_metrik = []
+                energy_metrik = []
+                for n in range(iterations):
+                    CM_data = sample_and_undo(n_samples, i )
+                    wasser_metrik.append(Wasserstein_distance(CM_data, TRUE_data))
+                    energy_metrik.append(Energy_distance(CM_data, TRUE_data))
+
+                results.append((i, np.mean(wasser_metrik), np.std(wasser_metrik), np.mean(energy_metrik), np.std(energy_metrik)))
+                print(f'CM Metrik: WATER {np.mean(wasser_metrik)}, {np.std(wasser_metrik)}, ENERGY {np.mean(energy_metrik)}, {np.std(energy_metrik)}')
+
+            # Ensure the output directory exists
+            os.makedirs(self.out_dir, exist_ok=True)
+            csv_filename = 'metrik.csv'
+            csv_filepath = os.path.join(self.out_dir, csv_filename)
+
+            # Export to CSV
+            with open(csv_filepath, 'w', newline='') as csvfile:
+                fieldnames = ['step', 'wasser', 'wasser_std', 'energy', 'energy_std']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                writer.writeheader()
+                for step, wasser, wasser_std, energy, energy_std in results:
+                    writer.writerow({'step': step, 'wasser': wasser, 'wasser_std': wasser_std, 'energy': energy, 'energy_std': energy_std})
+
+            # Print the path of the CSV file
+            print(f"CSV file has been saved to: {csv_filepath}")
+
+        else:
+            print("time_measurement set to false")
+
 
     def finish_up(self):
         """

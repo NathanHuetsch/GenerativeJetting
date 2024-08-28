@@ -116,7 +116,7 @@ class CFM(GenerativeModel):
             self.net.map = get(self.params,"fix_mu", False)
             for bay_layer in self.net.bayesian_layers:
                 bay_layer.random = None
-        self.eval()
+        self.eval1 = 0
         self.net.eval()
         batch_size = get(self.params, "batch_size_sample", 8192)
         x_T = self.latent.sample((n_samples, self.dim_x)).to(self.device)
@@ -128,7 +128,7 @@ class CFM(GenerativeModel):
             else:
                 v = self.net(x_t, t_torch)
 
-            self.eval = self.eval + 1 
+            self.eval1 = self.eval1 + 1 
             # 160 
             return v
     
@@ -137,7 +137,7 @@ class CFM(GenerativeModel):
         batches = torch.split(x_T, batch_size)
         with torch.no_grad():
             for batch in batches:
-                self.eval = 0
+                self.eval1 = 0
                 c = None
                 ode_solution = odeint(
                     net_wrapper,
@@ -148,7 +148,7 @@ class CFM(GenerativeModel):
                     method='dopri5',
                 ).detach().cpu().numpy()
                 events.append(ode_solution[-1])
-                calls.append(self.eval)
+                calls.append(self.eval1)
         
         print(f"CFM CALLS: {np.mean(calls)}")
         return np.concatenate(events, axis=0)

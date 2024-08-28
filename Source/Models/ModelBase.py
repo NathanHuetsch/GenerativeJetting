@@ -70,6 +70,12 @@ class GenerativeModel(nn.Module):
         self.runs = get(self.params, "runs", 0)
         self.model_type = get(self.params, "model", None)
 
+        self.obs_units = ["GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV",
+                          "GeV", None, None, "GeV"]
+
     def build_net(self):
         pass
 
@@ -182,7 +188,6 @@ class GenerativeModel(nn.Module):
         pass
 
     def sample_and_undo(self, n_samples):
-
         samples = self.sample_n(n_samples)
         samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.params)
 
@@ -193,9 +198,18 @@ class GenerativeModel(nn.Module):
         steps = get(self.params, "sample_steps", 1)
         label = [f'CFM', f'CM+{steps}', 'Data']
         
+        plot_train = []
+        plot_test = []
+        plot_samples = []
+        plot_weights = []
+
+        weights = None
         if teacher_samples is None: 
             teacher_samples = self.data_test
-            label = ['True','CFM','Data']
+            # self.data_test
+            print("using True, CFM, Train labels with data_test ")
+            label = ['True','CFM','Train']
+
 
             
         os.makedirs(f"plots", exist_ok=True)
@@ -209,16 +223,16 @@ class GenerativeModel(nn.Module):
 
         n_epochs = self.epoch
 
-        plot_train = []
-        plot_test = []
-        plot_samples = []
-        plot_weights = []
-        weights = None
-
         plot_train.append(self.data_train)
         plot_test.append(teacher_samples)
         plot_samples.append(samples)
 
+
+        print("Shape of plot_train:", [arr.shape for arr in plot_train])
+        print("Shape of plot_test:", [arr.shape for arr in plot_test])
+        print("Shape of plot_samples:", [arr.shape for arr in plot_samples])
+        print("Shape of plot_weights:", [arr.shape for arr in plot_weights])
+        
         if get(self.params, "magic_transformation", False):
             R_minus = get(self.params, "R_minus", 0.2)
             R_plus = get(self.params, "R_plus", 1.5)
@@ -248,6 +262,7 @@ class GenerativeModel(nn.Module):
                     # Get the name and the range of the observable
                     obs_name = self.obs_names[channel]
                     obs_range = self.obs_ranges[channel]
+                    obs_unit = self.obs_units[channel]
 
                     # Create the plot
                     plot_obs(pp=out,
@@ -255,6 +270,7 @@ class GenerativeModel(nn.Module):
                              obs_test=obs_test,
                              obs_predict=obs_generated,
                              name=obs_name,
+                             unit=obs_unit,
                              range=obs_range,
                              n_epochs=n_epochs,
                              n_jets=j + self.n_jets,
@@ -476,12 +492,14 @@ class GenerativeModel(nn.Module):
                     data_train = get_M_ll(plot_train[j])
                     data_test = get_M_ll(plot_test[j])
                     data_generated = get_M_ll(plot_samples[j])
+                    data_unit = 'GeV'
                     weights = plot_weights[j]
                     plot_obs(pp=out,
                              obs_train=data_train,
                              obs_test=data_test,
                              obs_predict=data_generated,
                              name=obs_name,
+                             unit=data_unit,
                              n_epochs=n_epochs,
                              range=obs_range,
                              n_jets=j+self.n_jets,

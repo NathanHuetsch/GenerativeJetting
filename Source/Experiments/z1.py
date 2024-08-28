@@ -59,6 +59,7 @@ class Z1_Experiment(Experiment):
         
         self.classify_measurement()
         self.time_measurement()
+        self.metrik_measurement()
 
         self.finish_up()
 
