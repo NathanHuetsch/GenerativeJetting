@@ -21,7 +21,7 @@ class CM(GenerativeModel):
         cal. batch_loss for CM 
         t=0 -> x(0) noise t=1 -x(1)data
         '''
-        stepsize = 0.01       
+         
         parent_model.eval()
 
         # Gen random punkt zwischen noise und data
@@ -30,16 +30,34 @@ class CM(GenerativeModel):
         x_t = t * x + (1-t) * epsilon
 
         # Velocity
-        v_theta = parent_model.net(x_t, t).detach()
+        #v_theta = parent_model.net(x_t, t).detach()
+        with torch.no_grad():
+            v_theta = parent_model.net(x_t, t)
+        
+        """
+        
+        try:
+            v_theta = parent_model.net(x_t, t).detach()
+        except Exception as e:
+            print(f"Error in parent_model.net: {e}")
+            print(f"x_t: {x_t.shape}")
+            print(f"t: {t.shape}")
+            print(f"parent_model type: {type(parent_model)}")
+            print(f"parent_model.net type: {type(parent_model.net)}")
+            raise
+        """
 
         # Euler Step
+        stepsize = 0.01      
         x_t_step = x_t + stepsize * v_theta
         t_step = t + stepsize
 
-        v_theta_step =  parent_model.net(x_t_step, t_step).detach()
+        #v_theta_step =  parent_model.net(x_t_step, t_step).detach()
         
         # Heun Verfahren
-        x_t_step = x_t + 1/2 * stepsize * (v_theta + v_theta_step)
+        #x_t_step = x_t + 1/2 * stepsize * (v_theta + v_theta_step)
+        x_t_step = x_t + stepsize * v_theta 
+
 
         # Consitency model forward
         f_theta = self.forward(x_t, t)

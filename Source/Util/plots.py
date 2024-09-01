@@ -63,12 +63,12 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
 
         FONTSIZE = 16
         labels = lab
-        #colors = ["#0343DE","forestgreen","black"]
-        colors = ["#0343DE","#A52A2A","black"] #CFM
+        colors = ["#0343DE","forestgreen","black"]
+        #colors = ["#0343DE","#A52A2A","black"] #CFM
         dup_last = lambda a: np.append(a, a[-1])
 
 
-        fig1, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios" : [3, 1], "hspace" : 0.00})
+        fig1, axs = plt.subplots(3, 1, sharex=True, gridspec_kw={"height_ratios" : [3, 1, 1], "hspace" : 0.00})
         fig1.tight_layout(pad=0.6, w_pad=0.5, h_pad=0.6, rect=(0.07, 0.06, 0.99, 0.95))
 
 
@@ -95,11 +95,11 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
             delta = np.fabs(ratio - 1) * 100
             delta_err = ratio_err * 100
 
-            # markers, caps, bars = axs[2].errorbar((bins[:-1] + bins[1:])/2, delta,
-            #        yerr=delta_err, ecolor=color, color=color, elinewidth=0.5,
-            #        linewidth=0, fmt=".", capsize=2)
-            #[cap.set_alpha(0.5) for cap in caps]
-            #[bar.set_alpha(0.5) for bar in bars]
+            markers, caps, bars = axs[2].errorbar((bins[:-1] + bins[1:])/2, delta,
+                    yerr=delta_err, ecolor=color, color=color, elinewidth=0.5,
+                    linewidth=0, fmt=".", capsize=2)
+            [cap.set_alpha(0.5) for cap in caps]
+            [bar.set_alpha(0.5) for bar in bars]
             
         axs[0].legend(loc="center right", frameon=False, fontsize=FONTSIZE)
         axs[0].set_ylabel("Normalized", fontsize = FONTSIZE)
@@ -116,20 +116,20 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
         if range is not None:
             plt.xlim((range[0], range[1]))
 
-        #axs[2].set_ylim((0.05,20))
-        #axs[2].set_yscale("log")
-        #axs[2].set_yticks([0.1, 1.0, 10.0])
-        #axs[2].set_yticklabels([r"$0.1$", r"$1.0$", "$10.0$"])
-        #axs[2].set_yticks([0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
-        #                    2., 3., 4., 5., 6., 7., 8., 9.], minor=True)
+        axs[2].set_ylim((0.05,20))
+        axs[2].set_yscale("log")
+        axs[2].set_yticks([0.1, 1.0, 10.0])
+        axs[2].set_yticklabels([r"$0.1$", r"$1.0$", "$10.0$"])
+        axs[2].set_yticks([0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                            2., 3., 4., 5., 6., 7., 8., 9.], minor=True)
 
-        #axs[2].axhline(y=1.0,linewidth=0.5, linestyle="--", color="grey")
-        #axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
-        #axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
+        axs[2].axhline(y=1.0,linewidth=0.5, linestyle="--", color="grey")
+        axs[2].axhspan(0, 1.0, facecolor="#cccccc", alpha=0.3)
+        axs[2].set_ylabel(r"$\delta [\%]$", fontsize = FONTSIZE)
 
         axs[0].tick_params(axis="both", labelsize=FONTSIZE)
         axs[1].tick_params(axis="both", labelsize=FONTSIZE)
-        #axs[2].tick_params(axis="both", labelsize=FONTSIZE)
+        axs[2].tick_params(axis="both", labelsize=FONTSIZE)
         if n_jets is not None:
             corner_text(axs[0], f"Z+{n_jets} jet exclusive", horizontal_pos="right", vertical_pos="top", fontsize=FONTSIZE)
         if ".png" in str(pp):

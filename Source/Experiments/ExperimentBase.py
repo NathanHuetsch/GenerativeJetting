@@ -189,20 +189,17 @@ class Experiment:
         retuns teacher model from teacher_model_path
         '''
         if self.model_type == "CM":
-            try:
-                self.teacher_model_params = load_params(get(self.params, "teacher_model_params", None))
-                model_path = get(self.params, "teacher_model_path", None)
-                model_type = get(self.teacher_model_params, "model", 'CFM')
-                if model_path is None:
-                    raise ValueError("Model path must be specified")
+            self.teacher_model_params = load_params(get(self.params, "teacher_model_params", None))
+            model_path = get(self.params, "teacher_model_path", None)
+            model_type = get(self.teacher_model_params, "model", 'CFM')
+            if model_path is None:
+                raise ValueError("Model path must be specified")
 
-                # Load the model directly
-                self.teacher_model = eval(model_type)(self.teacher_model_params)
-                self.teacher_model.load_state_dict(torch.load(model_path, map_location=self.device))
-                self.teacher_model.to(self.device)
-                print(f"load_teacher_model: Loaded model from {model_path}")
-            except Exception as e:
-                print('failed load model_teacher')
+            # Load the model directly
+            self.teacher_model = eval(model_type)(self.teacher_model_params)
+            self.teacher_model.load_state_dict(torch.load(model_path, map_location=self.device))
+            self.teacher_model.to(self.device)
+            print(f"load_teacher_model: Loaded model from {model_path}")
 
     
     def load_model(self):
@@ -267,13 +264,17 @@ class Experiment:
         # Read in the "train" parameter. If it is set to True, build the dataloaders, otherwise skip it.
         print(f"data_raw shape is : {self.data_raw.shape}")
         train = get(self.params, "train", True)
-        n_data = get(self.params, "n_data", 315_903)
+        if self.n_jets == 3: n_data = 315_903
+        elif self.n_jets == 2: n_data = 1_000_000
+        elif self.n_jets == 1: n_data = 3_987_097
+        #n_data = get(self.params, "n_data", 315_903)
         # Read in the "data_split" parameter, specifying which parts of the data to use for training, validation and test
         cut1 = int(n_data * self.data_split[0])
-        cut2 = int(self.n_data * (self.data_split[0] + self.data_split[1]))
-        self.model.data_train = self.data_raw[cut1:]
+        cut2 = int(n_data * (self.data_split[0] + self.data_split[2]))
+        self.model.data_train = self.data_raw[:cut1]
         print(f"training shape is : {self.model.data_train.shape}")
-        self.model.data_test = self.data_raw[cut2:]
+        self.model.data_test = self.data_raw[:cut2]
+        print(f"test shape is : {self.model.data_test.shape}")
 
 
         if train:
@@ -286,7 +287,7 @@ class Experiment:
                            batch_size=self.batch_size,
                            shuffle=True)
             self.model.test_loader = \
-                DataLoader(dataset=self.data[cut2:],
+                DataLoader(dataset=self.data[:cut2],
                            batch_size=self.batch_size,
                            shuffle=True)
 
@@ -445,7 +446,7 @@ class Experiment:
             if class_mode == 1:
                 True_data = self.data_raw
                 False_data = self.teacher_model.sample_and_undo(n_samples)
-                label = ['Data','CFM']
+                label = ['Data','TraCFM']
                 print("classify_measurement: training classifer on DATA AND CFM")
             
             elif class_mode ==2:
@@ -457,7 +458,7 @@ class Experiment:
             elif class_mode == 3:
                 True_data = self.teacher_model.sample_and_undo(n_samples)
                 False_data = self.model.sample_and_undo(n_samples)
-                label = ['CFM','CM']
+                label = ['TraCFM','CM']
                 print("classify_measurement: training classifer on CFM and CM")
 
             else: print('invalde mode selection')
@@ -532,7 +533,7 @@ class Experiment:
         metrik_measurement = get(self.params, "metrik_measurement", False)
         n_samples = get(self.params, "n_samples", 100_000)
         iterations = 2
-        steps = 15
+        steps = 10
 
         def sample_and_undo(n_samples, steps):
             samples = self.model.sample_n(n_samples, steps)
@@ -558,11 +559,9 @@ class Experiment:
                 value = 0
                 #for channel in self.channels:
                 #    value += scipy.stats.wasserstein_distance(data_A[:, channel], data_B[:, channel])
-                #    print(f"wasser {value}")
                 mass_A = get_mass(data_A)
                 mass_B = get_mass(data_B)
                 value += scipy.stats.wasserstein_distance(mass_A, mass_B)
-                print(f"wasser {value}")
                 return value
 
             def Energy_distance(data_A, data_B):
@@ -573,7 +572,6 @@ class Experiment:
                 mass_A = get_mass(data_A)
                 mass_B = get_mass(data_B)
                 value += scipy.stats.energy_distance(mass_A, mass_B)
-                print(value)
                 return value
 
             results = []
@@ -596,8 +594,8 @@ class Experiment:
                 energy_metrik = []
                 for n in range(iterations):
                     CM_data = sample_and_undo(n_samples, i )
-                    wasser_metrik.append(Wasserstein_distance(CM_data, TRUE_data))
-                    energy_metrik.append(Energy_distance(CM_data, TRUE_data))
+                    wasser_metrik.append(Wasserstein_distance(CM_data, CFM_data))
+                    energy_metrik.append(Energy_distance(CM_data, CFM_data))
 
                 results.append((i, np.mean(wasser_metrik), np.std(wasser_metrik), np.mean(energy_metrik), np.std(energy_metrik)))
                 print(f'CM Metrik: WATER {np.mean(wasser_metrik)}, {np.std(wasser_metrik)}, ENERGY {np.mean(energy_metrik)}, {np.std(energy_metrik)}')

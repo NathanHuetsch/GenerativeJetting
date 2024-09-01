@@ -55,9 +55,9 @@ class Z2_Experiment(Experiment):
 
 
         self.model.data_mean, self.model.data_std = self.data_mean, self.data_std
-
         self.model.obs_names = self.obs_names
         self.model.obs_ranges = self.obs_ranges
+        
         self.build_optimizer()
         self.build_dataloaders()
         self.train_model()
@@ -67,5 +67,7 @@ class Z2_Experiment(Experiment):
         self.classify_measurement()
         self.time_measurement()
         self.metrik_measurement()
-        
+
         self.finish_up()
+
+

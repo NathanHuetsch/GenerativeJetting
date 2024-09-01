@@ -190,13 +190,13 @@ class GenerativeModel(nn.Module):
     def sample_and_undo(self, n_samples):
         samples = self.sample_n(n_samples)
         samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.params)
-
         return samples
+
 
     # cfm_samples
     def plot_samples(self, samples, teacher_samples = None, finished=False):
         steps = get(self.params, "sample_steps", 1)
-        label = [f'CFM', f'CM+{steps}', 'Data']
+        label = [f'TraCFM', f'CM+{steps}', 'Data']
         
         plot_train = []
         plot_test = []
@@ -208,7 +208,7 @@ class GenerativeModel(nn.Module):
             teacher_samples = self.data_test
             # self.data_test
             print("using True, CFM, Train labels with data_test ")
-            label = ['True','CFM','Train']
+            label = ['True','TraCFM','Train']
 
 
             
