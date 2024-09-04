@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, random_split
+
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from Source.Util.util import get, save_params
@@ -9,44 +10,51 @@ from Source.Util.physics import get_M_ll
 from matplotlib.backends.backend_pdf import PdfPages
 from Source.Util.plots import plot_obs, delta_r, plot_deta_dphi, plot_obs_2d, plot_loss
 import os 
+import Source.Networks
+
+
 
 class ClassNN(nn.Module):
-    def __init__(self, n_layers=6, dim_in=15, n_hidden=256, dropout=0.1):
+    def __init__(self, n_layers=5, dim_in=4, n_hidden=256, dropout=0):
         super().__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.loss_fn = nn.BCEWithLogitsLoss()
         
         layers = []
         layers.append(nn.Linear(dim_in, n_hidden))
+        layers.append(nn.BatchNorm1d(n_hidden))
         layers.append(nn.LeakyReLU())
         layers.append(nn.Dropout(dropout))
-        for _ in range(n_layers):
+        
+        for _ in range(n_layers - 1):
             layers.append(nn.Linear(n_hidden, n_hidden))
+            layers.append(nn.BatchNorm1d(n_hidden))
             layers.append(nn.LeakyReLU())
             layers.append(nn.Dropout(dropout))
+        
         layers.append(nn.Linear(n_hidden, 1))
         self.net = nn.Sequential(*layers)
-    
+        
     def forward(self, input):
-        input = input.to(self.device)
         output = self.net(input)
         return output
-
+    
     def batch_loss(self, data):
         input, label = data
-        input = input.to(self.device)
-        label = label.to(self.device)
+        input, label = input.to(self.device), label.to(self.device)
         output = self.forward(input)
-
-        loss_fn = nn.BCEWithLogitsLoss()
-
-        loss = loss_fn(output, label)
+        loss = self.loss_fn(output, label)
         return loss
     
+
 class MeasureClass:
     def __init__(self, x, y, params, label):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.out_dir = params['out_dir']
-    
+        self.params = params
+
+        self.channels = self.params.get('plot_channels', [2])
+        self.channels = [0,2]
         self.params = params
         self.label = label # Default dimension without mass_x and mass_y
         self.cm_steps = self.params.get('sample_steps', None)
@@ -56,58 +64,49 @@ class MeasureClass:
         self.train_model()
         self.plot_eval()
 
+
     def prepare_data(self, x, y):
         samples_n = self.params.get('n_samples', 100_000)
-        channels = self.params.get('plot_channels', [2])
-        self.BATCHSIZE = self.params.get("class_batch_size", 128)
-
-
+        n_jets = self.params.get('n_jets', None)
+        samples_n = self.params.get('n_samples', 100_000)
+        batchsize = self.params.get("class_batch_size", 128)
+        
         def preprocess_data(data):
             mass = get_M_ll(data)
-            delta_R = delta_r(data)
-            #delta_R = np.minimum(1/(delta_R+1e-7), 20) #preprocess
+            if n_jets >= 2: delta_R = delta_r(data)
 
             mass = torch.Tensor(mass)
             data = torch.Tensor(data)
 
             mass = mass.unsqueeze(1)
-           
+    
             corupt_mass = torch.isnan(mass).squeeze(1)
             mass = mass[~corupt_mass]
             data = data[~corupt_mass]
             
-
             mass = mass[:samples_n]
             data = data[:samples_n]
-            data = data[:, channels]
+            data = data[:, self.channels]
 
-            n_jets = self.params.get('n_jets', None)
-            if n_jets > 2:
-                delta_R = torch.Tensor(delta_R)
-                delta_R = delta_R.unsqueeze(1)
-                delta_R = delta_R[~corupt_mass]
-                delta_R = delta_R[:samples_n]
-               
-
-            data = torch.cat((data, delta_R), dim=1)
-            data = torch.cat((data, mass), dim=1)
-            self.dim = 15
+            delta_R = torch.Tensor(delta_R)
+            delta_R = delta_R.unsqueeze(1)
+            delta_R = delta_R[~corupt_mass]
+            delta_R = delta_R[:samples_n]
             
-            print(f'shape after adding mass to data: {data.shape}')
+               
+            data = torch.cat((data, mass), dim=1)
+            data = torch.cat((data, delta_R), dim=1)
+            
+            self.dim = data.shape[1]
+            
             return data.numpy()
         
 
-        self.x = preprocess_data(x)
-        self.y = preprocess_data(y)
+        data_real = preprocess_data(x)
+        data_gen= preprocess_data(y)
 
-        self.data_real = self.x
-        self.data_gen = self.y
- 
-        #self.data_real = np.load("/remote/gpu03/hoelzl/data09/ttbarj_LO.npy")
-        #self.data_gen =  np.load("/remote/gpu03/hoelzl/data09/ttbarj_NLO.npy")
-        
-        self.data = np.concatenate((self.data_real, self.data_gen), axis=0)
-        self.labels = np.concatenate((np.zeros(self.data_real.shape[0]), np.ones(self.data_gen.shape[0])), axis=0)
+        self.data = np.concatenate((data_real, data_gen), axis=0)
+        self.labels = np.concatenate((np.zeros(data_real.shape[0]), np.ones(data_gen.shape[0])), axis=0)
         idx = np.random.permutation(len(self.data))
         self.data = self.data[idx,:]
         self.labels=self.labels[idx,None]
@@ -127,23 +126,21 @@ class MeasureClass:
             return loader, mean, std
         
         total_data_points = self.data.shape[0]
-        n1 = 1_500_000
+        n1 = 1_7500_000
         #n_val = int(0.5 * (total_data_points - n1))  # 50% of the remaining 40% for validation
-        n2 = 1_500_000
+        n2 = 1_750_000
 
 
 
-        batchsize = self.BATCHSIZE
         self.data_trn, self.data_val, self.data_tst = self.data[:n1,:], self.data[n2:,:], self.data
         print(f"TRAIN_DATA SHAPE: {self.data_trn.shape}")
         print(f"VAL_DATA SHAPE: {self.data_val.shape}")
         print(f"TEST_DATA SHAPE: {self.data_tst.shape}")
         self.labels_trn, self.labels_val, self.labels_tst = self.labels[:n1,:], self.labels[n2:,:], self.labels
 
-        mean, std = None, None
-        self.loader_trn, mean, std = create_dataloader(self.data_trn, self.labels_trn, batchsize, True, mean=mean, std=std)
-        self.loader_tst, mean, std = create_dataloader(self.data_tst, self.labels_tst, batchsize, False, mean=mean, std=std)
-        self.loader_val, mean, std = create_dataloader(self.data_val, self.labels_val, batchsize, False, mean=mean, std=std)
+        self.loader_trn, mean, std = create_dataloader(self.data_trn, self.labels_trn, batchsize, True)
+        self.loader_tst, mean, std = create_dataloader(self.data_tst, self.labels_tst, batchsize, False)
+        self.loader_val, mean, std = create_dataloader(self.data_val, self.labels_val, batchsize, False)
 
     def build_model(self):
         self.model = ClassNN(dim_in = self.dim).to(self.device)
@@ -166,8 +163,9 @@ class MeasureClass:
         
         self.losses = []
         self.val_loss = []
-        patience = 20
+        patience = 10
         min_val_loss = float('inf')
+        es_epochs = 0
 
         def train_epoch(loader, losses):
             self.model.train()
@@ -206,8 +204,9 @@ class MeasureClass:
                     break
 
 
-        #os.makedirs("models", exist_ok=True)
-        #torch.save(self.model.state_dict(), f"models/CLASSmodel.pt")
+        os.makedirs("models", exist_ok=True)
+        #self.model.load_state_dict(torch.load("/remote/gpu03/hoelzl/GenerativeJetting/runs/Z+2Jet/CM+2Jets_Class4/models/CLASSmodel.pt", map_location=self.device))
+        torch.save(self.model.state_dict(), f"models/CLASSmodel.pt")
 
     def plot_eval(self):
         truth, pred = [], []
@@ -219,7 +218,8 @@ class MeasureClass:
             for (x, y) in self.loader_tst:
                 x = x.to('cpu')
                 y = y.to('cpu')
-                y_pred = self.model(x).cpu()
+                self.model.to('cpu')
+                y_pred = self.model(x).to('cpu')
                 truth.append(y.flatten().numpy())
                 pred.append(y_pred.flatten().numpy())
         pred = np.concatenate(pred)
@@ -296,12 +296,14 @@ class MeasureClass:
             test_LO = self.data_tst[self.labels_tst[:,0]==0]
             test_NLO = self.data_tst[self.labels_tst[:,0]==1]
 
-            mass_top1_LO = test_LO[:,13]
-            mass_top1_NLO = test_NLO[:,13]
+            Rdim = self.dim -1
+            mdim = self.dim -2
+            mass_top1_LO = test_LO[:,mdim]
+            mass_top1_NLO = test_NLO[:,mdim]
 
                 
-            delta_R_LO = test_LO[:,14]
-            delta_R_NLO = test_NLO[:,14]
+            delta_R_LO = test_LO[:,Rdim]
+            delta_R_NLO = test_NLO[:,Rdim]
 
             weights_LOtoNLO = weights[self.labels_tst[:,0]==0]
             weights_NLOtoLO = weights[self.labels_tst[:,0]==1]
@@ -355,11 +357,10 @@ class MeasureClass:
                             [17,  82], [-4, 4], [-6, 6], [0, 50],
                             [17,  82], [-4, 4], [-6, 6], [0, 50]]
             
-            channels = get(self.params, "channels", None)
-            if channels is None:
-                channels = np.array([i for i in range(self.n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
+            if self.channels is None:
+                self.channels = np.array([i for i in range(self.n_jets * 4 + 8) if i not in [1, 3, 7]]).tolist()
 
-            for i,channel in enumerate(channels):
+            for i,channel in enumerate(self.channels):
                 obs_name = self.obs_names[channel]
                 obs_range = self.obs_ranges[channel]
                 unit = self.obs_units[channel]
@@ -452,3 +453,8 @@ def delta_r(y, idx_phi1=9, idx_eta1=10, idx_phi2=13, idx_eta2=14):
     dphi = delta_phi(y, idx_phi1, idx_phi2)
     deta = delta_eta(y, idx_eta1, idx_eta2)
     return np.sqrt(dphi**2 + deta**2)
+
+
+def delta_eta(y, idx1, idx2):
+    return y[:,idx1] - y[:, idx2]
+    # return np.abs(y[:,idx1] - y[:,idx2])

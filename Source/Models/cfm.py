@@ -5,6 +5,7 @@ from Source.Util.util import get
 from Source.Models.ModelBase import GenerativeModel
 from torchdiffeq import odeint
 from torch.autograd import grad
+import time 
 import math
 
 
@@ -118,6 +119,7 @@ class CFM(GenerativeModel):
                 bay_layer.random = None
         self.eval1 = 0
         self.net.eval()
+        t1 = time.time()
         batch_size = get(self.params, "batch_size_sample", 8192)
         x_T = self.latent.sample((n_samples, self.dim_x)).to(self.device)
 
@@ -149,8 +151,9 @@ class CFM(GenerativeModel):
                 ).detach().cpu().numpy()
                 events.append(ode_solution[-1])
                 calls.append(self.eval1)
-        
-        print(f"CFM CALLS: {np.mean(calls)}")
+        t2 = time.time()
+
+        print(f"generate_samples: Finished generation of {n_samples} samples with {np.mean(calls)} steps after {(t2-t1):.02}s  ")
         return np.concatenate(events, axis=0)
 
     def log_prob(self, x: torch.Tensor) -> torch.Tensor:

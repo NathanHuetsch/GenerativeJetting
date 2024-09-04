@@ -146,6 +146,7 @@ class GenerativeModel(nn.Module):
                 print(f"Training time estimate: {dtEst/60:.2f} min = {dtEst/60**2:.2f} h")
 
     def train_one_epoch(self, teacher_model = None):
+        accum_iter  = 16384
         def batch_loss(data):
             if teacher_model is None: 
                 return self.batch_loss(data)
@@ -208,9 +209,7 @@ class GenerativeModel(nn.Module):
             teacher_samples = self.data_test
             # self.data_test
             print("using True, CFM, Train labels with data_test ")
-            label = ['True','TraCFM','Train']
-
-
+            label = ['Train','TraCFM','True']
             
         os.makedirs(f"plots", exist_ok=True)
         if finished:

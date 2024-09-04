@@ -9,6 +9,8 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from Source.Util.preprocessing import preformat, preprocess, undo_preprocessing
 from Source.Util.util import get_device, save_params, get, load_params, magic_trafo
 from Source.Util.classify import MeasureClass
+from Source.Util.metrics import calculate_metrics
+from Source.Util.time_metrics import calculate_sample_times
 import time
 from datetime import datetime
 import sys
@@ -198,7 +200,7 @@ class Experiment:
             # Load the model directly
             self.teacher_model = eval(model_type)(self.teacher_model_params)
             self.teacher_model.load_state_dict(torch.load(model_path, map_location=self.device))
-            self.teacher_model.to(self.device)
+            self.teacher_model.eval()
             print(f"load_teacher_model: Loaded model from {model_path}")
 
     
@@ -445,7 +447,9 @@ class Experiment:
         if classify_flag:
             if class_mode == 1:
                 True_data = self.data_raw
-                False_data = self.teacher_model.sample_and_undo(n_samples)
+                #False_data = self.teacher_model.sample_and_undo(n_samples)
+                False_data = np.load("/remote/gpu03/hoelzl/GenerativeJetting/runs/CM+2Jets_NEW_CLASS_TEST15.npy")
+                #np.save(self.out_dir, False_data)
                 label = ['Data','TraCFM']
                 print("classify_measurement: training classifer on DATA AND CFM")
             
@@ -470,153 +474,39 @@ class Experiment:
                 label = label) 
 
     def time_measurement(self):
-        ITERATIONS = 5
-        STEPS = 15
-        N_SAMPLES = 1_000_000
-            
-        def CM_sample_time(n_samples, steps):
-            t_start = time.time()
-            self.model.sample_n(n_samples, steps)
-            t_stop = time.time()
-            sample_time = t_stop - t_start
-            return sample_time
+        """
+        Cal. the sample time from Consitency model and Conditional flow matching model and write it into a csv.file in out.dir
+        """
+        if get(self.params, "time_meassurement", False):
+            calculate_sample_times(
+                self.model,
+                self.teacher_model,
+                self.out_dir,
+                n_samples=1_000_000,
+                iterations=5,
+                steps=15
+            )
+        else:
+            print("time_measurement set to false")
 
-        def CFM_sample_time(n_samples):
-            t_start = time.time()
-            self.teacher_model.sample_n(n_samples)
-            t_stop = time.time()
-            sample_time = t_stop - t_start
-            return sample_time
-        
-        if get(self.params, "time_meassurement", False) is True: 
-            results = []
-
-            CFM_sample_time_list = []
-            for i in range(ITERATIONS):
-                t = CFM_sample_time(N_SAMPLES)
-                CFM_sample_time_list.append(t)
-            mean_sample_time = np.mean(CFM_sample_time_list)
-            std_sample_time = np.std(CFM_sample_time_list)
-            results.append(("CFM", mean_sample_time, std_sample_time))
-
-
-            for step in range(STEPS):
-                sample_time_list = []
-                for i in range(ITERATIONS):
-                    t = CM_sample_time(N_SAMPLES, step+1)
-                    sample_time_list.append(t)
-
-                mean_sample_time = np.mean(sample_time_list)
-                std_sample_time = np.std(sample_time_list)
-            
-                results.append((step + 1, mean_sample_time, std_sample_time))
-
-            # Ensure the output directory exists
-            os.makedirs(self.out_dir, exist_ok=True)
-            csv_filename = 'sample_times.csv'
-            csv_filepath = os.path.join(self.out_dir, csv_filename)
-
-            # Export to CSV
-            with open(csv_filepath, 'w', newline='') as csvfile:
-                fieldnames = ['Step', 'Mean_Sample_Time', 'Std_Deviation']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-                writer.writeheader()
-                for step, mean, std in results:
-                    writer.writerow({'Step': step, 'Mean_Sample_Time': mean, 'Std_Deviation': std})
-
-            # Print the path of the CSV file
-            print(f"CSV file has been saved to: {csv_filepath}")
-    
 
     def metrik_measurement(self):
+        """
+        Cal. the metric for CM and CFM models and write it into a csv.file in out.dir
+        """
         metrik_measurement = get(self.params, "metrik_measurement", False)
-        n_samples = get(self.params, "n_samples", 100_000)
-        iterations = 2
-        steps = 10
-
-        def sample_and_undo(n_samples, steps):
-            samples = self.model.sample_n(n_samples, steps)
-            samples = undo_preprocessing(samples, self.data_mean, self.data_std, self.params)
-            return samples
-        
-        def get_mass(data):
-            mass = get_M_ll(data)
-            mass = torch.Tensor(mass)
-            mass = mass.unsqueeze(1)
-            corupt_mass = torch.isnan(mass).squeeze(1)
-            mass = mass[~corupt_mass]
-            print(mass.shape)
-            mass = mass.squeeze()
-            return mass.numpy()
 
         if metrik_measurement:
-            TRUE_data = self.data_raw[:n_samples]
-            #print(f"CFM_SHAPE: {CFM_data.shape}")
-            print(f"True_SHAPE: {TRUE_data.shape}")
-
-            def Wasserstein_distance(data_A, data_B):
-                value = 0
-                #for channel in self.channels:
-                #    value += scipy.stats.wasserstein_distance(data_A[:, channel], data_B[:, channel])
-                mass_A = get_mass(data_A)
-                mass_B = get_mass(data_B)
-                value += scipy.stats.wasserstein_distance(mass_A, mass_B)
-                return value
-
-            def Energy_distance(data_A, data_B):
-                value = 0
-                #for channel in self.channels:
-                #    value += scipy.stats.energy_distance(data_A[:, channel], data_B[:, channel])
-                #    print(value)
-                mass_A = get_mass(data_A)
-                mass_B = get_mass(data_B)
-                value += scipy.stats.energy_distance(mass_A, mass_B)
-                return value
-
-            results = []
-            CFM_wasser = []
-            CFM_energy = []
-
-            for n in range(iterations):
-                CFM_data = self.teacher_model.sample_and_undo(n_samples)
-                wasserstein = Wasserstein_distance(CFM_data, TRUE_data)
-                energy = Energy_distance(CFM_data, TRUE_data)
-                CFM_wasser.append(wasserstein)
-                CFM_energy.append(energy)
-
-            results.append(('CFM', np.mean(CFM_wasser), np.std(CFM_wasser), np.mean(CFM_energy), np.std(CFM_energy)))
-            print(f'CFM Metrik: WATER {np.mean(CFM_wasser)}, {np.std(CFM_wasser)}, ENERGY {np.mean(CFM_energy)}, {np.std(CFM_energy)}')
-
-            for i in range(1, steps + 1):
-                print(f'generation CM sampling with steps {i}')
-                wasser_metrik = []
-                energy_metrik = []
-                for n in range(iterations):
-                    CM_data = sample_and_undo(n_samples, i )
-                    wasser_metrik.append(Wasserstein_distance(CM_data, CFM_data))
-                    energy_metrik.append(Energy_distance(CM_data, CFM_data))
-
-                results.append((i, np.mean(wasser_metrik), np.std(wasser_metrik), np.mean(energy_metrik), np.std(energy_metrik)))
-                print(f'CM Metrik: WATER {np.mean(wasser_metrik)}, {np.std(wasser_metrik)}, ENERGY {np.mean(energy_metrik)}, {np.std(energy_metrik)}')
-
-            # Ensure the output directory exists
-            os.makedirs(self.out_dir, exist_ok=True)
-            csv_filename = 'metrik.csv'
-            csv_filepath = os.path.join(self.out_dir, csv_filename)
-
-            # Export to CSV
-            with open(csv_filepath, 'w', newline='') as csvfile:
-                fieldnames = ['step', 'wasser', 'wasser_std', 'energy', 'energy_std']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-                writer.writeheader()
-                for step, wasser, wasser_std, energy, energy_std in results:
-                    writer.writerow({'step': step, 'wasser': wasser, 'wasser_std': wasser_std, 'energy': energy, 'energy_std': energy_std})
-
-            # Print the path of the CSV file
-            print(f"CSV file has been saved to: {csv_filepath}")
-
+            calculate_metrics(
+                self.model,
+                self.teacher_model,
+                self.model.data_test,
+                self.data_mean,
+                self.data_std,
+                self.params,
+                self.out_dir,
+                n_samples=get(self.params, "n_samples", 100_000)
+            )
         else:
             print("time_measurement set to false")
 

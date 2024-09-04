@@ -42,6 +42,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
 
+
         y_t,  bins = np.histogram(obs_test, bins=bins, range=range) #generate bin array if needed
         y_tr, _ = np.histogram(obs_train, bins=bins)
 
@@ -64,7 +65,7 @@ def plot_obs(pp, obs_train, obs_test, obs_predict, name, bins=60, range=None, un
         FONTSIZE = 16
         labels = lab
         colors = ["#0343DE","forestgreen","black"]
-        #colors = ["#0343DE","#A52A2A","black"] #CFM
+        #colors = ["indigo","#0343DE","black"] #CFM
         dup_last = lambda a: np.append(a, a[-1])
 
 
@@ -219,8 +220,8 @@ def plot_obs_2d(pp, data_train, data_test, data_generated, n_epochs, obs_ranges,
 
     fig.add_subplot(1, 3, 1)
     plt.hist2d(data_train[:,0], data_train[:,1], bins=100, range=obs_ranges, rasterized=True)
-    plt.xlabel(r"${%s}$" % obs_names[0])
-    plt.ylabel(r"${%s}$" % obs_names[1])
+    plt.xlabel(f'$\Delta \eta{i,j}$')
+    plt.ylabel(f'$\Delta \phi{i,j}$')
     plt.title("train")
     fig.add_subplot(1, 3, 2)
     plt.hist2d(data_test[:,0], data_test[:,1], bins=100, range=obs_ranges, rasterized=True)

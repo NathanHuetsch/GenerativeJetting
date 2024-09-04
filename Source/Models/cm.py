@@ -8,6 +8,7 @@ import time
 class CM(GenerativeModel):
     def __init__(self, params):
         super().__init__(params)
+        self.steps = get(self.params, "sample_steps", 1)
         
     def build_net(self):
         network = get(self.params, "network", "MLP")
@@ -18,54 +19,32 @@ class CM(GenerativeModel):
 
     def batch_loss(self, x, parent_model):
         '''
-        cal. batch_loss for CM 
+        Calculate batch_loss for CM
         t=0 -> x(0) noise t=1 -x(1)data
         '''
-         
-        parent_model.eval()
-
-        # Gen random punkt zwischen noise und data
-        epsilon = torch.randn_like(x, device = x.device)
-        t = torch.rand(x.shape[0], 1, device= x.device)
-        x_t = t * x + (1-t) * epsilon
-
-        # Velocity
-        #v_theta = parent_model.net(x_t, t).detach()
         with torch.no_grad():
+            # Move these operations to GPU
+            epsilon = torch.randn_like(x)
+            t = torch.rand(x.shape[0], 1, device=x.device)
+            x_t = t * x + (1 - t) * epsilon
+            
+            # Run parent model on GPU if possible
             v_theta = parent_model.net(x_t, t)
         
-        """
-        
-        try:
-            v_theta = parent_model.net(x_t, t).detach()
-        except Exception as e:
-            print(f"Error in parent_model.net: {e}")
-            print(f"x_t: {x_t.shape}")
-            print(f"t: {t.shape}")
-            print(f"parent_model type: {type(parent_model)}")
-            print(f"parent_model.net type: {type(parent_model.net)}")
-            raise
-        """
-
         # Euler Step
-        stepsize = 0.01      
+        stepsize = 0.01
         x_t_step = x_t + stepsize * v_theta
         t_step = t + stepsize
 
-        #v_theta_step =  parent_model.net(x_t_step, t_step).detach()
+        f_theta, f_theta2 = self.forward_both(x_t, t, x_t_step, t_step)
         
-        # Heun Verfahren
-        #x_t_step = x_t + 1/2 * stepsize * (v_theta + v_theta_step)
-        x_t_step = x_t + stepsize * v_theta 
-
-
-        # Consitency model forward
-        f_theta = self.forward(x_t, t)
-        f_theta2 = self.forward(x_t_step, t_step)
-
-        loss = torch.mean((f_theta - f_theta2) ** 2)
+        loss = torch.nn.functional.mse_loss(f_theta, f_theta2, reduction='mean')
+        
         return loss
-    
+
+    def forward_both(self, x_t, t, x_t_step, t_step):
+        return self.forward(x_t, t), self.forward(x_t_step, t_step)
+
 
     def forward(self, x, t):
         """Res. Net mit Formel aus Apendix B paper"""
@@ -84,7 +63,7 @@ class CM(GenerativeModel):
         Sample Data in N steps
         from t = 1 and x(1) = noise to t = 0 and x(0) = noise
         """
-        if steps is None: steps = get(self.params, "sample_steps", 1)
+        if steps is None: steps = self.steps
         
         start_time = time.time()
         epsilon = torch.randn(nsamples, self.dim_x, device=self.device)
@@ -112,8 +91,7 @@ class CM(GenerativeModel):
                 events.append(x)
                 self.eval2 = 0
             stop_time = time.time()
-            print(f'CM CALLS: {np.mean(calls)}')
-            print(f"generate_samples: Finished generation of {nsamples} samples with {steps} steps after {(stop_time-start_time):.2f}s ")
+            print(f"generate_samples: Finished generation of {nsamples} samples with {np.mean(calls)} steps after {(stop_time-start_time):.2f}s ")
             return np.concatenate(events)       
 
 
